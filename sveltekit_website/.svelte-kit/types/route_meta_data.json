@@ -1,0 +1,127 @@
+{
+	"/(public)": [
+		"src/routes/(public)/+layout.server.js"
+	],
+	"/(protected)/(professore)": [
+		"src/routes/(protected)/(professore)/+layout.server.js",
+		"src/routes/(protected)/+layout.server.js"
+	],
+	"/(protected)": [
+		"src/routes/(protected)/+layout.server.js"
+	],
+	"/": [],
+	"/api/corsi": [
+		"src/routes/api/corsi/+server.js"
+	],
+	"/api/corsi/import": [
+		"src/routes/api/corsi/import/+server.js"
+	],
+	"/api/corsi/[id]": [
+		"src/routes/api/corsi/[id]/+server.js"
+	],
+	"/api/esercitazioni": [
+		"src/routes/api/esercitazioni/+server.js"
+	],
+	"/api/esercitazioni/[id]": [
+		"src/routes/api/esercitazioni/[id]/+server.js"
+	],
+	"/api/esercitazioni/[id]/immagini": [
+		"src/routes/api/esercitazioni/[id]/immagini/+server.js"
+	],
+	"/api/esercitazioni/[id]/immagini/[imageId]": [
+		"src/routes/api/esercitazioni/[id]/immagini/[imageId]/+server.js"
+	],
+	"/api/membri": [
+		"src/routes/api/membri/+server.js"
+	],
+	"/api/membri/[id]": [
+		"src/routes/api/membri/[id]/+server.js"
+	],
+	"/api/risultati": [
+		"src/routes/api/risultati/+server.js"
+	],
+	"/api/risultati/[id]": [
+		"src/routes/api/risultati/[id]/+server.js"
+	],
+	"/api/sessioni-correzione": [
+		"src/routes/api/sessioni-correzione/+server.js"
+	],
+	"/api/sessioni-correzione/[id]": [
+		"src/routes/api/sessioni-correzione/[id]/+server.js"
+	],
+	"/api/sessioni-correzione/[id]/job": [
+		"src/routes/api/sessioni-correzione/[id]/job/+server.js"
+	],
+	"/api/tentativi-correzione": [
+		"src/routes/api/tentativi-correzione/+server.js"
+	],
+	"/api/tentativi-correzione/[id]": [
+		"src/routes/api/tentativi-correzione/[id]/+server.js"
+	],
+	"/api/utenti": [
+		"src/routes/api/utenti/+server.js"
+	],
+	"/api/utenti/[id]": [
+		"src/routes/api/utenti/[id]/+server.js"
+	],
+	"/auth": [
+		"src/routes/auth/+layout.server.js"
+	],
+	"/auth/verifica-password": [
+		"src/routes/auth/+layout.server.js"
+	],
+	"/(protected)/corsi": [
+		"src/routes/(protected)/+layout.server.js"
+	],
+	"/(protected)/corsi/aggiungi": [
+		"src/routes/(protected)/+layout.server.js"
+	],
+	"/(protected)/corsi/[id]": [
+		"src/routes/(protected)/+layout.server.js"
+	],
+	"/(protected)/corsi/[id]/esercitazioni": [
+		"src/routes/(protected)/+layout.server.js"
+	],
+	"/(protected)/corsi/[id]/esercitazioni/aggiungi": [
+		"src/routes/(protected)/+layout.server.js"
+	],
+	"/(protected)/corsi/[id]/esercitazioni/[activityId]": [
+		"src/routes/(protected)/+layout.server.js"
+	],
+	"/(protected)/corsi/[id]/esercitazioni/[activityId]/correzione": [
+		"src/routes/(protected)/+layout.server.js"
+	],
+	"/(protected)/corsi/[id]/esercitazioni/[activityId]/modifica": [
+		"src/routes/(protected)/+layout.server.js"
+	],
+	"/(protected)/corsi/[id]/modifica": [
+		"src/routes/(protected)/+layout.server.js"
+	],
+	"/(protected)/corsi/[id]/statistiche": [
+		"src/routes/(protected)/+layout.server.js"
+	],
+	"/(public)/login": [
+		"src/routes/(public)/login/+layout.server.js",
+		"src/routes/(public)/+layout.server.js",
+		"src/routes/(public)/login/+layout.server.js",
+		"src/routes/(public)/+layout.server.js"
+	],
+	"/(public)/password-dimenticata": [
+		"src/routes/(public)/+layout.server.js"
+	],
+	"/(protected)/profilo": [
+		"src/routes/(protected)/+layout.server.js"
+	],
+	"/(protected)/(professore)/studenti": [
+		"src/routes/(protected)/(professore)/+layout.server.js",
+		"src/routes/(protected)/+layout.server.js"
+	],
+	"/(protected)/(professore)/studenti/aggiungi": [
+		"src/routes/(protected)/(professore)/+layout.server.js",
+		"src/routes/(protected)/+layout.server.js"
+	],
+	"/(protected)/(professore)/studenti/[id]": [
+		"src/routes/(protected)/(professore)/+layout.server.js",
+		"src/routes/(protected)/+layout.server.js"
+	]
+}

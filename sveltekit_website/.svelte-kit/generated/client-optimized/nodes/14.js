@@ -1,0 +1,1 @@
+export { default as component } from "../../../../src/routes/(protected)/corsi/[id]/esercitazioni/[activityId]/+page.svelte";

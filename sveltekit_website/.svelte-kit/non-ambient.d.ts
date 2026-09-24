@@ -1,0 +1,101 @@
+
+// this file is generated — do not edit it
+
+
+declare module "svelte/elements" {
+	export interface HTMLAttributes<T> {
+		'data-sveltekit-keepfocus'?: true | '' | 'off' | undefined | null;
+		'data-sveltekit-noscroll'?: true | '' | 'off' | undefined | null;
+		'data-sveltekit-preload-code'?:
+			| true
+			| ''
+			| 'eager'
+			| 'viewport'
+			| 'hover'
+			| 'tap'
+			| 'off'
+			| undefined
+			| null;
+		'data-sveltekit-preload-data'?: true | '' | 'hover' | 'tap' | 'off' | undefined | null;
+		'data-sveltekit-reload'?: true | '' | 'off' | undefined | null;
+		'data-sveltekit-replacestate'?: true | '' | 'off' | undefined | null;
+	}
+}
+
+export {};
+
+
+declare module "$app/types" {
+	type MatcherParam<M> = M extends (param : string) => param is (infer U extends string) ? U : string;
+
+	export interface AppTypes {
+		RouteId(): "/(public)" | "/(protected)/(professore)" | "/(protected)" | "/" | "/api" | "/api/corsi" | "/api/corsi/import" | "/api/corsi/[id]" | "/api/esercitazioni" | "/api/esercitazioni/[id]" | "/api/esercitazioni/[id]/immagini" | "/api/esercitazioni/[id]/immagini/[imageId]" | "/api/membri" | "/api/membri/[id]" | "/api/risultati" | "/api/risultati/[id]" | "/api/sessioni-correzione" | "/api/sessioni-correzione/[id]" | "/api/sessioni-correzione/[id]/job" | "/api/tentativi-correzione" | "/api/tentativi-correzione/[id]" | "/api/utenti" | "/api/utenti/[id]" | "/auth" | "/auth/verifica-password" | "/(protected)/corsi" | "/(protected)/corsi/aggiungi" | "/(protected)/corsi/[id]" | "/(protected)/corsi/[id]/esercitazioni" | "/(protected)/corsi/[id]/esercitazioni/aggiungi" | "/(protected)/corsi/[id]/esercitazioni/[activityId]" | "/(protected)/corsi/[id]/esercitazioni/[activityId]/correzione" | "/(protected)/corsi/[id]/esercitazioni/[activityId]/modifica" | "/(protected)/corsi/[id]/modifica" | "/(protected)/corsi/[id]/statistiche" | "/(public)/login" | "/(public)/password-dimenticata" | "/(protected)/profilo" | "/(protected)/(professore)/studenti" | "/(protected)/(professore)/studenti/aggiungi" | "/(protected)/(professore)/studenti/[id]";
+		RouteParams(): {
+			"/api/corsi/[id]": { id: string };
+			"/api/esercitazioni/[id]": { id: string };
+			"/api/esercitazioni/[id]/immagini": { id: string };
+			"/api/esercitazioni/[id]/immagini/[imageId]": { id: string; imageId: string };
+			"/api/membri/[id]": { id: string };
+			"/api/risultati/[id]": { id: string };
+			"/api/sessioni-correzione/[id]": { id: string };
+			"/api/sessioni-correzione/[id]/job": { id: string };
+			"/api/tentativi-correzione/[id]": { id: string };
+			"/api/utenti/[id]": { id: string };
+			"/(protected)/corsi/[id]": { id: string };
+			"/(protected)/corsi/[id]/esercitazioni": { id: string };
+			"/(protected)/corsi/[id]/esercitazioni/aggiungi": { id: string };
+			"/(protected)/corsi/[id]/esercitazioni/[activityId]": { id: string; activityId: string };
+			"/(protected)/corsi/[id]/esercitazioni/[activityId]/correzione": { id: string; activityId: string };
+			"/(protected)/corsi/[id]/esercitazioni/[activityId]/modifica": { id: string; activityId: string };
+			"/(protected)/corsi/[id]/modifica": { id: string };
+			"/(protected)/corsi/[id]/statistiche": { id: string };
+			"/(protected)/(professore)/studenti/[id]": { id: string }
+		};
+		LayoutParams(): {
+			"/(public)": Record<string, never>;
+			"/(protected)/(professore)": { id?: string | undefined };
+			"/(protected)": { id?: string | undefined; activityId?: string | undefined };
+			"/": { id?: string | undefined; imageId?: string | undefined; activityId?: string | undefined };
+			"/api": { id?: string | undefined; imageId?: string | undefined };
+			"/api/corsi": { id?: string | undefined };
+			"/api/corsi/import": Record<string, never>;
+			"/api/corsi/[id]": { id: string };
+			"/api/esercitazioni": { id?: string | undefined; imageId?: string | undefined };
+			"/api/esercitazioni/[id]": { id: string; imageId?: string | undefined };
+			"/api/esercitazioni/[id]/immagini": { id: string; imageId?: string | undefined };
+			"/api/esercitazioni/[id]/immagini/[imageId]": { id: string; imageId: string };
+			"/api/membri": { id?: string | undefined };
+			"/api/membri/[id]": { id: string };
+			"/api/risultati": { id?: string | undefined };
+			"/api/risultati/[id]": { id: string };
+			"/api/sessioni-correzione": { id?: string | undefined };
+			"/api/sessioni-correzione/[id]": { id: string };
+			"/api/sessioni-correzione/[id]/job": { id: string };
+			"/api/tentativi-correzione": { id?: string | undefined };
+			"/api/tentativi-correzione/[id]": { id: string };
+			"/api/utenti": { id?: string | undefined };
+			"/api/utenti/[id]": { id: string };
+			"/auth": Record<string, never>;
+			"/auth/verifica-password": Record<string, never>;
+			"/(protected)/corsi": { id?: string | undefined; activityId?: string | undefined };
+			"/(protected)/corsi/aggiungi": Record<string, never>;
+			"/(protected)/corsi/[id]": { id: string; activityId?: string | undefined };
+			"/(protected)/corsi/[id]/esercitazioni": { id: string; activityId?: string | undefined };
+			"/(protected)/corsi/[id]/esercitazioni/aggiungi": { id: string };
+			"/(protected)/corsi/[id]/esercitazioni/[activityId]": { id: string; activityId: string };
+			"/(protected)/corsi/[id]/esercitazioni/[activityId]/correzione": { id: string; activityId: string };
+			"/(protected)/corsi/[id]/esercitazioni/[activityId]/modifica": { id: string; activityId: string };
+			"/(protected)/corsi/[id]/modifica": { id: string };
+			"/(protected)/corsi/[id]/statistiche": { id: string };
+			"/(public)/login": Record<string, never>;
+			"/(public)/password-dimenticata": Record<string, never>;
+			"/(protected)/profilo": Record<string, never>;
+			"/(protected)/(professore)/studenti": { id?: string | undefined };
+			"/(protected)/(professore)/studenti/aggiungi": Record<string, never>;
+			"/(protected)/(professore)/studenti/[id]": { id: string }
+		};
+		Pathname(): "/" | "/api/corsi" | "/api/corsi/import" | `/api/corsi/${string}` & {} | "/api/esercitazioni" | `/api/esercitazioni/${string}` & {} | `/api/esercitazioni/${string}/immagini` & {} | `/api/esercitazioni/${string}/immagini/${string}` & {} | "/api/membri" | `/api/membri/${string}` & {} | "/api/risultati" | `/api/risultati/${string}` & {} | "/api/sessioni-correzione" | `/api/sessioni-correzione/${string}` & {} | `/api/sessioni-correzione/${string}/job` & {} | "/api/tentativi-correzione" | `/api/tentativi-correzione/${string}` & {} | "/api/utenti" | `/api/utenti/${string}` & {} | "/auth/verifica-password" | "/corsi" | "/corsi/aggiungi" | `/corsi/${string}` & {} | `/corsi/${string}/esercitazioni` & {} | `/corsi/${string}/esercitazioni/aggiungi` & {} | `/corsi/${string}/esercitazioni/${string}` & {} | `/corsi/${string}/esercitazioni/${string}/correzione` & {} | `/corsi/${string}/esercitazioni/${string}/modifica` & {} | `/corsi/${string}/modifica` & {} | `/corsi/${string}/statistiche` & {} | "/login" | "/password-dimenticata" | "/profilo" | "/studenti" | "/studenti/aggiungi" | `/studenti/${string}` & {};
+		ResolvedPathname(): `${"" | `/${string}`}${ReturnType<AppTypes['Pathname']>}`;
+		Asset(): "/images/favicon.ico" | "/images/polito_logo_desktop.svg" | "/images/polito_logo_desktop_bianco.png" | "/robots.txt" | string & {};
+	}
+}

@@ -1,0 +1,46 @@
+{
+	"name": "thesis-project",
+	"private": true,
+	"version": "0.0.1",
+	"type": "module",
+	"scripts": {
+		"dev": "vite dev",
+		"build": "vite build",
+		"db": "drizzle-kit studio --verbose",
+		"db:seed-initial-users": "node scripts/seed-initial-users.mjs",
+		"test": "vitest run tests/unit",
+		"test:integration": "vitest run tests/integration",
+		"check": "svelte-kit sync && svelte-check --tsconfig ./jsconfig.json",
+		"preview": "vite preview",
+		"prepare": "svelte-kit sync || echo ''"
+	},
+	"devDependencies": {
+		"@neoconfetti/svelte": "^2.2.1",
+		"@sveltejs/adapter-auto": "^7.0.1",
+		"@sveltejs/kit": "^2.63.0",
+		"@sveltejs/vite-plugin-svelte": "^7.1.2",
+		"drizzle-kit": "^0.31.10",
+		"svelte": "^5.56.1",
+		"vite": "^8.0.16",
+		"vitest": "^5.0.1"
+	},
+	"dependencies": {
+		"@better-auth/passkey": "^1.7.5",
+		"@popperjs/core": "^2.11.8",
+		"@sentry/sveltekit": "^10.74.0",
+		"@sveltestrap/sveltestrap": "^7.1.0",
+		"better-auth": "^1.7.5",
+		"bootstrap": "^5.3.8",
+		"dotenv": "^17.4.2",
+		"drizzle-orm": "^0.45.2",
+		"fullcalendar": "^6.1.8",
+		"intl-messageformat": "^10.5.0",
+		"nodemailer": "^10.0.10",
+		"overlayscrollbars": "^2.16.0",
+		"postgres": "^3.4.9",
+		"read-excel-file": "^9.3.10",
+		"svelte-check": "^4.7.6",
+		"svelte-i18n": "^4.0.1",
+		"svelte-link": "^2.0.0"
+	}
+}

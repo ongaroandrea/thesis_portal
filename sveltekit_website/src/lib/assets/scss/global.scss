@@ -1,0 +1,11 @@
+/*
+ * Single global stylesheet entry point.
+ *
+ * Keep framework, theme and icon styles here so SvelteKit loads the same CSS
+ * for every route. Route-level imports can otherwise be prefetched and change
+ * the appearance of the page before navigation has even started.
+ */
+@import "config/saas/bootstrap";
+@import "icons";
+@import "config/saas/app";
+@import "config/saas/custom";

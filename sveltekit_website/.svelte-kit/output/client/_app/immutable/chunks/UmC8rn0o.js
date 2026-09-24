@@ -1,0 +1,1 @@
+function e(e){return String(e??``).trim().replace(/\s+/g,` `).toLocaleLowerCase(`it-IT`).replace(/(^|[\s'-])\p{L}/gu,e=>e.toLocaleUpperCase(`it-IT`))}function t(t){return e(t)}export{t};
