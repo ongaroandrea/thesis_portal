@@ -10,6 +10,7 @@
     import { invalidateAll } from "$app/navigation";
     import { authClient } from "$lib/client/auth/auth-client";
     import { formatNameForDisplay } from "$lib/utils/text.js";
+    import { _ } from 'svelte-i18n';
 
     const session = authClient.useSession();
     let isLoggingOut = false; // State variable
@@ -38,7 +39,7 @@
             <img
                 class="rounded-circle header-profile-user"
                 src="/images/favicon.ico"
-                alt="Profilo utente"
+				alt={$_('users.profile')}
             />
             <span class="text-start ms-xl-2">
                 <span
@@ -47,17 +48,17 @@
                     {#if $session.data}
                         {formatNameForDisplay($session.data.user.name)}
                     {:else}
-                        Loading...
+						{$_('common.loading')}
                     {/if}
                     <span
                         class="d-none d-xl-block ms-1 fs-12 user-name-sub-text"
                         >{#if $session.data}
-                            {#if $session.data.user.role === "sviluppatore"}
-                                Sviluppatore
-                            {:else if $session.data.user.role === "professore"}
-                                Professore
-                            {:else if $session.data.user.role === "studente"}
-                                Studente
+							{#if $session.data.user.role === "sviluppatore" || $session.data.user.role === 'developer'}
+								{$_('role.developer')}
+							{:else if $session.data.user.role === "professore" || $session.data.user.role === 'professor'}
+								{$_('role.professor')}
+							{:else if $session.data.user.role === "studente" || $session.data.user.role === 'student'}
+								{$_('role.student')}
                             {/if}
                         {/if}</span
                     >
@@ -68,17 +69,17 @@
     <DropdownMenu class="dropdown-menu-end" end>
         <!-- item-->
         <h6 class="dropdown-header">
-            Benvenuto {$session.data
+            {$_('profile.welcome', { values: { name: $session.data
                 ? formatNameForDisplay($session.data.user.name)
-                : "Loading..."}
+                : '…' } })}
         </h6>
         <DropdownItem href="/profilo"
             ><i class="mdi mdi-cog-outline text-muted fs-16 align-middle me-1"
-            ></i> <span class="align-middle">Impostazioni</span></DropdownItem
+            ></i> <span class="align-middle">{$_('profile.settings')}</span></DropdownItem
         >
         <DropdownItem href={null} on:click={logout}
             ><i class="mdi mdi-logout text-muted fs-16 align-middle me-1"></i>
-            <span class="align-middle" data-key="t-logout">Esci</span>
+            <span class="align-middle" data-key="t-logout">{$_('profile.logout')}</span>
             {#if isLoggingOut}
                 <Spinner size="sm" class="ms-2" />
             {/if}

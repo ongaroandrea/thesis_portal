@@ -1,5 +1,6 @@
-import { g as unsubscribe_stores, s as head } from "../../../../../../chunks/server.js";
+import { A as escape_html, g as unsubscribe_stores, m as store_get, s as head } from "../../../../../../chunks/server.js";
 import "../../../../../../chunks/index-server2.js";
+import { t as $format } from "../../../../../../chunks/runtime.js";
 import "../../../../../../chunks/stores.js";
 import { t as BreadCrumb } from "../../../../../../chunks/BreadCrumb.js";
 //#region src/routes/(protected)/(professore)/studenti/[id]/+page.svelte
@@ -8,13 +9,13 @@ function _page($$renderer, $$props) {
 		var $$store_subs;
 		head("100zey7", $$renderer, ($$renderer) => {
 			$$renderer.title(($$renderer) => {
-				$$renderer.push(`<title>Dettaglio utente</title>`);
+				$$renderer.push(`<title>${escape_html(store_get($$store_subs ??= {}, "$_", $format)("users.detail"))}</title>`);
 			});
 		});
 		$$renderer.push(`<div class="page-content"><div class="container-fluid py-4">`);
 		BreadCrumb($$renderer, {
-			title: "Dettaglio utente",
-			pageTitle: "Studenti",
+			title: store_get($$store_subs ??= {}, "$_", $format)("users.detail"),
+			pageTitle: store_get($$store_subs ??= {}, "$_", $format)("nav.students"),
 			pageHref: "/studenti"
 		});
 		$$renderer.push(`<!----> `);

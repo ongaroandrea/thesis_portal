@@ -1,0 +1,115 @@
+## ABSOLUTE EXCLUSIONS
+
+Do NOT evaluate or comment on any of the following under any circumstances:
+- Texture patterns, UV mapping, tiling
+- Normal maps interpreted as surface detail
+- Transmission or refraction appearance
+- Lighting direction or intensity
+- Shadow placement or density
+- Scene composition or camera settings
+- Geometry quality or topology
+- Artistic intent or rendering style
+
+---
+
+## INVALID EVIDENCE — NEVER USE
+
+- Lighting angle changes → do NOT interpret as roughness change
+- Specular brightness driven by light angle alone → do NOT interpret as roughness or metallic change
+- Brightness variation caused by illumination → do NOT interpret as metallic mismatch
+- Angle-dependent darkening alone → do NOT interpret as Fresnel mismatch without verifying the angular falloff curve
+- Texture pattern changes → do NOT interpret as roughness changes
+- Hidden shader graphs, renderer settings, or material node trees → do NOT infer these
+
+---
+
+## VALID EVIDENCE — USE ONLY THESE
+
+- Highlight spread width and sharpness (roughness indicator)
+- Reflection sharpness and clarity (roughness indicator)
+- Surface glossiness vs diffuse appearance (roughness indicator)
+- Colored vs achromatic reflections (metallic vs dielectric indicator)
+- Conductance behavior — whether reflections carry surface color (metallic indicator)
+- Highlight intensity relative to surface base color (specular indicator)
+- Fresnel angle-dependent brightness falloff curve (Fresnel/IOR indicator)
+- BRDF lobe shape and width as visible from surface highlights (BRDF indicator)
+- Opacity or alpha cutout boundary behavior (opacity indicator)
+- Transmission blur, caustic pattern, or interior visibility (transmission indicator)
+
+---
+
+## INTERNAL REASONING — DO NOT OUTPUT
+
+Before writing any output, silently reason through ALL of the following. This reasoning is for your internal use only — do NOT include it in the response.
+
+---
+
+### STEP 1 — ROUGHNESS BEHAVIOR
+
+Evaluate surface glossiness vs diffuse appearance:
+- Is the highlight spread wide (rough) or narrow (smooth)?
+- Is the reflection sharp and mirror-like or blurred and broad?
+- Does Image B show the same highlight spread and reflection sharpness as Image A?
+
+> Do NOT interpret texture pattern changes as roughness changes.
+> Do NOT interpret light angle changes as roughness changes.
+
+---
+
+### STEP 2 — METALLIC VS DIELECTRIC BEHAVIOR
+
+Evaluate whether reflections are colored (metallic) or achromatic/white (dielectric):
+- In Image A, do reflections carry the surface base color? (metallic) Or are they white/grey? (dielectric)
+- Does Image B preserve the same conductance behavior?
+- Has the tint of reflections or highlights changed?
+
+> Do NOT interpret illumination brightness changes as metallic mismatch.
+
+---
+
+### STEP 3 — SPECULAR AND FRESNEL RESPONSE
+
+Evaluate highlight intensity and angle-dependent brightness:
+- How intense is the specular highlight at normal incidence in Image A?
+- Is there a visible Fresnel brightening at grazing angles?
+- Does Image B show the same highlight intensity and the same angular falloff curve?
+- Has the Fresnel rim brightened, darkened, or disappeared?
+
+> Angle-dependent darkening alone is NOT Fresnel mismatch — verify the full angular falloff curve.
+
+---
+
+### STEP 4 — IOR EFFECT ON FRESNEL FALLOFF
+
+Evaluate the IOR-driven Fresnel curve shape:
+- Does the transition from dark (normal incidence) to bright (grazing angle) follow the same curve in Image B?
+- Is the falloff steeper (higher IOR) or shallower (lower IOR)?
+- Is this difference separable from lighting changes?
+
+---
+
+### STEP 5 — BRDF LOBE SHAPE
+
+Evaluate the visible shape and width of the specular lobe:
+- Is the highlight elongated, circular, or diffuse in Image A?
+- Does Image B show the same lobe shape?
+- Has the lobe become broader, narrower, or shifted?
+
+
+---
+
+### STEP 6 — OPACITY AND ALPHA
+
+If opacity or alpha cutout is visible:
+- Are cutout boundaries sharp or soft in Image A?
+- Does Image B reproduce the same boundary behavior?
+- Is any region fully transparent in A but opaque in B, or vice versa?
+
+---
+
+### STEP 7 — TRANSMISSION AND REFRACTION
+
+If transmission is visible (glass, liquid, translucent materials):
+- Is interior visibility, blur level, or caustic pattern consistent between A and B?
+- Has transmission IOR changed (distortion amount)?
+- Has transmission color or scattering changed?

@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field, field_validator
 
 class Settings(BaseModel):
     hmac_secret: str = Field(min_length=32)
+    development_mode: bool = False
     hmac_max_age_seconds: int = Field(default=300, ge=10, le=3600)
     queue_max_size: int = Field(default=100, ge=1, le=10_000)
     completed_job_limit: int = Field(default=500, ge=1, le=100_000)
@@ -26,6 +27,7 @@ class Settings(BaseModel):
 def get_settings() -> Settings:
     return Settings(
         hmac_secret=environ.get("HMAC_SECRET", ""),
+        development_mode=environ.get("DEVELOPMENT_MODE", "false"),
         hmac_max_age_seconds=int(environ.get("HMAC_MAX_AGE_SECONDS", "300")),
         queue_max_size=int(environ.get("QUEUE_MAX_SIZE", "100")),
         completed_job_limit=int(environ.get("COMPLETED_JOB_LIMIT", "500")),

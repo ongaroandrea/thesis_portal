@@ -1,25 +1,33 @@
-import { and, count, desc, eq, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray, sql } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { activity, activityReferenceImage, correctionAttempt, correctionSession, user } from '$lib/server/db/schema';
 import { ApiError, numericId, paginated, paginationParams, requiredText, requireUser } from './api.service.js';
 import { activityService } from './activity.service.js';
 import { courseService } from './course.service.js';
+import { CORRECTION_FOCUS_IDS } from '$lib/correction-focus.js';
 
-const SESSION_TRANSITIONS = {
-	OPEN: new Set(['PROCESSING', 'CLOSED', 'FAILED']),
-	PROCESSING: new Set(['ANSWERED', 'CLOSED', 'FAILED']),
-	ANSWERED: new Set(['CLOSED']),
-	CLOSED: new Set(),
-	FAILED: new Set()
-};
+export function derivedSessionStatus(attempts) {
+	const latest = [...attempts].filter((attempt) => !attempt.cancelledAt)
+		.sort((left, right) => left.attemptNumber - right.attemptNumber).at(-1);
+	if (!latest?.jobStatus) return 'OPEN';
+	if (['queued', 'processing'].includes(latest.jobStatus)) return 'PROCESSING';
+	if (latest.jobStatus === 'completed') return 'ANSWERED';
+	if (['failed', 'unavailable'].includes(latest.jobStatus)) return 'FAILED';
+	return 'OPEN';
+}
 
-function validateStatusTransition(currentStatus, nextStatus) {
-	if (!Object.hasOwn(SESSION_TRANSITIONS, nextStatus)) {
-		throw new ApiError(400, 'Invalid correction session status.', 'VALIDATION_ERROR');
-	}
-	if (currentStatus !== nextStatus && !SESSION_TRANSITIONS[currentStatus].has(nextStatus)) {
-		throw new ApiError(409, `Correction session cannot transition from ${currentStatus} to ${nextStatus}.`, 'INVALID_SESSION_STATUS_TRANSITION');
-	}
+async function attemptsBySessionIds(sessionIds) {
+	if (sessionIds.length === 0) return new Map();
+	const attempts = await db.select({
+		sessionId: correctionAttempt.sessionId,
+		attemptNumber: correctionAttempt.attemptNumber,
+		jobStatus: correctionAttempt.jobStatus,
+		cancelledAt: correctionAttempt.cancelledAt
+	}).from(correctionAttempt).where(inArray(correctionAttempt.sessionId, sessionIds))
+		.orderBy(asc(correctionAttempt.attemptNumber));
+	const grouped = new Map(sessionIds.map((sessionId) => [sessionId, []]));
+	for (const attempt of attempts) grouped.get(attempt.sessionId)?.push(attempt);
+	return grouped;
 }
 
 async function findSession(id) {
@@ -31,16 +39,15 @@ async function findSession(id) {
 		studentUserId: correctionSession.studentUserId,
 		anonymousAlias: correctionSession.anonymousAlias,
 		isAnonymous: correctionSession.isAnonymous,
-		status: correctionSession.status,
 		openedAt: correctionSession.openedAt,
-		closedAt: correctionSession.closedAt,
 		updatedAt: correctionSession.updatedAt,
 		courseId: activity.courseId,
 		maxCorrectionsPerStudent: activity.maxCorrectionsPerStudent
 	}).from(correctionSession).innerJoin(activity, eq(activity.id, correctionSession.activityId))
 		.where(eq(correctionSession.id, numericId(id, 'sessionId'))).limit(1);
 	if (!record) throw new ApiError(404, 'Correction session not found.', 'CORRECTION_SESSION_NOT_FOUND');
-	return record;
+	const attempts = await attemptsBySessionIds([record.id]);
+	return { ...record, status: derivedSessionStatus(attempts.get(record.id) ?? []) };
 }
 
 async function countStudentCorrections(executor, activityId, studentUserId) {
@@ -121,9 +128,7 @@ export const correctionSessionService = {
 			studentEmail: user.email,
 			anonymousAlias: correctionSession.anonymousAlias,
 			isAnonymous: correctionSession.isAnonymous,
-			status: correctionSession.status,
 			openedAt: correctionSession.openedAt,
-			closedAt: correctionSession.closedAt,
 			updatedAt: correctionSession.updatedAt,
 			referenceViewType: activityReferenceImage.viewType,
 			referenceCustomViewLabel: activityReferenceImage.customViewLabel
@@ -137,7 +142,12 @@ export const correctionSessionService = {
 				.limit(pagination.pageSize).offset(pagination.offset),
 			db.select({ total: count() }).from(correctionSession).where(condition)
 		]);
-		return paginated(records.map((record) => visibleSession({ ...record, courseId: activityRecord.courseId }, currentUser, manager)), total, pagination);
+		const attempts = await attemptsBySessionIds(records.map((record) => record.id));
+		return paginated(records.map((record) => visibleSession({
+			...record,
+			status: derivedSessionStatus(attempts.get(record.id) ?? []),
+			courseId: activityRecord.courseId
+		}, currentUser, manager)), total, pagination);
 	},
 
 	get: requireSessionAccess,
@@ -145,6 +155,9 @@ export const correctionSessionService = {
 	async create(input, currentUser) {
 		requireUser(currentUser);
 		const activityRecord = await activityService.requireActivityAccess(input.activityId, currentUser);
+		if (activityRecord.kind === 'EXAM') {
+			throw new ApiError(400, 'Exam activities use the dedicated submission workflow.', 'EXAM_USES_SUBMISSIONS');
+		}
 		const membership = currentUser.role === 'developer'
 			? true
 			: await courseService.isAuthorizedMember(activityRecord.courseId, currentUser.id);
@@ -158,8 +171,14 @@ export const correctionSessionService = {
 			throw new ApiError(400, 'The selected point of view is not available for this activity.', 'INVALID_REFERENCE_IMAGE');
 		}
 		const analysisFocus = requiredText(input.analysisFocus, 'analysisFocus', 100);
-		if (!['Illuminazione', 'Camera', 'Materiali', 'Texture', 'Qualità generale'].includes(analysisFocus)) {
+		if (!CORRECTION_FOCUS_IDS.has(analysisFocus)) {
 			throw new ApiError(400, 'Invalid analysis type.', 'VALIDATION_ERROR');
+		}
+		const allowedFocuses = Array.isArray(activityRecord.allowedCorrectionFocuses)
+			? activityRecord.allowedCorrectionFocuses
+			: [...CORRECTION_FOCUS_IDS];
+		if (!allowedFocuses.includes(analysisFocus)) {
+			throw new ApiError(400, 'This analysis topic is not enabled for the activity.', 'CORRECTION_FOCUS_NOT_ALLOWED');
 		}
 		const isAnonymous = input.isAnonymous === true;
 		const studentUserId = numericId(currentUser.id, 'userId');
@@ -171,10 +190,9 @@ export const correctionSessionService = {
 				analysisFocus,
 				studentUserId,
 				isAnonymous,
-				anonymousAlias: isAnonymous ? 'Anonimizzato' : null,
-				status: 'OPEN'
+				anonymousAlias: isAnonymous ? 'Anonimizzato' : null
 			}).returning();
-			return created;
+			return { ...created, status: 'OPEN' };
 		});
 	},
 
@@ -185,29 +203,6 @@ export const correctionSessionService = {
 		}
 		await assertCorrectionAvailable(db, record.activityId, record.studentUserId, record.maxCorrectionsPerStudent);
 		return record;
-	},
-
-	async update(id, input, currentUser) {
-		requireUser(currentUser);
-		const record = await findSession(id);
-		const isOwner = record.studentUserId === numericId(currentUser.id, 'userId');
-		if (!isOwner && !(await isCourseManager(record.courseId, currentUser))) {
-			throw new ApiError(403, 'You cannot modify this correction session.', 'CORRECTION_SESSION_EDIT_DENIED');
-		}
-		validateStatusTransition(record.status, input.status);
-		const now = new Date();
-		const [updated] = await db.update(correctionSession).set({
-			status: input.status,
-			closedAt: input.status === 'CLOSED' ? (record.closedAt ?? now) : null,
-			updatedAt: now
-		}).where(and(
-			eq(correctionSession.id, record.id),
-			eq(correctionSession.status, record.status)
-		)).returning();
-		if (!updated) {
-			throw new ApiError(409, 'The correction session changed concurrently. Reload it and retry.', 'CONCURRENT_WRITE_CONFLICT');
-		}
-		return updated;
 	},
 
 	async remove(id, currentUser) {

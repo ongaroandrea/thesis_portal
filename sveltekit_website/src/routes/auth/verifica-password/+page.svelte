@@ -14,6 +14,7 @@
   } from "@sveltestrap/sveltestrap";
   import ParticlesAuth from '$lib/components/layouts/ParticlesAuth.svelte';
   import { authClient } from "$lib/client/auth/auth-client";
+  import { _ } from 'svelte-i18n';
 
   let password = "";
   let confirmPassword = "";
@@ -41,12 +42,12 @@
     if (/[0-9]/.test(password)) score++;
     if (/[^A-Za-z0-9]/.test(password)) score++;
     if (score <= 2) {
-      return { score, label: "Debole", color: "danger", hex: "#dc3545" };
+	  return { score, label: 'password.weak', color: "danger", hex: "#dc3545" };
     }
     if (score <= 4) {
-      return { score, label: "Discreta", color: "warning", hex: "#ffc107" };
+	  return { score, label: 'password.fair', color: "warning", hex: "#ffc107" };
     }
-    return { score, label: "Forte", color: "success", hex: "#198754" };
+	return { score, label: 'password.strong', color: "success", hex: "#198754" };
   })();
 
   async function handleReset() {
@@ -54,15 +55,15 @@
 
     // 2. Validation
     if (password !== confirmPassword) {
-      error = "Le password non corrispondono.";
+	  error = $_('password.mismatch');
       return;
     }
     if (password.length < 8) {
-      error = "La password deve essere di almeno 8 caratteri.";
+	  error = $_('password.minLengthError');
       return;
     }
     if (!token) {
-      error = "Token mancante o non valido. Richiedi un nuovo link.";
+	  error = $_('password.invalidToken');
       return;
     }
 
@@ -87,7 +88,7 @@
       }, 3000);
     } catch (err) {
       console.error("Reset error:", err);
-      error = err.message || "Si è verificato un errore. Riprova.";
+	  error = err.message || $_('common.unexpectedError');
     } finally {
       loading = false;
     }
@@ -95,7 +96,7 @@
 </script>
 
 <svelte:head>
-  <title>Reimposta password | Portale correzione automatica</title>
+  <title>{$_('password.reset')} | {$_('home.eyebrow')}</title>
 </svelte:head>
 
 <ParticlesAuth>
@@ -109,7 +110,7 @@
                 <img src="/images/polito_logo_desktop.svg" alt="Politecnico di Torino" height="76" />
               </Link>
             </div>
-            <p class="mt-3 fs-15 fw-medium">Portale correzione automatica <span class="alpha-label">Alpha</span></p>
+			<p class="mt-3 fs-15 fw-medium">{$_('home.eyebrow')} <span class="alpha-label">Alpha</span></p>
           </div>
         </Col>
       </Row>
@@ -119,23 +120,21 @@
           <Card class="mt-4">
             <CardBody class="p-4">
               <div class="text-center mt-2">
-                <h5 class="text-primary">Crea Nuova Password</h5>
-                <p class="text-muted">
-                  La tua nuova password deve essere diversa dalla precedente.
-                </p>
+				<h5 class="text-primary">{$_('password.createNew')}</h5>
+				<p class="text-muted">{$_('password.mustDiffer')}</p>
               </div>
 
               <div class="p-2">
                 {#if success}
                   <Alert color="success" class="text-center">
-                    <h5 class="message">Password Aggiornata!</h5>
-                    <p>Sarai reindirizzato al login in pochi secondi...</p>
+					<h5 class="message">{$_('password.updated')}</h5>
+					<p>{$_('password.redirecting')}</p>
                   </Alert>
                   <div class="mt-4 text-center">
                     <Button
                       color="primary"
                       class="w-100"
-                      on:click={() => goto("/login")}>Vai al Login ora</Button
+					  on:click={() => goto("/login")}>{$_('password.goLogin')}</Button
                     >
                   </div>
                 {:else}
@@ -148,7 +147,7 @@
 
                     <div class="mb-3">
                       <Label class="form-label" for="password"
-                        >Nuova Password</Label
+						>{$_('password.new')}</Label
                       >
                       <div class="input-group">
                         {#if showPassword}
@@ -156,7 +155,7 @@
                             type="text"
                             class="form-control"
                             id="password"
-                            placeholder="Inserisci nuova password"
+							placeholder={$_('password.newPlaceholder')}
                             bind:value={password}
                             autocomplete="new-password"
                             required
@@ -166,7 +165,7 @@
                             type="password"
                             class="form-control"
                             id="password"
-                            placeholder="Inserisci nuova password"
+							placeholder={$_('password.newPlaceholder')}
                             bind:value={password}
                             autocomplete="new-password"
                             required
@@ -176,7 +175,7 @@
                           type="button"
                           class="btn btn-outline-secondary"
                           on:click={() => (showPassword = !showPassword)}
-                          title={showPassword ? "Nascondi" : "Mostra"}
+						  title={$_(showPassword ? 'common.hide' : 'common.show')}
                         >
                           <i
 							class={showPassword
@@ -201,49 +200,49 @@
                           {/each}
                         </div>
                         <small class="text-{passwordStrength.color} fw-semibold"
-                          >{passwordStrength.label}</small
+						  >{$_(passwordStrength.label)}</small
                         >
                         <small class="text-muted ms-2"
-                          >{password.length} caratteri</small
+						  >{$_('password.characters', { values: { count: password.length } })}</small
                         >
                       </div>
                     {/if}
 
                     <div class="p-3 bg-light mb-3 rounded">
-                      <h5 class="fs-13">La tua password deve contenere:</h5>
+					  <h5 class="fs-13">{$_('password.requirements')}</h5>
                       <p
                         class="fs-12 mb-2"
                         class:valid={hasMinLength}
                         class:invalid={!hasMinLength}
                       >
-                        Almeno <b>8 caratteri</b>
+						{$_('password.minEight')}
                       </p>
                       <p
                         class="fs-12 mb-2"
                         class:valid={hasLower}
                         class:invalid={!hasLower}
                       >
-                        Almeno una lettera <b>minuscola</b> (a-z)
+						{$_('password.lowercase')}
                       </p>
                       <p
                         class="fs-12 mb-2"
                         class:valid={hasUpper}
                         class:invalid={!hasUpper}
                       >
-                        Almeno una lettera <b>maiuscola</b> (A-Z)
+						{$_('password.uppercase')}
                       </p>
                       <p
                         class="fs-12 mb-0"
                         class:valid={hasNumber}
                         class:invalid={!hasNumber}
                       >
-                        Almeno un <b>numero</b> (0-9)
+						{$_('password.number')}
                       </p>
                     </div>
 
                     <div class="mb-3">
                       <Label class="form-label" for="confirm-password"
-                        >Conferma Password</Label
+						>{$_('password.confirm')}</Label
                       >
                       <div class="input-group">
                         {#if showConfirmPassword}
@@ -251,7 +250,7 @@
                             type="text"
                             class="form-control"
                             id="confirm-password"
-                            placeholder="Conferma password"
+							placeholder={$_('password.confirmPlaceholder')}
                             bind:value={confirmPassword}
                             required
                           />
@@ -260,7 +259,7 @@
                             type="password"
                             class="form-control"
                             id="confirm-password"
-                            placeholder="Conferma password"
+							placeholder={$_('password.confirmPlaceholder')}
                             bind:value={confirmPassword}
                             required
                           />
@@ -270,7 +269,7 @@
                           class="btn btn-outline-secondary"
                           on:click={() =>
                             (showConfirmPassword = !showConfirmPassword)}
-                          title={showConfirmPassword ? "Nascondi" : "Mostra"}
+						  title={$_(showConfirmPassword ? 'common.hide' : 'common.show')}
                         >
                           <i
 							class={showConfirmPassword
@@ -281,7 +280,7 @@
                       </div>
                       {#if password !== "" && confirmPassword !== "" && password !== confirmPassword}
                         <div class="text-danger small mt-1">
-                          Le password non corrispondono
+						  {$_('password.mismatch')}
                         </div>
                       {/if}
                     </div>
@@ -294,9 +293,9 @@
                         disabled={loading}
                       >
                         {#if loading}
-                          Aggiornamento in corso...
+						  {$_('password.updating')}
                         {:else}
-                          Reimposta Password
+						  {$_('password.reset')}
                         {/if}
                       </Button>
                     </div>
@@ -308,12 +307,12 @@
 
           <div class="mt-4 text-center">
             <p class="mb-0">
-              Ricordi la password?
+			  {$_('password.remember')}
               <Link
                 href="/login"
                 class="fw-semibold text-primary text-decoration-underline"
               >
-                Torna al Login
+				{$_('auth.backToLogin')}
               </Link>
             </p>
           </div>

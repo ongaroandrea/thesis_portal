@@ -1,46 +1,46 @@
+<script>
+	import { _ } from 'svelte-i18n';
+	import LanguageSwitcher from '$lib/components/common/LanguageSwitcher.svelte';
+</script>
+
 <svelte:head>
-	<title>Portale correzione automatica</title>
+	<title>{$_('home.eyebrow')}</title>
 	<meta
 		name="description"
-		content="Portale in fase Alpha per sperimentare la correzione automatica delle attività didattiche."
+		content={$_('home.metaDescription')}
 	/>
 </svelte:head>
 
 <main class="home-page">
 	<header class="site-header container">
-		<a class="brand" href="/" aria-label="Portale correzione automatica — Home">
+		<a class="brand" href="/" aria-label={`${$_('home.eyebrow')} — Home`}>
 			<img src="/images/polito_logo_desktop.svg" alt="Politecnico di Torino" />
 		</a>
-		<a class="login-link" href="/login">Accedi</a>
+		<div class="header-actions">
+			<LanguageSwitcher />
+			<a class="login-link" href="/login">{$_('login')}</a>
+		</div>
 	</header>
 
 	<section class="hero container">
 		<div class="hero-copy">
-			<p class="eyebrow">Portale correzione automatica</p>
-			<h1>Più tempo per insegnare.<br /><span>Feedback più rapido.</span></h1>
-			<p class="intro">
-				Il progetto esplora come supportare docenti e studenti attraverso la correzione
-				automatica delle attività didattiche, rendendo la valutazione più tempestiva,
-				coerente e trasparente.
-			</p>
+			<p class="eyebrow">{$_('home.eyebrow')}</p>
+			<h1>{$_('home.title')}<br /><span>{$_('home.titleAccent')}</span></h1>
+			<p class="intro">{$_('home.intro')}</p>
 			<div class="actions">
 				<a class="primary-action" href="/login">
-					Accedi al portale <i class="ri-arrow-right-line" aria-hidden="true"></i>
+					{$_('home.action')} <i class="ri-arrow-right-line" aria-hidden="true"></i>
 				</a>
 			</div>
 		</div>
 
 		<div class="project-card">
-			<p class="card-kicker">Obiettivo del progetto</p>
-			<h2>Un processo di correzione più semplice e consapevole.</h2>
-			<p>
-				Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor
-				incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud
-				exercitation ullamco laboris.
-			</p>
+			<p class="card-kicker">{$_('home.goal')}</p>
+			<h2>{$_('home.cardTitle')}</h2>
+			<p>{$_('home.cardBody')}</p>
 			<div class="alpha-note">
 				<i class="ri-flask-line" aria-hidden="true"></i>
-				<div><strong>Progetto in fase Alpha</strong><span>Funzionalità e contenuti sono in evoluzione.</span></div>
+				<div><strong>{$_('home.alpha')}</strong><span>{$_('home.alphaNote')}</span></div>
 			</div>
 		</div>
 	</section>
@@ -67,6 +67,7 @@
 	}
 
 	.brand img { display: block; width: 150px; height: auto; }
+	.header-actions { display: flex; align-items: center; gap: 1rem; }
 
 	.login-link {
 		color: #00284b;

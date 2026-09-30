@@ -1,0 +1,146 @@
+## ABSOLUTE EXCLUSIONS
+
+Do NOT evaluate or comment on any of the following under any circumstances:
+- Roughness values or glossiness changes
+- Metallic vs dielectric behavior
+- Specular Fresnel curves or IOR
+- Lighting direction or light intensity
+- Shadow placement or density
+- HDRI or environment lighting
+- Exposure differences
+- Camera or geometry changes
+- Artistic intent or rendering style
+
+---
+
+## INVALID EVIDENCE — NEVER USE
+
+- Lighting changes alone → do NOT interpret as texture mismatch
+- Brightness variation caused by illumination → do NOT interpret as texture change
+- Perspective distortion → do NOT interpret as UV distortion
+- Compression artifacts, scaling artifacts, or resolution differences → do NOT interpret as texture errors
+- Specular highlights or reflections → do NOT interpret as texture pattern changes
+- Hidden shader graphs, UV node trees, or renderer settings → do NOT infer these
+
+---
+
+## VALID EVIDENCE — USE ONLY THESE
+
+- Texture pattern content, color, and visible detail (texture consistency)
+- Tiling frequency and repetition rhythm (tiling indicator)
+- UV stretching — elongated or squeezed pattern elements (UV distortion indicator)
+- UV seams — visible discontinuities in pattern continuity (UV seam indicator)
+- Texture scale relative to object size (scale indicator)
+- Texture rotation — pattern orientation angle (rotation indicator)
+- Texture offset — pattern shifted along U or V axis (offset indicator)
+- Surface microdetail and noise pattern density (microdetail indicator)
+- Transparency level and opacity boundary behavior (transmission indicator)
+- Refraction distortion through transparent surfaces (refraction indicator)
+- Normal/bump/displacement surface relief appearance — only as surface texture evidence, not lighting evidence
+
+---
+
+## INTERNAL REASONING — DO NOT OUTPUT
+
+Before writing any output, silently reason through ALL of the following. This reasoning is for your internal use only — do NOT include it in the response.
+
+---
+
+### STEP 1 — TEXTURE CONTENT CONSISTENCY
+
+Evaluate whether the same texture pattern and color content appears in both images:
+- Are the same visible markings, patterns, graphics, or color zones present in Image B?
+- Has any texture region been replaced, removed, or substantially altered?
+- Is the overall texture content recognizably the same?
+
+> Do NOT interpret lighting-driven brightness changes as texture color changes.
+
+---
+
+### STEP 2 — TEXTURE SCALE
+
+Evaluate whether the texture appears at the same scale relative to the object surface:
+- Do pattern elements appear the same size in Image B as in Image A?
+- Has the tiling frequency increased (smaller pattern) or decreased (larger pattern)?
+- Is the change uniform across the surface or localized?
+
+> Do NOT interpret perspective foreshortening as scale change.
+
+---
+
+### STEP 3 — TEXTURE ROTATION
+
+Evaluate whether the texture orientation has changed:
+- Do pattern elements or directional features point in the same direction in Image B?
+- Has the texture been rotated clockwise or counterclockwise?
+- Is the rotation uniform across the surface?
+
+---
+
+### STEP 4 — TEXTURE OFFSET (U AND V AXES)
+
+Evaluate whether the texture has been shifted along U or V:
+- Has the pattern slid horizontally (U offset) relative to Image A?
+- Has the pattern slid vertically (V offset) relative to Image A?
+- Is the shift uniform or does it vary across the surface?
+
+> Do NOT interpret object movement or camera change as texture offset.
+
+---
+
+### STEP 5 — UV DISTORTION AND SEAMS
+
+Evaluate UV mapping quality:
+- Are pattern elements stretched or squeezed in any region?
+- Are there visible seam discontinuities where pattern continuity breaks?
+- Does stretching appear in regions of high surface curvature?
+- Has distortion increased or decreased compared to Image A?
+
+> Do NOT interpret perspective distortion as UV distortion.
+
+---
+
+### STEP 6 — TILING AND REPETITION
+
+Evaluate tiling behavior:
+- Does the pattern repeat at the same frequency?
+- Has tiling density increased or decreased?
+- Are repetition boundaries more or less visible than in Image A?
+
+---
+
+### STEP 7 — SURFACE MICRODETAIL AND NOISE
+
+Evaluate surface microdetail density and noise patterns:
+- Is the same level of fine surface grain, noise, or micro-texture visible?
+- Has microdetail become stronger, weaker, or disappeared?
+- Is this change uniform or localized?
+
+> Do NOT interpret specular highlight variation as microdetail change.
+
+Estimate: consistent / microdetail_stronger / microdetail_weaker / microdetail_missing / indeterminate.
+
+---
+
+### STEP 8 — NORMAL / BUMP / DISPLACEMENT APPEARANCE
+
+Evaluate surface relief as texture evidence only:
+- Does the surface show the same relief bump depth and distribution?
+- Has the apparent bump height increased or decreased?
+- Are displacement features present in the same locations?
+
+> Evaluate relief only as surface texture evidence. Do NOT evaluate as lighting evidence.
+
+---
+
+### STEP 9 — TRANSMISSION AND REFRACTION
+
+If transmission or refraction is observable:
+- Is the transparency level the same?
+- Is interior visibility or see-through clarity consistent?
+- Has refraction distortion amount changed?
+- Are opacity boundaries sharp or soft in the same way?
+
+If not observable, mark as `not_detectable` and skip.
+
+---

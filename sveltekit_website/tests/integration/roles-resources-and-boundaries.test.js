@@ -86,26 +86,26 @@ beforeAll(async () => {
 	`;
 	const [session] = await setupSql`
 		insert into correction_session
-			(activity_id, reference_image_id, analysis_focus, student_user_id, status)
-		values (${activityId.Available}, ${image.id}, 'Illuminazione', ${userId['student-owner@test.polito.it']}, 'OPEN')
+			(activity_id, reference_image_id, analysis_focus, student_user_id)
+		values (${activityId.Available}, ${image.id}, 'LIGHT', ${userId['student-owner@test.polito.it']})
 		returning id
 	`;
 	const [attempt] = await setupSql`
 		insert into correction_attempt
 			(session_id, attempt_number, image_name, focus, view_type, view_label, reference_image_id, job_status)
-		values (${session.id}, 1, 'student.png', 'Illuminazione', 'FRONT', 'Front', ${image.id}, 'queued')
+		values (${session.id}, 1, 'student.png', 'LIGHT', 'FRONT', 'Front', ${image.id}, 'queued')
 		returning id
 	`;
 	const [peerSession] = await setupSql`
 		insert into correction_session
-			(activity_id, reference_image_id, analysis_focus, student_user_id, status)
-		values (${activityId.Available}, ${image.id}, 'Camera', ${userId['student-peer@test.polito.it']}, 'OPEN')
+			(activity_id, reference_image_id, analysis_focus, student_user_id)
+		values (${activityId.Available}, ${image.id}, 'CAMERA', ${userId['student-peer@test.polito.it']})
 		returning id
 	`;
 	const [peerAttempt] = await setupSql`
 		insert into correction_attempt
 			(session_id, attempt_number, image_name, focus, view_type, view_label, reference_image_id, job_status)
-		values (${peerSession.id}, 1, 'peer.png', 'Camera', 'FRONT', 'Front', ${image.id}, 'queued')
+		values (${peerSession.id}, 1, 'peer.png', 'CAMERA', 'FRONT', 'Front', ${image.id}, 'queued')
 		returning id
 	`;
 	const results = await setupSql`
@@ -244,11 +244,6 @@ describe('role/resource authorization matrix', () => {
 		await expect(services.image.update(ids.activityId.Available, ids.image, imageValues, professor)).resolves.toBeTruthy();
 		await expectDenied(() => services.image.update(ids.activityId.Available, ids.image, imageValues, owner), 'COURSE_MANAGEMENT_DENIED');
 
-		await expect(services.session.update(ids.session, { status: 'OPEN' }, dev)).resolves.toBeTruthy();
-		await expect(services.session.update(ids.session, { status: 'OPEN' }, professor)).resolves.toBeTruthy();
-		await expect(services.session.update(ids.session, { status: 'OPEN' }, owner)).resolves.toBeTruthy();
-		await expectDenied(() => services.session.update(ids.session, { status: 'OPEN' }, peer), 'CORRECTION_SESSION_EDIT_DENIED');
-
 		await expect(services.attempt.update(ids.attempt, { jobStatus: 'queued' }, dev)).resolves.toBeTruthy();
 		await expect(services.attempt.update(ids.attempt, { jobStatus: 'queued' }, professor)).resolves.toBeTruthy();
 		await expect(services.attempt.update(ids.attempt, { jobStatus: 'queued' }, owner)).resolves.toBeTruthy();
@@ -367,29 +362,14 @@ describe('activity availability boundaries', () => {
 	});
 });
 
-describe('correction-session state machine', () => {
-	const allowed = new Set([
-		'OPEN:OPEN', 'OPEN:PROCESSING', 'OPEN:CLOSED', 'OPEN:FAILED',
-		'PROCESSING:PROCESSING', 'PROCESSING:ANSWERED', 'PROCESSING:CLOSED', 'PROCESSING:FAILED',
-		'ANSWERED:ANSWERED', 'ANSWERED:CLOSED',
-		'CLOSED:CLOSED',
-		'FAILED:FAILED'
-	]);
-	const statuses = ['OPEN', 'PROCESSING', 'ANSWERED', 'CLOSED', 'FAILED'];
-
-	it.each(statuses.flatMap((from) => statuses.map((to) => [from, to])))('%s -> %s follows the transition table', async (from, to) => {
-		await setupSql`
-			update correction_session
-			set status = ${from}, closed_at = ${from === 'CLOSED' ? fixedNow : null}
-			where id = ${ids.session}
-		`;
+describe('correction-session derived status', () => {
+	it('derives status from the latest non-cancelled attempt', async () => {
 		const owner = actor(ids.userId['student-owner@test.polito.it'], 'student');
-		const operation = services.session.update(ids.session, { status: to }, owner);
-		if (allowed.has(`${from}:${to}`)) {
-			await expect(operation).resolves.toMatchObject({ status: to });
-		} else {
-			await expect(operation).rejects.toMatchObject({ status: 409, code: 'INVALID_SESSION_STATUS_TRANSITION' });
-		}
+		await expect(services.session.get(ids.session, owner)).resolves.toMatchObject({ status: 'PROCESSING' });
+		await setupSql`update correction_attempt set job_status = 'completed' where id = ${ids.attempt}`;
+		await expect(services.session.get(ids.session, owner)).resolves.toMatchObject({ status: 'ANSWERED' });
+		await setupSql`update correction_attempt set job_status = 'failed' where id = ${ids.attempt}`;
+		await expect(services.session.get(ids.session, owner)).resolves.toMatchObject({ status: 'FAILED' });
 	});
 });
 

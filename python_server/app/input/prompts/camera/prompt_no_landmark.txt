@@ -1,0 +1,205 @@
+## ABSOLUTE EXCLUSIONS
+
+Analyze only camera and framing. Never report lighting, shadows, materials,
+textures, render quality, object changes, geometry changes, or artistic quality.
+Perspective differences are not geometry deformation.
+
+This prompt is intended for scenes with a plain or featureless background. Base
+the comparison on the visible subject: its silhouette, stable internal features,
+recognizable edges, face proportions, overlaps, apparent scale, and position
+relative to the image center and frame boundaries. Do not require background
+detail, a horizon, or multiple scene objects.
+
+## DIRECTION CONTRACT — READ FIRST
+
+Every operation describes the physical camera/lens change that transforms
+Image A into Image B. It does NOT describe how to correct Image B back to
+Image A, and it does NOT describe the direction in which the subject moves on
+the screen.
+
+For a stationary subject, camera motion and apparent image motion are opposite:
+
+- camera looks right -> the subject moves left in Image B
+- camera looks left -> the subject moves right in Image B
+- camera trucks right -> the subject moves left in Image B
+- camera trucks left -> the subject moves right in Image B
+- camera looks up -> the subject moves down in Image B
+- camera looks down -> the subject moves up in Image B
+- camera moves up -> the subject moves down; camera moves down produces the
+  opposite result
+- camera moves closer or narrows the FOV -> the subject expands away from the
+  principal point
+- camera moves farther or widens the FOV -> the subject contracts toward the
+  principal point
+
+Infer the physical A-to-B camera operation first, then emit its label. Never
+name an operation from screen-space motion alone.
+
+## PRE-ANALYSIS REGISTRATION
+
+Before classifying anything, align the two images conceptually using the same
+stable parts of the subject. Compare:
+
+- the subject bounding box, center, width, and height
+- two or more recognizable points on different parts of the subject
+- the outer contour and any straight or curved edges
+- visible face proportions and top-versus-side visibility
+- internal overlap, self-occlusion, and newly revealed or hidden regions
+- each measured point's direction and distance from the image center
+
+Ignore changes caused only by lighting, reflections, material appearance, or
+other non-camera effects. If the subject itself changes pose or geometry, do
+not reinterpret that change as camera motion.
+
+Use these invariants:
+
+- Translation changes viewpoint and may alter self-occlusion, relative feature
+  spacing, and perspective across the subject.
+- Rotation changes viewing direction and the proportions or directions of
+  visible faces and edges.
+- FOV changes image magnification radially about the principal point without
+  changing viewpoint, face visibility, or self-occlusion.
+- A pure crop or uniform frame shift changes composition but does not by itself
+  identify a physical camera parameter.
+
+## PARAMETER TESTS
+
+### 1. YAW
+
+Positive evidence:
+- left-versus-right face proportions change
+- the directions or convergence of subject edges change consistently
+- a side becomes more or less visible as expected from a turn in place
+- the change is rotational rather than a uniform horizontal displacement
+
+Do not infer yaw from subject recentering or unequal side margins alone.
+
+### 2. PITCH
+
+Positive evidence:
+- top-versus-underside visibility changes consistently
+- vertical face proportions or the convergence of subject edges change
+- upper and lower subject features move in a pattern consistent with a turn in
+  place rather than a uniform vertical displacement
+
+Do not infer pitch from a vertical frame shift alone.
+
+### 3. ROLL
+
+Positive evidence:
+- stable subject axes or edges acquire one consistent angular rotation
+- several non-parallel parts of the subject rotate by the same image-plane
+  angle
+
+Do not infer roll from one locally curved or slanted edge.
+
+### 4. TRUCK
+
+Positive evidence:
+- horizontal viewpoint change alters self-occlusion or relative spacing across
+  the subject while its edge directions remain broadly consistent
+- protruding and recessed parts shift by different horizontal amounts
+- one side is revealed through lateral parallax rather than a turn in place
+
+Do not infer truck from a uniform horizontal shift, subject recentering, or
+margin change alone.
+
+### 5. DOLLY
+
+Positive evidence:
+- camera distance changes produce perspective change across the subject
+- protruding and recessed parts change scale or separation by different
+  factors
+- self-occlusion or the relative size of near and far subject parts changes
+
+Subject size change alone is not dolly evidence.
+
+### 6. PEDESTAL
+
+Positive evidence:
+- vertical viewpoint change alters self-occlusion or relative spacing between
+  upper and lower parts while edge directions remain broadly consistent
+- top or underside regions are revealed through vertical parallax rather than
+  a turn in place
+
+Do not infer pedestal from a uniform vertical shift or margin change alone.
+
+### 7. FOV
+
+Positive evidence:
+- the subject contour and its internal features share approximately one radial
+  scale factor about the same principal point
+- face proportions, self-occlusion, and visible regions remain unchanged
+- corresponding points move toward or away from the image center in proportion
+  to their original radius
+
+Do not use a scale change with altered perspective or self-occlusion as FOV
+evidence.
+
+## MANDATORY PAIRWISE GATES
+
+### YAW VS TRUCK
+
+1. If face proportions or edge directions change as a rotation signature and
+   lateral parallax is absent, choose yaw and set truck to none.
+2. If edge directions remain stable while self-occlusion or relative feature
+   spacing changes laterally, choose truck and set yaw to none.
+3. If the only cue is uniform horizontal displacement, set both to none.
+4. Report both only when separate rotation and translation signatures remain
+   after accounting for each other.
+
+### PITCH VS PEDESTAL
+
+1. If top/underside visibility and edge directions change as a rotation
+   signature without vertical parallax, choose pitch and set pedestal to none.
+2. If edge directions remain stable while self-occlusion or relative feature
+   spacing changes vertically, choose pedestal and set pitch to none.
+3. If the only cue is uniform vertical displacement, set both to none.
+4. Report both only when separate rotation and translation signatures are
+   visible.
+
+### DOLLY VS FOV
+
+1. If self-occlusion, perspective, or scale ratios between protruding and
+   recessed subject parts change, choose dolly and set FOV to none unless an
+   additional uniform radial scale remains.
+2. If the entire subject shares one radial scale and its perspective and
+   visibility relationships stay unchanged, choose FOV and set dolly to none.
+3. If only overall subject size changes and the subject provides no usable
+   depth structure, set both to none because the cause is not identifiable.
+4. Report both only when a depth-dependent distance signature and a separate
+   common radial scale are independently visible.
+
+## PLAIN-BACKGROUND FALLBACK
+
+A featureless background is missing evidence, not evidence that a parameter is
+unchanged. Use the subject-only tests above. When the available subject does
+not contain enough visible geometry to separate two explanations, return none
+for the confounded parameters and state exactly which signature is unavailable.
+Do not invent a horizon, background point, floor edge, or second depth layer.
+
+## EVIDENCE AND CONFIDENCE RULES
+
+- Each non-none parameter needs a named visible subject feature and a
+  parameter-specific cue.
+- Describe evidence using concrete regions such as "left rim," "top face,"
+  "front tip," "rear opening," or "outer silhouette."
+- Do not reuse one generic cue as evidence for two confounded parameters.
+- High confidence requires two independent cues. Medium requires one clear cue.
+- When evidence is weak or merely compatible with a change, use none.
+- Use indeterminate only when a camera change is unmistakable but its direction
+  cannot be determined; do not use it for ordinary uncertainty.
+- The number of true changes may be zero, one, or several. Do not add a second
+  parameter merely because it can also explain the same pixels.
+
+## FINAL SELF-CONSISTENCY PASS
+
+For every non-none output, verify all three conditions:
+
+1. The evidence names a visible subject feature, contour, or edge.
+2. The evidence distinguishes this parameter from its confounder.
+3. The operation direction is the physical A-to-B camera/lens direction after
+   applying the direction contract, not the observed screen-motion direction.
+
+If any condition fails, change that parameter to none. For every none result,
+use magnitude none and briefly state which required signature was absent.

@@ -3,6 +3,7 @@
 	import { authClient } from '$lib/client/auth/auth-client.js';
 	import { apiListRequest, formatDate } from '$lib/client/api.js';
 	import PageHeader from '$lib/components/portal/PageHeader.svelte';
+	import { _ } from 'svelte-i18n';
 
 	const session = authClient.useSession();
 	let courses = [];
@@ -30,36 +31,36 @@
 	});
 </script>
 
-<svelte:head><title>Corsi</title></svelte:head>
+<svelte:head><title>{$_('nav.courses')}</title></svelte:head>
 
 <div class="page-content">
 	<div class="container-fluid py-4">
-		<PageHeader title="Corsi" subtitle="I corsi che puoi consultare o gestire" parentLabel="Portale" parentHref="/" />
+		<PageHeader title={$_('nav.courses')} subtitle={$_('courses.subtitle')} parentLabel={$_('common.portal')} parentHref="/" />
 
 		<div class="card border-0 shadow-sm mb-4">
 			<div class="card-body course-filters">
 				<div class="input-group search-box flex-grow-1">
 					<span class="input-group-text bg-transparent"><i class="ri-search-line"></i></span>
-					<input class="form-control" type="search" bind:value={search} placeholder="Cerca un corso..." />
+					<input class="form-control" type="search" bind:value={search} placeholder={$_('courses.search')} />
 				</div>
 				<select class="form-select status-filter" bind:value={statusFilter}>
-					<option value="all">Tutti gli stati</option>
-					<option value="active">Attivi</option>
-					<option value="inactive">Non attivi</option>
+					<option value="all">{$_('courses.allStatuses')}</option>
+					<option value="active">{$_('status.activePlural')}</option>
+					<option value="inactive">{$_('status.inactivePlural')}</option>
 				</select>
 				{#if canCreate}
-					<a class="btn btn-primary" href="/corsi/aggiungi"><i class="ri-add-line me-1"></i>Nuovo corso</a>
+					<a class="btn btn-primary" href="/corsi/aggiungi"><i class="ri-add-line me-1"></i>{$_('course.new')}</a>
 				{/if}
 			</div>
 		</div>
 
 		{#if errorMessage}<div class="alert alert-danger">{errorMessage}</div>{/if}
 		{#if loading}
-			<div class="text-center py-5"><div class="spinner-border text-primary"></div><p class="text-muted mt-3">Caricamento corsi...</p></div>
+			<div class="text-center py-5"><div class="spinner-border text-primary"></div><p class="text-muted mt-3">{$_('courses.loading')}</p></div>
 		{:else if filteredCourses.length === 0}
 			<div class="card border-0 shadow-sm"><div class="card-body text-center py-5">
 				<div class="empty-icon mx-auto mb-3"><i class="ri-book-open-line"></i></div>
-				<h5>Nessun corso trovato</h5><p class="text-muted mb-0">Non risultano corsi corrispondenti ai filtri selezionati.</p>
+				<h5>{$_('courses.empty')}</h5><p class="text-muted mb-0">{$_('courses.emptyHelp')}</p>
 			</div></div>
 		{:else}
 			<div class="row g-4">
@@ -69,17 +70,17 @@
 							<div class="course-accent" class:inactive={!course.isActive}></div>
 							<div class="card-body p-4">
 								<div class="d-flex justify-content-between gap-3 mb-3">
-									<span class="badge rounded-pill {course.isActive ? 'bg-success-subtle text-success' : 'bg-secondary-subtle text-secondary'}">{course.isActive ? 'Attivo' : 'Non attivo'}</span>
+									<span class="badge rounded-pill {course.isActive ? 'bg-success-subtle text-success' : 'bg-secondary-subtle text-secondary'}">{$_(course.isActive ? 'status.active' : 'status.inactive')}</span>
 								</div>
 								<h5 class="mb-2">{course.name}</h5>
-								<p class="text-muted course-description">{course.description || 'Nessuna descrizione disponibile.'}</p>
+								<p class="text-muted course-description">{course.description || $_('common.noDescription')}</p>
 								<div class="small text-muted d-grid gap-2 mb-4">
 									<span><i class="ri-calendar-event-line me-2 text-primary"></i>{formatDate(course.startsAt)}</span>
 									<span><i class="ri-calendar-check-line me-2 text-primary"></i>{formatDate(course.endsAt)}</span>
 								</div>
 								<div class="d-flex gap-2">
-									<a class="btn btn-primary flex-grow-1" href={`/corsi/${course.id}`}>Apri corso</a>
-									{#if course.canManage}<a class="btn btn-light" href={`/corsi/${course.id}/modifica`} aria-label="Modifica"><i class="ri-edit-line"></i></a>{/if}
+									<a class="btn btn-primary flex-grow-1" href={`/corsi/${course.id}`}>{$_('course.open')}</a>
+									{#if course.canManage}<a class="btn btn-light" href={`/corsi/${course.id}/modifica`} aria-label={$_('common.edit')}><i class="ri-edit-line"></i></a>{/if}
 								</div>
 							</div>
 						</div>

@@ -12,6 +12,7 @@
   import ParticlesAuth from '$lib/components/layouts/ParticlesAuth.svelte';
   import { authClient } from "$lib/client/auth/auth-client";
   import { PUBLIC_URL } from "$env/static/public";
+  import { _ } from 'svelte-i18n';
   let email = $state("");
   let loading = $state(false);
   let message = $state("");
@@ -34,14 +35,13 @@
     if (error) {
       errorMessage = error.message;
     } else {
-      message =
-        "Se l'email esiste, riceverai un link per reimpostare la password.";
+		message = $_('auth.resetEmailSent');
     }
   }
 </script>
 
 <svelte:head>
-  <title>Password dimenticata | Portale correzione automatica</title>
+  <title>{$_('auth.forgotPassword')} | {$_('home.eyebrow')}</title>
 </svelte:head>
 
 <ParticlesAuth>
@@ -55,7 +55,7 @@
                 <img src="/images/polito_logo_desktop.svg" alt="Politecnico di Torino" height="76" />
               </Link>
             </div>
-            <p class="mt-3 fs-15 fw-medium">Portale correzione automatica </p>
+			<p class="mt-3 fs-15 fw-medium">{$_('home.eyebrow')}</p>
           </div>
         </Col>
       </Row>
@@ -65,11 +65,8 @@
           <Card class="mt-4">
             <CardBody class="p-4">
               <div class="text-center mt-2">
-                <h5 class="text-primary">Password Dimenticata?</h5>
-                <p class="text-muted">
-                  Inserisci la tua email per ricevere istruzioni su come
-                  reimpostare la tua password.
-                </p>
+				<h5 class="text-primary">{$_('auth.forgotPassword')}</h5>
+				<p class="text-muted">{$_('auth.forgotHelp')}</p>
 
                 <lord-icon
                   src="//cdn.lordicon.com/rhvddzym.json"
@@ -84,8 +81,7 @@
                 class="border-0 alert-warning text-center mb-2 mx-2"
                 role="alert"
               >
-                Inserisci la tua email e riceverai le istruzioni per reimpostare
-                la password.
+				{$_('auth.forgotAlert')}
               </Alert>
               <div class="p-2">
                 <form onsubmit={(event) => { event.preventDefault(); sendResetLink(); }}>
@@ -95,7 +91,7 @@
                       type="email"
                       class="form-control"
                       id="email"
-                      placeholder="Inserisci la tua email"
+					  placeholder={$_('auth.emailPlaceholder')}
                       bind:value={email}
                     />
                   </div>
@@ -107,9 +103,9 @@
                       disabled={loading}
                     >
                       {#if loading}
-                        Inviando...
+						{$_('auth.sending')}
                       {:else}
-                        Invia richiesta di cambio password
+						{$_('auth.sendReset')}
                       {/if}
                     </button>
                   </div>
@@ -138,12 +134,12 @@
 
           <div class="mt-4 text-center">
             <p class="mb-0">
-              Clicca qui per tornare al login
+			  {$_('auth.backToLoginPrompt')}
               <Link
                 href="/login"
                 class="fw-semibold text-primary text-decoration-underline"
               >
-                Clicca qui
+				{$_('auth.clickHere')}
               </Link>
             </p>
           </div>

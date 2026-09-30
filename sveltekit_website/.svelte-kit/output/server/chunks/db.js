@@ -1,5 +1,6 @@
 import { t as __exportAll } from "./rolldown-runtime.js";
 import { t as private_env } from "./shared-server.js";
+import { sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import { bigint, boolean, index, integer, jsonb, numeric, pgEnum, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
@@ -13,7 +14,6 @@ var schema_exports = /* @__PURE__ */ __exportAll({
 	appUserRoleEnum: () => appUserRoleEnum,
 	correctionAttempt: () => correctionAttempt,
 	correctionSession: () => correctionSession,
-	correctionSessionStatusEnum: () => correctionSessionStatusEnum,
 	course: () => course,
 	courseImport: () => courseImport,
 	courseInvitation: () => courseInvitation,
@@ -21,6 +21,8 @@ var schema_exports = /* @__PURE__ */ __exportAll({
 	courseMemberRoleEnum: () => courseMemberRoleEnum,
 	courseMemberStatusEnum: () => courseMemberStatusEnum,
 	examResult: () => examResult,
+	examSubmission: () => examSubmission,
+	examSubmissionFile: () => examSubmissionFile,
 	imageViewTypeEnum: () => imageViewTypeEnum,
 	resultStatusEnum: () => resultStatusEnum,
 	session: () => session,
@@ -52,13 +54,6 @@ var imageViewTypeEnum = pgEnum("image_view_type", [
 	"TOP",
 	"ANGLED",
 	"OTHER"
-]);
-var correctionSessionStatusEnum = pgEnum("correction_session_status", [
-	"OPEN",
-	"PROCESSING",
-	"ANSWERED",
-	"CLOSED",
-	"FAILED"
 ]);
 var resultStatusEnum = pgEnum("result_status", [
 	"DRAFT",
@@ -170,6 +165,13 @@ var activity = pgTable("course_activity", {
 	objective: text("objective").notNull(),
 	durationMinutes: integer("duration_minutes"),
 	maxCorrectionsPerStudent: integer("max_corrections_per_student"),
+	allowedCorrectionFocuses: jsonb("allowed_correction_focuses").notNull().default([
+		"LIGHT",
+		"CAMERA",
+		"MATERIAL",
+		"TEXTURE",
+		"GENERAL"
+	]),
 	availableFrom: dateTime("available_from"),
 	availableUntil: dateTime("available_until"),
 	resultsReleasedAt: dateTime("results_released_at"),
@@ -198,9 +200,7 @@ var correctionSession = pgTable("correction_session", {
 	studentUserId: bigint("student_user_id", { mode: "number" }).references(() => user.id, { onDelete: "set null" }),
 	anonymousAlias: text("anonymous_alias"),
 	isAnonymous: boolean("is_anonymous").notNull().default(false),
-	status: correctionSessionStatusEnum("status").notNull().default("OPEN"),
 	openedAt: dateTime("opened_at").notNull().defaultNow(),
-	closedAt: dateTime("closed_at"),
 	updatedAt: dateTime("updated_at").notNull().defaultNow()
 }, (table) => [index("correction_session_activity_idx").on(table.activityId), index("correction_session_student_idx").on(table.studentUserId)]);
 var correctionAttempt = pgTable("correction_attempt", {
@@ -235,6 +235,30 @@ var correctionAttempt = pgTable("correction_attempt", {
 	index("correction_attempt_job_idx").on(table.jobId),
 	index("correction_attempt_status_idx").on(table.jobStatus)
 ]);
+var examSubmission = pgTable("exam_submission", {
+	id: identity("id"),
+	activityId: bigint("activity_id", { mode: "number" }).notNull().references(() => activity.id, { onDelete: "cascade" }),
+	studentUserId: bigint("student_user_id", { mode: "number" }).notNull().references(() => user.id, { onDelete: "cascade" }),
+	createdAt: dateTime("created_at").notNull().defaultNow(),
+	updatedAt: dateTime("updated_at").notNull().defaultNow()
+}, (table) => [uniqueIndex("exam_submission_activity_student_unique").on(table.activityId, table.studentUserId), index("exam_submission_activity_idx").on(table.activityId)]);
+var examSubmissionFile = pgTable("exam_submission_file", {
+	id: identity("id"),
+	submissionId: bigint("submission_id", { mode: "number" }).notNull().references(() => examSubmission.id, { onDelete: "cascade" }),
+	referenceImageId: bigint("reference_image_id", { mode: "number" }).notNull().references(() => activityReferenceImage.id),
+	revision: integer("revision").notNull(),
+	originalFilename: text("original_filename").notNull(),
+	mimeType: text("mime_type").notNull(),
+	storageKey: text("storage_key").notNull(),
+	isCurrent: boolean("is_current").notNull().default(true),
+	replacedAt: dateTime("replaced_at"),
+	removedAt: dateTime("removed_at"),
+	uploadedAt: dateTime("uploaded_at").notNull().defaultNow()
+}, (table) => [
+	uniqueIndex("exam_submission_file_revision_unique").on(table.submissionId, table.referenceImageId, table.revision),
+	uniqueIndex("exam_submission_file_current_view_uidx").on(table.submissionId, table.referenceImageId).where(sql`${table.isCurrent}`),
+	index("exam_submission_file_submission_idx").on(table.submissionId, table.uploadedAt)
+]);
 var examResult = pgTable("exam_result", {
 	id: identity("id"),
 	activityId: bigint("activity_id", { mode: "number" }).notNull().references(() => activity.id, { onDelete: "cascade" }),
@@ -257,4 +281,4 @@ console.log("Using postgres client for database connection");
 var client = postgres(private_env.DATABASE_URL, { prepare: false });
 var db = drizzle(client, { schema: schema_exports });
 //#endregion
-export { correctionSession as a, courseInvitation as c, schema_exports as d, session as f, correctionAttempt as i, courseMember as l, activity as n, course as o, user as p, activityReferenceImage as r, courseImport as s, db as t, examResult as u };
+export { correctionSession as a, courseInvitation as c, examSubmission as d, examSubmissionFile as f, user as h, correctionAttempt as i, courseMember as l, session as m, activity as n, course as o, schema_exports as p, activityReferenceImage as r, courseImport as s, db as t, examResult as u };

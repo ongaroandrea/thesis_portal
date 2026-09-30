@@ -1,0 +1,403 @@
+This document covers ONLY parameters relevant to the Material
+analysis prompt: roughness, metallic/dielectric behavior,
+specular, Fresnel/IOR, and BSDF type distinctions.
+
+Do NOT use this document to reason about texture patterns,
+UV mapping, lighting direction, or shadow behavior.
+
+================================================================
+SECTION 1 — PRINCIPLED BSDF (UNIVERSAL MATERIAL NODE)
+================================================================
+
+The Principled BSDF is the master material node in physically
+based rendering (Blender, Unreal, Unity, and most PBR pipelines).
+Almost all real-world surfaces can be described by combining
+its parameters. Every material analysis must start here.
+
+----------------------------------------------------------------
+1.1 ROUGHNESS
+----------------------------------------------------------------
+Physical meaning:
+    Specifies the microfacet roughness of the surface for both
+    diffuse and specular reflection. Roughness describes how
+    microscopically irregular the surface is at a scale smaller
+    than the pixel.
+
+Range: 0.0 (perfectly smooth) to 1.0 (fully rough/diffuse)
+
+Observable behavior at roughness = 0.0 (smooth):
+    - Mirror-sharp reflections
+    - Very narrow, intense specular highlight
+    - Clear, undistorted reflection of environment
+    - High contrast between lit and unlit areas
+
+Observable behavior at roughness = 1.0 (rough):
+    - No visible reflections
+    - Wide, soft, low-intensity highlight
+    - Diffuse, even appearance across surface
+    - Low contrast, matte look
+
+Observable behavior at intermediate roughness (0.3-0.7):
+    - Blurred reflections, visible but not sharp
+    - Broad highlight with moderate intensity
+    - Gradual falloff from highlight center
+
+HOW TO DISTINGUISH ROUGHNESS FROM LIGHTING:
+    Roughness affects highlight WIDTH and SHARPNESS.
+    Lighting affects highlight POSITION and INTENSITY.
+    - If the highlight is in the same position but wider -> roughness increased
+    - If the highlight moved but kept the same sharpness -> lighting changed
+    - If brightness changed uniformly across the surface -> lighting, not roughness
+
+HOW TO DISTINGUISH ROUGHNESS FROM TEXTURE:
+    Roughness is a uniform surface property, not a pattern.
+    - A rough surface has uniform matte appearance without visible pattern
+    - A texture pattern creates visible color or detail variation
+    - Do NOT interpret a missing texture pattern as increased roughness
+
+HOW TO DISTINGUISH ROUGHNESS FROM FRESNEL:
+    Roughness controls the SHARPNESS of the specular lobe.
+    Fresnel controls WHERE (at which angle) reflectance increases.
+    - Two surfaces can share the same roughness but differ in rim width (IOR)
+    - Two surfaces can share the same IOR but differ in highlight sharpness (roughness)
+
+----------------------------------------------------------------
+1.2 METALLIC
+----------------------------------------------------------------
+Physical meaning:
+    Controls whether the surface behaves as a metal (conductor)
+    or a non-metal (dielectric/insulator). In nature this is
+    binary: a surface is either metallic or not.
+
+Range: 0.0 (fully dielectric) to 1.0 (fully metallic)
+
+Observable behavior at metallic = 1.0 (conductor):
+    - Reflections are TINTED by the surface base color
+    - No diffuse component: the surface does not scatter light
+    - Very dark at normal incidence, very bright at grazing angles
+    - Gold reflects gold-colored highlights
+    - Copper reflects copper-tinted highlights
+    - Specular color equals the base color of the material
+
+Observable behavior at metallic = 0.0 (dielectric/insulator):
+    - Reflections are WHITE or ACHROMATIC regardless of base color
+    - Strong diffuse component: light scatters from subsurface
+    - Base color visible in diffuse areas
+    - Highlight color is white/neutral, not tinted
+    - Plastic, ceramic, wood, fabric all behave this way
+
+HOW TO DISTINGUISH METALLIC FROM LIGHTING:
+    Lighting changes affect both metals and dielectrics equally.
+    - If the highlight color matches the surface base color -> metallic
+    - If the highlight is white regardless of surface color -> dielectric
+    - Illumination intensity cannot shift a material from metallic to dielectric
+
+HOW TO DISTINGUISH METALLIC FROM ROUGHNESS:
+    - A rough metal still shows tinted reflections, just blurred
+    - A smooth dielectric shows sharp white/neutral reflections
+    - The COLOR of the reflection identifies metallic
+    - The SHARPNESS of the reflection identifies roughness
+
+HOW TO DISTINGUISH METALLIC FROM SPECULAR:
+    - Metallic surfaces have no diffuse component at all
+    - Dielectric surfaces with high specular still show diffuse base color
+    - If the surface is completely dark in shadowed regions -> likely metallic/Glossy
+    - If the surface shows base color in shadowed regions -> dielectric
+
+----------------------------------------------------------------
+1.3 SPECULAR
+----------------------------------------------------------------
+Physical meaning:
+    Controls the intensity of the specular reflection for
+    dielectric (non-metallic) surfaces at normal incidence.
+    It adjusts the F0 (reflectance at zero degrees) of the
+    Fresnel equation for dielectrics only.
+    Has no effect on metallic surfaces.
+
+Range: 0.0 (no specular) to 1.0 (full specular, ~8% reflectance)
+
+Observable behavior at specular = 0.0:
+    - No visible specular highlight on dielectric surface
+    - Pure diffuse, matte appearance even on smooth surfaces
+    - Fresnel rim also disappears or is very weak
+
+Observable behavior at specular = 1.0:
+    - Strong visible highlight at normal incidence
+    - Pronounced Fresnel brightening at grazing angles
+    - Typical for water, glass, polished plastic, ceramic
+
+HOW TO DISTINGUISH SPECULAR FROM ROUGHNESS:
+    - Specular controls highlight INTENSITY at normal incidence
+    - Roughness controls highlight SHARPNESS and WIDTH
+    - Low specular + low roughness = dim but narrow highlight
+    - High specular + high roughness = bright but very wide and soft highlight
+
+HOW TO DISTINGUISH SPECULAR FROM LIGHTING:
+    - Specular value affects highlight visibility independently of light position
+    - If highlight disappears when the light does not move -> specular reduced
+    - If highlight moves but keeps same intensity -> lighting direction changed
+
+----------------------------------------------------------------
+1.4 FRESNEL AND IOR
+----------------------------------------------------------------
+Physical meaning:
+    Fresnel describes the angle-dependent reflectance of any
+    surface. At normal incidence reflectance is low. At grazing
+    angles reflectance approaches 100% for all materials.
+    This is physically universal and automatic in PBR.
+
+    IOR (Index of Refraction) determines the SHAPE of the
+    Fresnel curve: how quickly reflectance increases from
+    normal to grazing angle.
+
+Common IOR values:
+    Water:      1.33
+    Glass:      1.45-1.52
+    Plastic:    1.46-1.55
+    Diamond:    2.42
+    Most non-metals: 1.3-1.8
+
+Observable Fresnel behavior (dielectrics):
+    - At normal incidence: surface shows base color, low reflectance
+    - At grazing angles: bright rim of reflected light appears
+    - Higher IOR -> Fresnel rim starts earlier, wider bright rim
+    - Lower IOR -> Fresnel rim starts later, narrower rim
+
+Observable behavior for metals:
+    - Metals have high reflectance even at normal incidence
+    - Fresnel still present but less dramatic
+    - Metal reflectance does not drop to near-zero at normal incidence
+
+HOW TO DISTINGUISH FRESNEL FROM LIGHTING:
+    Fresnel brightening follows the GEOMETRY of the surface.
+    Lighting creates a hotspot that follows the LIGHT POSITION.
+    - If bright region is at grazing angles and surface edges -> Fresnel
+    - If bright region tracks the light source reflection -> lighting
+
+HOW TO DISTINGUISH IOR FROM ROUGHNESS:
+    - IOR affects WHERE the Fresnel falloff starts (angle)
+    - Roughness affects HOW SHARP the specular lobe is
+    - If rim width changed but highlight sharpness unchanged -> IOR changed
+    - If highlight sharpness changed but rim width unchanged -> roughness changed
+
+----------------------------------------------------------------
+1.5 BASE COLOR
+----------------------------------------------------------------
+Physical meaning:
+    The albedo of the surface: diffuse color for dielectrics,
+    or reflection tint color for metals.
+
+Observable behavior:
+    - For dielectrics: visible in diffuse areas away from highlights
+    - For metals: visible as the tint of specular reflections
+    - Not affected by roughness or specular in its hue
+
+HOW TO DISTINGUISH BASE COLOR FROM LIGHTING:
+    - Illumination color shifts affect the whole scene uniformly
+    - Base color change affects only the specific surface
+    - If only one surface changed color while others are consistent
+      -> base color changed, not lighting
+
+----------------------------------------------------------------
+1.6 ALPHA / OPACITY
+----------------------------------------------------------------
+Physical meaning:
+    Controls how opaque or transparent the surface is, independent
+    of reflection or refraction. Alpha blends the surface with
+    whatever is behind it (background or another object) without
+    bending that background content.
+
+Range: 0.0 (fully transparent, invisible surface) to 1.0 (fully opaque)
+
+Observable behavior at alpha = 0.0 (transparent):
+    - Surface is invisible except for its specular highlight/Fresnel
+      rim, if present
+    - Background/object behind is fully visible, in its true
+      undistorted position
+    - No color tint added to what's seen through the surface
+
+Observable behavior at alpha = 1.0 (opaque):
+    - Surface fully blocks anything behind it
+    - Base color and shading are fully visible
+    - No background content bleeds through anywhere on the surface
+
+Observable behavior at intermediate alpha (0.3-0.7):
+    - Background is partially visible, blended with the surface's
+      own base color and shading
+    - Background position is unchanged (no bending), only its
+      visibility/blend strength changes
+
+HOW TO DISTINGUISH ALPHA FROM TRANSMISSION:
+    - Alpha reveals what's behind WITHOUT bending it: straight
+      blend, no refraction.
+    - Transmission reveals what's behind WITH IOR-driven bending
+      and can also blur/distort based on roughness.
+    - If background content lines up exactly where it should be
+      without the object -> alpha/opacity changed.
+    - If background content is shifted, warped, or displaced from
+      its true position -> transmission/IOR changed, not alpha.
+
+HOW TO DISTINGUISH ALPHA FROM LIGHTING:
+    - Lighting changes affect brightness of the visible surface and
+      background equally; it does not change how much of the
+      background bleeds through the object.
+    - If the background becomes more/less visible through the
+      object specifically, while overall scene brightness is
+      unchanged -> alpha changed.
+
+----------------------------------------------------------------
+1.7 TRANSMISSION
+----------------------------------------------------------------
+Physical meaning:
+    Controls how much light passes through the material rather
+    than bouncing off or being absorbed, driving glass-like,
+    liquid-like, or translucent behavior. Works together with IOR
+    (which bends the transmitted light) and Roughness (which blurs
+    it).
+
+Range: 0.0 (fully opaque, no light passes through) to 1.0 (fully
+    transmissive, glass-like)
+
+Observable behavior at transmission = 0.0:
+    - Surface behaves like a standard opaque dielectric
+    - No background visible through the object
+    - Only surface reflection and diffuse base color are visible
+
+Observable behavior at transmission = 1.0:
+    - Object becomes glass-like: background is visible through it,
+      bent according to IOR
+    - Diffuse base-color contribution mostly disappears; base color
+      instead tints the transmitted light
+    - Fresnel rim still visible at grazing angles
+
+HOW TO DISTINGUISH TRANSMISSION FROM ALPHA:
+    - See 1.6 above: transmission bends/displaces what's seen
+      through the surface; alpha does not.
+
+HOW TO DISTINGUISH TRANSMISSION FROM ROUGHNESS:
+    - Transmission controls HOW MUCH background is visible through
+      the object.
+    - Roughness (when combined with transmission) controls how
+      BLURRED that visible background is (frosted glass).
+    - If the background is visible but sharp -> high transmission,
+      low roughness.
+    - If the background is barely visible or heavily smeared ->
+      could be low transmission OR high roughness; check whether
+      background is present-but-blurred (roughness) or largely
+      absent (transmission reduced).
+
+HOW TO DISTINGUISH TRANSMISSION FROM IOR:
+    - Transmission controls the AMOUNT of background visible.
+    - IOR controls the POSITION/DISTORTION of that background.
+    - Amount of see-through content changed, position of visible
+      content is otherwise consistent -> transmission changed.
+    - Amount of see-through content is similar, but its position/
+      warp changed -> IOR changed.
+
+================================================================
+SECTION 2 — GLASS BSDF
+================================================================
+
+Physical meaning:
+    Simulates a perfect glass material combining transmission
+    (light passes through) and Fresnel reflection at the surface.
+    Uses a single IOR parameter to control both Fresnel reflectance
+    angle and refraction distortion amount.
+
+Key parameters:
+    IOR:        Controls Fresnel rim angle AND refraction bend amount
+    Roughness:  Blurs both reflection AND transmission (frosted glass)
+    Color:      Tints transmitted light (colored glass)
+
+Observable behavior:
+    - At normal incidence: see-through, low reflection
+    - At grazing angles: strongly reflective rim (Fresnel)
+    - Objects seen through glass appear distorted or shifted (refraction)
+    - Higher IOR -> more distortion, stronger Fresnel rim
+    - Higher roughness -> blurred transmission (frosted), blurred reflection
+
+HOW TO DISTINGUISH GLASS REFRACTION FROM ROUGHNESS:
+    - Refraction creates DISPLACEMENT of background objects (position shift)
+    - Roughness creates BLUR of background objects (smearing in place)
+    - Displacement without blur -> low roughness, significant IOR refraction
+    - Blur without displacement -> higher roughness, less distinct refraction
+
+HOW TO DISTINGUISH GLASS FROM LIGHTING:
+    - Background visible through glass is a MATERIAL property, not lighting
+    - If background content seen through surface changes -> IOR or transmission changed
+    - If only highlight brightness changes -> lighting changed
+
+HOW TO DISTINGUISH GLASS FROM METALLIC:
+    - Glass transmits light (see-through): metals do not
+    - Glass Fresnel rim is achromatic (white): metal reflections are tinted
+    - Glass shows background distortion: metals show only surface reflections
+
+================================================================
+SECTION 3 — GLOSSY BSDF
+================================================================
+
+Physical meaning:
+    Simulates purely reflective surfaces with no diffuse or
+    transmission component. Used for polished metals, mirrors,
+    and highly reflective coatings. All light interaction is
+    specular only.
+
+Key parameters:
+    Roughness:  Sharpness of reflection (0 = mirror, 1 = dull metal)
+    Color:      Tints the reflection (conductor color for metals)
+
+Observable behavior at roughness = 0.0:
+    - Perfect mirror: environment reflected with full clarity
+    - No diffuse component anywhere on surface
+    - Sharp edges in reflected environment
+
+Observable behavior at roughness = 0.5:
+    - Blurred reflections: environment recognizable but smeared
+    - No diffuse scattering: surface appears very dark in regions
+      with no reflection source
+
+Observable behavior at roughness = 1.0:
+    - Uniform dull metallic appearance
+    - No clear reflection visible
+    - Similar to rough diffuse but with tinted (metallic) response
+
+HOW TO DISTINGUISH GLOSSY FROM PRINCIPLED METALLIC:
+    - Glossy BSDF has NO diffuse component at any roughness
+    - Principled metallic at high roughness still scatters some energy
+    - In dark shadow areas: Glossy surfaces appear completely black
+    - Principled metallic shows some ambient response in shadow
+    - This difference is only visible in shadowed areas
+
+HOW TO DISTINGUISH GLOSSY FROM LIGHTING:
+    - Glossy reflections show actual environment content
+    - If reflected content changes but sharpness stays same
+      -> lighting or camera moved, not roughness change
+    - If sharpness changed but content is similar -> roughness changed
+
+HOW TO DISTINGUISH GLOSSY FROM GLASS:
+    - Glossy surfaces are opaque: no background visible through them
+    - Glass surfaces are transparent: background visible through surface
+    - Glossy shows only surface reflection
+    - Glass shows both reflection and transmission
+
+================================================================
+SECTION 4 — MATERIAL SIGNAL QUICK-REFERENCE TABLE
+================================================================
+
+Signal observed                             Most likely parameter
+------------------------------------------------------------------
+Highlight got wider and softer              Roughness increased
+Highlight got narrower and sharper          Roughness decreased
+Reflection tint matches surface color       Metallic = 1.0 (conductor)
+Reflection is white or achromatic           Metallic = 0.0 (dielectric)
+Bright rim at surface edges / grazing       Fresnel response (IOR driven)
+Rim width changed, not highlight position   IOR changed
+Highlight moved, sharpness unchanged        Lighting direction changed
+Highlight disappeared, light unchanged      Specular reduced
+Dark shadow areas completely black          Glossy BSDF (no diffuse bounce)
+See-through surface with distortion         Glass BSDF / transmission
+See-through surface, background undistorted Alpha/opacity reduced
+Amount of see-through content changed only  Transmission changed
+Position/warp of see-through content changed IOR changed
+Diffuse base color visible in shadow        Dielectric (non-metallic)
+No base color visible, only reflections     Metallic or Glossy BSDF

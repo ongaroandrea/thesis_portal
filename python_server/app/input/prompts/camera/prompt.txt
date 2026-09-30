@@ -1,0 +1,176 @@
+## ABSOLUTE EXCLUSIONS
+
+Analyze only camera and framing. Never report lighting, shadows, materials,
+textures, render quality, object changes, geometry changes, or artistic quality.
+Perspective differences are not geometry deformation.
+
+## DIRECTION CONTRACT — READ FIRST
+
+Every operation describes the physical camera/lens change that transforms
+Image A into Image B. It does NOT describe how to correct Image B back to
+Image A, and it does NOT describe the direction in which scene content moves
+on the screen.
+
+For a stationary scene, camera motion and apparent image motion are opposite:
+
+- camera looks right -> fixed scene landmarks move left in Image B
+- camera looks left -> fixed scene landmarks move right in Image B
+- camera trucks right -> fixed scene landmarks move left, with stronger shift
+  for nearer landmarks
+- camera trucks left -> fixed scene landmarks move right, with stronger shift
+  for nearer landmarks
+- camera looks up -> the horizon and fixed landmarks move down in Image B
+- camera looks down -> the horizon and fixed landmarks move up in Image B
+- camera moves up -> fixed landmarks move down, with depth-dependent vertical
+  parallax; camera moves down produces the opposite result
+- camera moves closer or narrows the FOV -> landmarks expand away from the
+  principal point; camera moves farther or widens the FOV -> they contract
+
+Infer the physical A-to-B camera operation first, then emit its label. Never
+name an operation from screen-space motion alone.
+
+## PRE-ANALYSIS REGISTRATION
+
+Before classifying anything, compare at least one near landmark and one far
+landmark. Track their image positions, scale, overlap, relevant line direction,
+and relation to the image center. Ignore differences caused only by non-camera
+scene changes.
+
+Use these invariants:
+
+- Translation changes viewpoint and can cause depth-dependent parallax and
+  occlusion, but it does not rotate vanishing directions.
+- Rotation changes viewing direction and vanishing-point placement, but does
+  not create near-versus-far translational parallax.
+- FOV changes radial image magnification about the principal point. It does
+  not change viewpoint, object overlap, or occlusion.
+- The ground-plane horizon depends on orientation and intrinsics, not camera
+  height. A moved horizon is evidence for pitch/FOV, not pedestal by itself.
+
+## PARAMETER TESTS
+
+### 1. YAW
+
+Positive evidence:
+- horizontal vanishing directions or side-plane angles change
+- left/right face proportions change consistently across the scene
+- the pattern is explained by a turn in place, without depth-dependent lateral
+  parallax
+
+Do not infer yaw from subject recentering, margins, or a uniform lateral shift
+alone.
+
+### 2. PITCH
+
+Positive evidence:
+- horizon or vertical vanishing-point placement changes
+- top-versus-underside visibility changes consistently as expected from a turn
+  in place
+- line-direction changes occur without depth-dependent vertical parallax
+
+Do not infer pitch from a vertical frame shift alone.
+
+### 3. ROLL
+
+Positive evidence:
+- normally vertical/horizontal scene lines acquire a consistent frame-wide
+  rotation
+- the horizon rotates rather than merely moving vertically
+
+### 4. TRUCK
+
+Positive evidence:
+- a named near landmark shifts laterally relative to a named far landmark
+- overlap or occlusion changes laterally across depth
+- vanishing directions remain consistent with Image A
+
+Do not infer truck from one side becoming exposed, margin change, or subject
+recentring alone. Those cues are also produced by yaw or crop.
+
+### 5. DOLLY
+
+Positive evidence:
+- near and far landmarks scale by measurably different factors
+- overlap or occlusion changes along depth
+- nearer landmarks show stronger radial displacement than farther landmarks
+
+Subject size change alone is not dolly evidence.
+
+### 6. PEDESTAL
+
+Positive evidence:
+- a named near landmark shifts vertically relative to a named far landmark
+- vertical overlap or occlusion changes with depth
+- the horizon/vanishing directions stay consistent with Image A
+
+Do not require the horizon to move for pedestal. A horizon shift with no
+vertical parallax indicates pitch, not pedestal.
+
+### 7. FOV
+
+Positive evidence:
+- multiple landmarks at different depths undergo approximately one common
+  radial scale about the same principal point
+- visibility relationships and object overlaps remain unchanged
+- any vanishing-point movement is radial about the principal point and is
+  consistent with the same global scale
+
+Do not use foreground/background scale-ratio change as evidence for FOV; it is
+evidence for translation or a mixed move.
+
+## MANDATORY PAIRWISE GATES
+
+### YAW VS TRUCK
+
+1. If vanishing directions or side-plane angles change and near/far lateral
+   parallax is absent, choose yaw and set truck to none.
+2. If vanishing directions stay fixed and near/far lateral parallax or overlap
+   changes, choose truck and set yaw to none.
+3. If there is only an overall lateral framing shift, set both to none; the
+   cause is not identifiable from the required evidence.
+4. Report both only when there is separate, named evidence for both a rotation
+   signature and a translation signature.
+
+### PITCH VS PEDESTAL
+
+Apply the same logic vertically: changed horizon/vanishing geometry without
+vertical parallax means pitch; depth-dependent vertical parallax with stable
+vanishing geometry means pedestal. A simple vertical crop shift proves neither.
+
+### DOLLY VS FOV
+
+1. First test for changed overlap, occlusion, or unequal near/far scale.
+   If present, choose dolly and set FOV to none unless a separate global radial
+   scale remains after accounting for the dolly.
+2. If overlap and occlusion are unchanged and near/far landmarks share one
+   radial scale factor, choose FOV and set dolly to none.
+3. If the image only shows a single usable depth plane or one isolated object,
+   subject-size change cannot distinguish the causes. Set both to none.
+4. Report both dolly and FOV only when two independent residual patterns are
+   visible: depth-dependent parallax/scale for dolly AND an additional common
+   radial scale for FOV. A vague impression of perspective change is not enough.
+5. A same-size subject with a changed background is mixed only if the subject
+   scale is demonstrably preserved while background scale or occlusion changes.
+
+## EVIDENCE AND CONFIDENCE RULES
+
+- Each non-none parameter needs a named landmark and a parameter-specific cue.
+- Do not reuse one generic cue as evidence for two confounded parameters.
+- High confidence requires two independent cues. Medium requires one clear cue.
+- When evidence is weak or merely compatible with a change, use none.
+- Use indeterminate only when a camera change is unmistakable but its direction
+  cannot be determined; do not use it for ordinary uncertainty.
+- The number of true changes may be zero, one, or several. Do not add a second
+  parameter merely because it can also explain the same pixels.
+
+## FINAL SELF-CONSISTENCY PASS
+
+For every non-none output, verify all three conditions:
+
+1. The evidence names a visible landmark or line.
+2. The evidence distinguishes this parameter from its confounder.
+3. The operation direction is the physical A-to-B camera/lens direction after
+   applying the direction contract, not the observed screen-motion direction.
+
+If any condition fails, change that parameter to none. For every none result,
+use magnitude none and briefly state which required signature was absent.

@@ -1,5 +1,6 @@
 import { A as escape_html, O as attr, g as unsubscribe_stores, h as stringify, k as clsx, m as store_get, n as attr_style, o as ensure_array_like, s as head, t as attr_class } from "../../../../chunks/server.js";
 import { t as formatNameForDisplay } from "../../../../chunks/text.js";
+import { t as $format } from "../../../../chunks/runtime.js";
 import { S as Alert, _ as CardHeader, a as ModalHeader, c as Input, g as CardTitle, h as Col, i as Modal, l as FormGroup, m as Container, n as Row, o as ModalBody, r as ModalFooter, s as Label, t as Spinner, v as CardBody, x as Button, y as Card } from "../../../../chunks/dist.js";
 import { t as authClient } from "../../../../chunks/auth-client.js";
 //#region src/routes/(protected)/profilo/+page.svelte
@@ -15,9 +16,9 @@ function _page($$renderer, $$props) {
 			type: "success"
 		};
 		const roleNames = {
-			developer: "Sviluppatore",
-			professor: "Professore",
-			student: "Studente"
+			developer: "role.developer",
+			professor: "role.professor",
+			student: "role.student"
 		};
 		let pwData = {
 			current: "",
@@ -41,7 +42,7 @@ function _page($$renderer, $$props) {
 			passwordCopied = false;
 			message.text = "";
 		};
-		$: role = roleNames[store_get($$store_subs ??= {}, "$session", session).data?.user.role] ?? "Utente";
+		$: role = roleNames[store_get($$store_subs ??= {}, "$session", session).data?.user.role] ? store_get($$store_subs ??= {}, "$_", $format)(roleNames[store_get($$store_subs ??= {}, "$session", session).data?.user.role]) : store_get($$store_subs ??= {}, "$_", $format)("role.user");
 		$: passwordStrength = (() => {
 			if (!pwData.new) return {
 				score: 0,
@@ -57,19 +58,19 @@ function _page($$renderer, $$props) {
 			if (/[^A-Za-z0-9]/.test(pwData.new)) score++;
 			if (score <= 2) return {
 				score,
-				label: "Debole",
+				label: "password.weak",
 				color: "danger",
 				hex: "#dc3545"
 			};
 			if (score <= 4) return {
 				score,
-				label: "Discreta",
+				label: "password.fair",
 				color: "warning",
 				hex: "#ffc107"
 			};
 			return {
 				score,
-				label: "Forte",
+				label: "password.strong",
 				color: "success",
 				hex: "#198754"
 			};
@@ -79,7 +80,7 @@ function _page($$renderer, $$props) {
 		function $$render_inner($$renderer) {
 			head("conn2a", $$renderer, ($$renderer) => {
 				$$renderer.title(($$renderer) => {
-					$$renderer.push(`<title>Profilo | Portale correzione automatica</title>`);
+					$$renderer.push(`<title>${escape_html(store_get($$store_subs ??= {}, "$_", $format)("profile.title"))} | ${escape_html(store_get($$store_subs ??= {}, "$_", $format)("home.eyebrow"))}</title>`);
 				});
 			});
 			Container($$renderer, {
@@ -97,7 +98,7 @@ function _page($$renderer, $$props) {
 									xs: "12",
 									class: "mb-4",
 									children: ($$renderer) => {
-										$$renderer.push(`<h2>Profilo</h2> <p class="text-muted">Gestisci le impostazioni del tuo account e la sicurezza.</p>`);
+										$$renderer.push(`<h2>${escape_html(store_get($$store_subs ??= {}, "$_", $format)("profile.title"))}</h2> <p class="text-muted">${escape_html(store_get($$store_subs ??= {}, "$_", $format)("profile.subtitle"))}</p>`);
 									},
 									$$slots: { default: true }
 								});
@@ -114,7 +115,7 @@ function _page($$renderer, $$props) {
 														CardTitle($$renderer, {
 															class: "m-0",
 															children: ($$renderer) => {
-																$$renderer.push(`<!---->Informazioni Personali`);
+																$$renderer.push(`<!---->${escape_html(store_get($$store_subs ??= {}, "$_", $format)("profile.personalInfo"))}`);
 															},
 															$$slots: { default: true }
 														});
@@ -127,9 +128,7 @@ function _page($$renderer, $$props) {
 														Alert($$renderer, {
 															color: "info",
 															children: ($$renderer) => {
-																$$renderer.push(`<strong>Nota:</strong> Per modificare le tue
-                            informazioni personali, contatta l'amministratore
-                            del sistema tramite la pagina di supporto <a href="/supporto" class="alert-link">qui</a>.`);
+																$$renderer.push(`<strong>${escape_html(store_get($$store_subs ??= {}, "$_", $format)("profile.note"))}</strong> ${escape_html(store_get($$store_subs ??= {}, "$_", $format)("profile.editInfoHelp"))} <a href="/supporto" class="alert-link">${escape_html(store_get($$store_subs ??= {}, "$_", $format)("profile.here"))}</a>.`);
 															},
 															$$slots: { default: true }
 														});
@@ -145,7 +144,7 @@ function _page($$renderer, $$props) {
 																				Label($$renderer, {
 																					class: "text-muted mb-1 small text-uppercase fw-bold",
 																					children: ($$renderer) => {
-																						$$renderer.push(`<!---->Nome`);
+																						$$renderer.push(`<!---->${escape_html(store_get($$store_subs ??= {}, "$_", $format)("common.name"))}`);
 																					},
 																					$$slots: { default: true }
 																				});
@@ -165,7 +164,7 @@ function _page($$renderer, $$props) {
 																				Label($$renderer, {
 																					class: "text-muted mb-1 small text-uppercase fw-bold",
 																					children: ($$renderer) => {
-																						$$renderer.push(`<!---->Cognome`);
+																						$$renderer.push(`<!---->${escape_html(store_get($$store_subs ??= {}, "$_", $format)("common.surname"))}`);
 																					},
 																					$$slots: { default: true }
 																				});
@@ -192,7 +191,7 @@ function _page($$renderer, $$props) {
 																				Label($$renderer, {
 																					class: "text-muted mb-1 small text-uppercase fw-bold",
 																					children: ($$renderer) => {
-																						$$renderer.push(`<!---->Indirizzo Email`);
+																						$$renderer.push(`<!---->${escape_html(store_get($$store_subs ??= {}, "$_", $format)("profile.emailAddress"))}`);
 																					},
 																					$$slots: { default: true }
 																				});
@@ -217,7 +216,7 @@ function _page($$renderer, $$props) {
 																				Label($$renderer, {
 																					class: "text-muted mb-1 small text-uppercase fw-bold",
 																					children: ($$renderer) => {
-																						$$renderer.push(`<!---->Ruolo`);
+																						$$renderer.push(`<!---->${escape_html(store_get($$store_subs ??= {}, "$_", $format)("common.role"))}`);
 																					},
 																					$$slots: { default: true }
 																				});
@@ -256,7 +255,7 @@ function _page($$renderer, $$props) {
 														CardTitle($$renderer, {
 															class: "m-0",
 															children: ($$renderer) => {
-																$$renderer.push(`<!---->Sicurezza`);
+																$$renderer.push(`<!---->${escape_html(store_get($$store_subs ??= {}, "$_", $format)("profile.security"))}`);
 															},
 															$$slots: { default: true }
 														});
@@ -267,13 +266,13 @@ function _page($$renderer, $$props) {
 												CardBody($$renderer, {
 													class: "d-flex flex-column gap-3",
 													children: ($$renderer) => {
-														$$renderer.push(`<div><h6>Password</h6> <p class="text-muted small">Ultima modifica: Mai</p> `);
+														$$renderer.push(`<div><h6>Password</h6> <p class="text-muted small">${escape_html(store_get($$store_subs ??= {}, "$_", $format)("profile.lastChangedNever"))}</p> `);
 														Button($$renderer, {
 															outline: true,
 															color: "dark",
 															class: "w-100",
 															children: ($$renderer) => {
-																$$renderer.push(`<!---->Cambia Password`);
+																$$renderer.push(`<!---->${escape_html(store_get($$store_subs ??= {}, "$_", $format)("password.change"))}`);
 															},
 															$$slots: { default: true }
 														});
@@ -297,7 +296,7 @@ function _page($$renderer, $$props) {
 						Alert($$renderer, {
 							color: "warning",
 							children: ($$renderer) => {
-								$$renderer.push(`<!---->Devi essere loggato per visualizzare questa pagina.`);
+								$$renderer.push(`<!---->${escape_html(store_get($$store_subs ??= {}, "$_", $format)("profile.loginRequired"))}`);
 							},
 							$$slots: { default: true }
 						});
@@ -314,7 +313,7 @@ function _page($$renderer, $$props) {
 					ModalHeader($$renderer, {
 						toggle: togglePwModal,
 						children: ($$renderer) => {
-							$$renderer.push(`<!---->Cambia Password`);
+							$$renderer.push(`<!---->${escape_html(store_get($$store_subs ??= {}, "$_", $format)("password.change"))}`);
 						},
 						$$slots: { default: true }
 					});
@@ -336,7 +335,7 @@ function _page($$renderer, $$props) {
 								children: ($$renderer) => {
 									Label($$renderer, {
 										children: ($$renderer) => {
-											$$renderer.push(`<!---->Password Attuale`);
+											$$renderer.push(`<!---->${escape_html(store_get($$store_subs ??= {}, "$_", $format)("password.current"))}`);
 										},
 										$$slots: { default: true }
 									});
@@ -351,7 +350,7 @@ function _page($$renderer, $$props) {
 											$$settled = false;
 										}
 									});
-									$$renderer.push(`<!----> <button type="button" class="btn btn-outline-secondary"${attr("title", showCurrent ? "Nascondi" : "Mostra")}><i${attr_class(clsx(showCurrent ? "ri-eye-off-line" : "ri-eye-line"))}></i></button></div>`);
+									$$renderer.push(`<!----> <button type="button" class="btn btn-outline-secondary"${attr("title", store_get($$store_subs ??= {}, "$_", $format)(showCurrent ? "common.hide" : "common.show"))}><i${attr_class(clsx(showCurrent ? "ri-eye-off-line" : "ri-eye-line"))}></i></button></div>`);
 								},
 								$$slots: { default: true }
 							});
@@ -360,7 +359,7 @@ function _page($$renderer, $$props) {
 								children: ($$renderer) => {
 									Label($$renderer, {
 										children: ($$renderer) => {
-											$$renderer.push(`<!---->Nuova Password`);
+											$$renderer.push(`<!---->${escape_html(store_get($$store_subs ??= {}, "$_", $format)("password.new"))}`);
 										},
 										$$slots: { default: true }
 									});
@@ -376,7 +375,7 @@ function _page($$renderer, $$props) {
 											$$settled = false;
 										}
 									});
-									$$renderer.push(`<!----> <button type="button" class="btn btn-outline-secondary"${attr("title", showNew ? "Nascondi" : "Mostra")}><i${attr_class(clsx(showNew ? "ri-eye-off-line" : "ri-eye-line"))}></i></button> <button type="button" class="btn btn-outline-secondary"${attr("disabled", !pwData.new, true)} title="Copia password"><i${attr_class(clsx(passwordCopied ? "ri-check-line text-success" : "ri-file-copy-line"))}></i></button> <button type="button" class="btn btn-primary" title="Genera password sicura"><i class="ri-shield-keyhole-line me-1"></i> Genera</button></div> `);
+									$$renderer.push(`<!----> <button type="button" class="btn btn-outline-secondary"${attr("title", store_get($$store_subs ??= {}, "$_", $format)(showNew ? "common.hide" : "common.show"))}><i${attr_class(clsx(showNew ? "ri-eye-off-line" : "ri-eye-line"))}></i></button> <button type="button" class="btn btn-outline-secondary"${attr("disabled", !pwData.new, true)}${attr("title", store_get($$store_subs ??= {}, "$_", $format)("password.copy"))}><i${attr_class(clsx(passwordCopied ? "ri-check-line text-success" : "ri-file-copy-line"))}></i></button> <button type="button" class="btn btn-primary"${attr("title", store_get($$store_subs ??= {}, "$_", $format)("password.generateSecure"))}><i class="ri-shield-keyhole-line me-1"></i> ${escape_html(store_get($$store_subs ??= {}, "$_", $format)("common.generate"))}</button></div> `);
 									if (pwData.new) {
 										$$renderer.push(`<!--[0--><div class="mt-2"><div class="d-flex gap-1 mb-1"><!--[-->`);
 										const each_array = ensure_array_like([
@@ -391,7 +390,7 @@ function _page($$renderer, $$props) {
 											let i = each_array[$$index];
 											$$renderer.push(`<div class="flex-fill rounded"${attr_style(`height: 4px; background-color: ${stringify(i < passwordStrength.score ? passwordStrength.hex : "#dee2e6")};`)}></div>`);
 										}
-										$$renderer.push(`<!--]--></div> <small${attr_class(`text-${stringify(passwordStrength.color)} fw-semibold`)}>${escape_html(passwordStrength.label)}</small> <small class="text-muted ms-2">${escape_html(pwData.new.length)} caratteri</small></div>`);
+										$$renderer.push(`<!--]--></div> <small${attr_class(`text-${stringify(passwordStrength.color)} fw-semibold`)}>${escape_html(store_get($$store_subs ??= {}, "$_", $format)(passwordStrength.label))}</small> <small class="text-muted ms-2">${escape_html(store_get($$store_subs ??= {}, "$_", $format)("password.characters", { values: { count: pwData.new.length } }))}</small></div>`);
 									} else $$renderer.push("<!--[-1-->");
 									$$renderer.push(`<!--]-->`);
 								},
@@ -402,7 +401,7 @@ function _page($$renderer, $$props) {
 								children: ($$renderer) => {
 									Label($$renderer, {
 										children: ($$renderer) => {
-											$$renderer.push(`<!---->Conferma Nuova Password`);
+											$$renderer.push(`<!---->${escape_html(store_get($$store_subs ??= {}, "$_", $format)("password.confirmNew"))}`);
 										},
 										$$slots: { default: true }
 									});
@@ -418,8 +417,8 @@ function _page($$renderer, $$props) {
 											$$settled = false;
 										}
 									});
-									$$renderer.push(`<!----> <button type="button" class="btn btn-outline-secondary"${attr("title", showConfirm ? "Nascondi" : "Mostra")}><i${attr_class(clsx(showConfirm ? "ri-eye-off-line" : "ri-eye-line"))}></i></button></div> `);
-									if (pwData.new !== "" && pwData.confirm !== "" && pwData.new !== pwData.confirm) $$renderer.push(`<!--[0--><div class="text-danger small mt-1">Le password non corrispondono</div>`);
+									$$renderer.push(`<!----> <button type="button" class="btn btn-outline-secondary"${attr("title", store_get($$store_subs ??= {}, "$_", $format)(showConfirm ? "common.hide" : "common.show"))}><i${attr_class(clsx(showConfirm ? "ri-eye-off-line" : "ri-eye-line"))}></i></button></div> `);
+									if (pwData.new !== "" && pwData.confirm !== "" && pwData.new !== pwData.confirm) $$renderer.push(`<!--[0--><div class="text-danger small mt-1">${escape_html(store_get($$store_subs ??= {}, "$_", $format)("password.mismatch"))}</div>`);
 									else $$renderer.push("<!--[-1-->");
 									$$renderer.push(`<!--]-->`);
 								},
@@ -435,7 +434,7 @@ function _page($$renderer, $$props) {
 							Button($$renderer, {
 								color: "secondary",
 								children: ($$renderer) => {
-									$$renderer.push(`<!---->Annulla`);
+									$$renderer.push(`<!---->${escape_html(store_get($$store_subs ??= {}, "$_", $format)("common.cancel"))}`);
 								},
 								$$slots: { default: true }
 							});
@@ -444,7 +443,7 @@ function _page($$renderer, $$props) {
 								color: "primary",
 								disabled: isLoading,
 								children: ($$renderer) => {
-									$$renderer.push(`<!--[-1-->Aggiorna Password`);
+									$$renderer.push(`<!--[-1-->${escape_html(store_get($$store_subs ??= {}, "$_", $format)("password.update"))}`);
 									$$renderer.push(`<!--]-->`);
 								},
 								$$slots: { default: true }

@@ -1,4 +1,5 @@
 import { A as escape_html, O as attr, g as unsubscribe_stores, k as clsx, m as store_get, s as head, t as attr_class } from "../../../../chunks/server.js";
+import { t as $format } from "../../../../chunks/runtime.js";
 import { S as Alert, h as Col, m as Container, n as Row, s as Label, v as CardBody, x as Button, y as Card } from "../../../../chunks/dist.js";
 import { t as ParticlesAuth } from "../../../../chunks/ParticlesAuth.js";
 import { n as page } from "../../../../chunks/stores.js";
@@ -29,7 +30,7 @@ function _page($$renderer, $$props) {
 		})();
 		head("19d1qel", $$renderer, ($$renderer) => {
 			$$renderer.title(($$renderer) => {
-				$$renderer.push(`<title>Reimposta password | Portale correzione automatica</title>`);
+				$$renderer.push(`<title>${escape_html(store_get($$store_subs ??= {}, "$_", $format)("password.reset"))} | ${escape_html(store_get($$store_subs ??= {}, "$_", $format)("home.eyebrow"))}</title>`);
 			});
 		});
 		ParticlesAuth($$renderer, {
@@ -51,7 +52,7 @@ function _page($$renderer, $$props) {
 											},
 											$$slots: { default: true }
 										});
-										$$renderer.push(`<!----></div> <p class="mt-3 fs-15 fw-medium svelte-19d1qel">Portale correzione automatica <span class="alpha-label svelte-19d1qel">Alpha</span></p></div>`);
+										$$renderer.push(`<!----></div> <p class="mt-3 fs-15 fw-medium svelte-19d1qel">${escape_html(store_get($$store_subs ??= {}, "$_", $format)("home.eyebrow"))} <span class="alpha-label svelte-19d1qel">Alpha</span></p></div>`);
 									},
 									$$slots: { default: true }
 								});
@@ -73,7 +74,7 @@ function _page($$renderer, $$props) {
 												CardBody($$renderer, {
 													class: "p-4",
 													children: ($$renderer) => {
-														$$renderer.push(`<div class="text-center mt-2 svelte-19d1qel"><h5 class="text-primary svelte-19d1qel">Crea Nuova Password</h5> <p class="text-muted svelte-19d1qel">La tua nuova password deve essere diversa dalla precedente.</p></div> <div class="p-2 svelte-19d1qel">`);
+														$$renderer.push(`<div class="text-center mt-2 svelte-19d1qel"><h5 class="text-primary svelte-19d1qel">${escape_html(store_get($$store_subs ??= {}, "$_", $format)("password.createNew"))}</h5> <p class="text-muted svelte-19d1qel">${escape_html(store_get($$store_subs ??= {}, "$_", $format)("password.mustDiffer"))}</p></div> <div class="p-2 svelte-19d1qel">`);
 														$$renderer.push(`<!--[-1--><form class="svelte-19d1qel">`);
 														if (errorParam) {
 															$$renderer.push("<!--[0-->");
@@ -91,38 +92,38 @@ function _page($$renderer, $$props) {
 															class: "form-label",
 															for: "password",
 															children: ($$renderer) => {
-																$$renderer.push(`<!---->Nuova Password`);
+																$$renderer.push(`<!---->${escape_html(store_get($$store_subs ??= {}, "$_", $format)("password.new"))}`);
 															},
 															$$slots: { default: true }
 														});
 														$$renderer.push(`<!----> <div class="input-group svelte-19d1qel">`);
-														$$renderer.push(`<!--[-1--><input type="password" class="form-control svelte-19d1qel" id="password" placeholder="Inserisci nuova password"${attr("value", password)} autocomplete="new-password" required=""/>`);
-														$$renderer.push(`<!--]--> <button type="button" class="btn btn-outline-secondary svelte-19d1qel"${attr("title", "Mostra")}><i${attr_class(clsx("ri-eye-line"), "svelte-19d1qel")}></i></button></div></div> `);
+														$$renderer.push(`<!--[-1--><input type="password" class="form-control svelte-19d1qel" id="password"${attr("placeholder", store_get($$store_subs ??= {}, "$_", $format)("password.newPlaceholder"))}${attr("value", password)} autocomplete="new-password" required=""/>`);
+														$$renderer.push(`<!--]--> <button type="button" class="btn btn-outline-secondary svelte-19d1qel"${attr("title", store_get($$store_subs ??= {}, "$_", $format)("common.show"))}><i${attr_class(clsx("ri-eye-line"), "svelte-19d1qel")}></i></button></div></div> `);
 														$$renderer.push("<!--[-1-->");
-														$$renderer.push(`<!--]--> <div class="p-3 bg-light mb-3 rounded svelte-19d1qel"><h5 class="fs-13 svelte-19d1qel">La tua password deve contenere:</h5> <p${attr_class("fs-12 mb-2 svelte-19d1qel", void 0, {
+														$$renderer.push(`<!--]--> <div class="p-3 bg-light mb-3 rounded svelte-19d1qel"><h5 class="fs-13 svelte-19d1qel">${escape_html(store_get($$store_subs ??= {}, "$_", $format)("password.requirements"))}</h5> <p${attr_class("fs-12 mb-2 svelte-19d1qel", void 0, {
 															"valid": hasMinLength,
 															"invalid": !hasMinLength
-														})}>Almeno <b class="svelte-19d1qel">8 caratteri</b></p> <p${attr_class("fs-12 mb-2 svelte-19d1qel", void 0, {
+														})}>${escape_html(store_get($$store_subs ??= {}, "$_", $format)("password.minEight"))}</p> <p${attr_class("fs-12 mb-2 svelte-19d1qel", void 0, {
 															"valid": hasLower,
 															"invalid": !hasLower
-														})}>Almeno una lettera <b class="svelte-19d1qel">minuscola</b> (a-z)</p> <p${attr_class("fs-12 mb-2 svelte-19d1qel", void 0, {
+														})}>${escape_html(store_get($$store_subs ??= {}, "$_", $format)("password.lowercase"))}</p> <p${attr_class("fs-12 mb-2 svelte-19d1qel", void 0, {
 															"valid": hasUpper,
 															"invalid": !hasUpper
-														})}>Almeno una lettera <b class="svelte-19d1qel">maiuscola</b> (A-Z)</p> <p${attr_class("fs-12 mb-0 svelte-19d1qel", void 0, {
+														})}>${escape_html(store_get($$store_subs ??= {}, "$_", $format)("password.uppercase"))}</p> <p${attr_class("fs-12 mb-0 svelte-19d1qel", void 0, {
 															"valid": hasNumber,
 															"invalid": !hasNumber
-														})}>Almeno un <b class="svelte-19d1qel">numero</b> (0-9)</p></div> <div class="mb-3 svelte-19d1qel">`);
+														})}>${escape_html(store_get($$store_subs ??= {}, "$_", $format)("password.number"))}</p></div> <div class="mb-3 svelte-19d1qel">`);
 														Label($$renderer, {
 															class: "form-label",
 															for: "confirm-password",
 															children: ($$renderer) => {
-																$$renderer.push(`<!---->Conferma Password`);
+																$$renderer.push(`<!---->${escape_html(store_get($$store_subs ??= {}, "$_", $format)("password.confirm"))}`);
 															},
 															$$slots: { default: true }
 														});
 														$$renderer.push(`<!----> <div class="input-group svelte-19d1qel">`);
-														$$renderer.push(`<!--[-1--><input type="password" class="form-control svelte-19d1qel" id="confirm-password" placeholder="Conferma password"${attr("value", confirmPassword)} required=""/>`);
-														$$renderer.push(`<!--]--> <button type="button" class="btn btn-outline-secondary svelte-19d1qel"${attr("title", "Mostra")}><i${attr_class(clsx("ri-eye-line"), "svelte-19d1qel")}></i></button></div> `);
+														$$renderer.push(`<!--[-1--><input type="password" class="form-control svelte-19d1qel" id="confirm-password"${attr("placeholder", store_get($$store_subs ??= {}, "$_", $format)("password.confirmPlaceholder"))}${attr("value", confirmPassword)} required=""/>`);
+														$$renderer.push(`<!--]--> <button type="button" class="btn btn-outline-secondary svelte-19d1qel"${attr("title", store_get($$store_subs ??= {}, "$_", $format)("common.show"))}><i${attr_class(clsx("ri-eye-line"), "svelte-19d1qel")}></i></button></div> `);
 														$$renderer.push("<!--[-1-->");
 														$$renderer.push(`<!--]--></div> <div class="mt-4 svelte-19d1qel">`);
 														Button($$renderer, {
@@ -131,7 +132,7 @@ function _page($$renderer, $$props) {
 															type: "submit",
 															disabled: loading,
 															children: ($$renderer) => {
-																$$renderer.push(`<!--[-1-->Reimposta Password`);
+																$$renderer.push(`<!--[-1-->${escape_html(store_get($$store_subs ??= {}, "$_", $format)("password.reset"))}`);
 																$$renderer.push(`<!--]-->`);
 															},
 															$$slots: { default: true }
@@ -144,12 +145,12 @@ function _page($$renderer, $$props) {
 											},
 											$$slots: { default: true }
 										});
-										$$renderer.push(`<!----> <div class="mt-4 text-center svelte-19d1qel"><p class="mb-0 svelte-19d1qel">Ricordi la password? `);
+										$$renderer.push(`<!----> <div class="mt-4 text-center svelte-19d1qel"><p class="mb-0 svelte-19d1qel">${escape_html(store_get($$store_subs ??= {}, "$_", $format)("password.remember"))} `);
 										Link($$renderer, {
 											href: "/login",
 											class: "fw-semibold text-primary text-decoration-underline",
 											children: ($$renderer) => {
-												$$renderer.push(`<!---->Torna al Login`);
+												$$renderer.push(`<!---->${escape_html(store_get($$store_subs ??= {}, "$_", $format)("auth.backToLogin"))}`);
 											},
 											$$slots: { default: true }
 										});

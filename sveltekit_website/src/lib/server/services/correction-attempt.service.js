@@ -3,8 +3,8 @@ import { db } from '$lib/server/db';
 import { activity, correctionAttempt, correctionSession } from '$lib/server/db/schema';
 import { ApiError, dateValue, numericId, optionalText, paginated, paginationParams, requiredText, requireUser } from './api.service.js';
 import { correctionSessionService } from './correction-session.service.js';
+import { CORRECTION_FOCUS_IDS } from '$lib/correction-focus.js';
 
-const FOCUSES = new Set(['Illuminazione', 'Camera', 'Materiali', 'Texture', 'Qualità generale']);
 const VIEW_TYPES = new Set(['FRONT', 'SIDE', 'TOP', 'ANGLED', 'OTHER']);
 const JOB_STATUSES = new Set(['queued', 'processing', 'completed', 'failed', 'unavailable']);
 
@@ -62,11 +62,11 @@ export const correctionAttemptService = {
 		if (sessionRecord.studentUserId !== numericId(currentUser.id, 'userId')) {
 			throw new ApiError(403, 'Only the session owner can submit a correction.', 'CORRECTION_ATTEMPT_CREATE_DENIED');
 		}
-		if (['CLOSED', 'FAILED'].includes(sessionRecord.status)) {
+		if (sessionRecord.status === 'FAILED') {
 			throw new ApiError(409, 'Attempts cannot be added to this correction session.', 'CORRECTION_SESSION_CLOSED');
 		}
 		const focus = requiredText(input.focus, 'focus', 100);
-		if (!FOCUSES.has(focus) || focus !== sessionRecord.analysisFocus) {
+		if (!CORRECTION_FOCUS_IDS.has(focus) || focus !== sessionRecord.analysisFocus) {
 			throw new ApiError(409, 'The analysis focus does not match this correction session.', 'CONVERSATION_SETTINGS_LOCKED');
 		}
 		const viewType = requiredText(input.viewType, 'viewType', 20);

@@ -1,3 +1,10 @@
+import { get } from 'svelte/store';
+import { _, locale } from 'svelte-i18n';
+
+function localeCode() {
+	return get(locale) === 'en' ? 'en-GB' : 'it-IT';
+}
+
 export async function apiRequest(url, options = {}) {
 	const response = await fetch(url, {
 		...options,
@@ -8,7 +15,7 @@ export async function apiRequest(url, options = {}) {
 	});
 	const payload = await response.json().catch(() => ({}));
 	if (!response.ok) {
-		const error = new Error(payload?.error?.message ?? 'La richiesta non è andata a buon fine.');
+		const error = new Error(payload?.error?.message ?? get(_)('api.requestFailed'));
 		error.code = payload?.error?.code;
 		error.status = response.status;
 		throw error;
@@ -34,16 +41,16 @@ export async function apiListRequest(url, options = {}) {
 }
 
 export function formatDateTime(value) {
-	if (!value) return 'Non definita';
-	return new Intl.DateTimeFormat('it-IT', {
+	if (!value) return get(_)('common.notDefined');
+	return new Intl.DateTimeFormat(localeCode(), {
 		dateStyle: 'medium',
 		timeStyle: 'short'
 	}).format(new Date(value));
 }
 
 export function formatDate(value) {
-	if (!value) return 'Non definita';
-	return new Intl.DateTimeFormat('it-IT', {
+	if (!value) return get(_)('common.notDefined');
+	return new Intl.DateTimeFormat(localeCode(), {
 		dateStyle: 'medium'
 	}).format(new Date(value));
 }

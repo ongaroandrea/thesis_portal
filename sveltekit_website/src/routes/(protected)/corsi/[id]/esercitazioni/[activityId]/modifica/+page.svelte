@@ -5,6 +5,7 @@
 	import { apiRequest } from '$lib/client/api.js';
 	import ActivityForm from '$lib/components/portal/ActivityForm.svelte';
 	import PageHeader from '$lib/components/portal/PageHeader.svelte';
+	import { _ } from 'svelte-i18n';
 
 	let activity;
 	let referenceImages = [];
@@ -39,12 +40,12 @@
 	}
 </script>
 
-<svelte:head><title>Modifica attività</title></svelte:head>
+<svelte:head><title>{$_('activity.edit')}</title></svelte:head>
 <div class="page-content"><div class="container-fluid py-4">
-	<PageHeader title="Modifica attività" subtitle="Aggiorna consegna e disponibilità" parentHref={`/corsi/${courseId}/esercitazioni/${activityId}`} parentLabel="Attività" />
+	<PageHeader title={$_('activity.edit')} subtitle={$_('activity.editSubtitle')} parentHref={`/corsi/${courseId}/esercitazioni/${activityId}`} parentLabel={$_('activity.activity')} />
 	{#if errorMessage}<div class="alert alert-danger">{errorMessage}</div>{/if}
 	{#if loading}<div class="text-center py-5"><div class="spinner-border text-primary"></div></div>
 	{:else if activity}<div class="row justify-content-center"><div class="col-xl-10"><div class="card border-0 shadow-sm"><div class="card-body p-4">
-		<ActivityForm initial={activity} initialReferenceImages={referenceImages} onSubmit={updateActivity} {busy} submitLabel="Salva modifiche" cancelHref={`/corsi/${courseId}/esercitazioni/${activityId}`} enableReferenceImages />
+		<ActivityForm initial={activity} initialReferenceImages={referenceImages} onSubmit={updateActivity} {busy} submitLabel={$_('common.saveChanges')} cancelHref={`/corsi/${courseId}/esercitazioni/${activityId}`} enableReferenceImages />
 	</div></div></div></div>{/if}
 </div></div>

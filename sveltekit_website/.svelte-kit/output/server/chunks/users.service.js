@@ -1,5 +1,5 @@
 import { a as numericId, c as paginationParams, i as dateValue, l as requireUser, o as optionalText, r as ApiError, s as paginated, u as requiredText } from "./handler.js";
-import { f as session, l as courseMember, p as user, t as db } from "./db.js";
+import { h as user, l as courseMember, m as session, t as db } from "./db.js";
 import { n as normalizeNameForStorage } from "./text.js";
 import { and, asc, count, countDistinct, eq, inArray } from "drizzle-orm";
 import { randomBytes } from "node:crypto";

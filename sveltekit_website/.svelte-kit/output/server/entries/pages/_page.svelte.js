@@ -1,17 +1,21 @@
-import { s as head } from "../../chunks/server.js";
+import { A as escape_html, O as attr, g as unsubscribe_stores, m as store_get, s as head } from "../../chunks/server.js";
+import { t as $format } from "../../chunks/runtime.js";
+import { t as LanguageSwitcher } from "../../chunks/LanguageSwitcher.js";
 //#region src/routes/+page.svelte
-function _page($$renderer) {
-	head("1uha8ag", $$renderer, ($$renderer) => {
-		$$renderer.title(($$renderer) => {
-			$$renderer.push(`<title>Portale correzione automatica</title>`);
+function _page($$renderer, $$props) {
+	$$renderer.component(($$renderer) => {
+		var $$store_subs;
+		head("1uha8ag", $$renderer, ($$renderer) => {
+			$$renderer.title(($$renderer) => {
+				$$renderer.push(`<title>${escape_html(store_get($$store_subs ??= {}, "$_", $format)("home.eyebrow"))}</title>`);
+			});
+			$$renderer.push(`<meta name="description"${attr("content", store_get($$store_subs ??= {}, "$_", $format)("home.metaDescription"))}/>`);
 		});
-		$$renderer.push(`<meta name="description" content="Portale in fase Alpha per sperimentare la correzione automatica delle attività didattiche."/>`);
+		$$renderer.push(`<main class="home-page svelte-1uha8ag"><header class="site-header container svelte-1uha8ag"><a class="brand svelte-1uha8ag" href="/"${attr("aria-label", `${store_get($$store_subs ??= {}, "$_", $format)("home.eyebrow")} — Home`)}><img src="/images/polito_logo_desktop.svg" alt="Politecnico di Torino" class="svelte-1uha8ag"/></a> <div class="header-actions svelte-1uha8ag">`);
+		LanguageSwitcher($$renderer, {});
+		$$renderer.push(`<!----> <a class="login-link svelte-1uha8ag" href="/login">${escape_html(store_get($$store_subs ??= {}, "$_", $format)("login"))}</a></div></header> <section class="hero container svelte-1uha8ag"><div class="hero-copy"><p class="eyebrow svelte-1uha8ag">${escape_html(store_get($$store_subs ??= {}, "$_", $format)("home.eyebrow"))}</p> <h1 class="svelte-1uha8ag">${escape_html(store_get($$store_subs ??= {}, "$_", $format)("home.title"))}<br/><span class="svelte-1uha8ag">${escape_html(store_get($$store_subs ??= {}, "$_", $format)("home.titleAccent"))}</span></h1> <p class="intro svelte-1uha8ag">${escape_html(store_get($$store_subs ??= {}, "$_", $format)("home.intro"))}</p> <div class="actions svelte-1uha8ag"><a class="primary-action svelte-1uha8ag" href="/login">${escape_html(store_get($$store_subs ??= {}, "$_", $format)("home.action"))} <i class="ri-arrow-right-line" aria-hidden="true"></i></a></div></div> <div class="project-card svelte-1uha8ag"><p class="card-kicker svelte-1uha8ag">${escape_html(store_get($$store_subs ??= {}, "$_", $format)("home.goal"))}</p> <h2 class="svelte-1uha8ag">${escape_html(store_get($$store_subs ??= {}, "$_", $format)("home.cardTitle"))}</h2> <p class="svelte-1uha8ag">${escape_html(store_get($$store_subs ??= {}, "$_", $format)("home.cardBody"))}</p> <div class="alpha-note svelte-1uha8ag"><i class="ri-flask-line svelte-1uha8ag" aria-hidden="true"></i> <div class="svelte-1uha8ag"><strong class="svelte-1uha8ag">${escape_html(store_get($$store_subs ??= {}, "$_", $format)("home.alpha"))}</strong><span class="svelte-1uha8ag">${escape_html(store_get($$store_subs ??= {}, "$_", $format)("home.alphaNote"))}</span></div></div></div></section></main>`);
+		if ($$store_subs) unsubscribe_stores($$store_subs);
 	});
-	$$renderer.push(`<main class="home-page svelte-1uha8ag"><header class="site-header container svelte-1uha8ag"><a class="brand svelte-1uha8ag" href="/" aria-label="Portale correzione automatica — Home"><img src="/images/polito_logo_desktop.svg" alt="Politecnico di Torino" class="svelte-1uha8ag"/></a> <a class="login-link svelte-1uha8ag" href="/login">Accedi</a></header> <section class="hero container svelte-1uha8ag"><div class="hero-copy"><p class="eyebrow svelte-1uha8ag">Portale correzione automatica</p> <h1 class="svelte-1uha8ag">Più tempo per insegnare.<br/><span class="svelte-1uha8ag">Feedback più rapido.</span></h1> <p class="intro svelte-1uha8ag">Il progetto esplora come supportare docenti e studenti attraverso la correzione
-				automatica delle attività didattiche, rendendo la valutazione più tempestiva,
-				coerente e trasparente.</p> <div class="actions svelte-1uha8ag"><a class="primary-action svelte-1uha8ag" href="/login">Accedi al portale <i class="ri-arrow-right-line" aria-hidden="true"></i></a></div></div> <div class="project-card svelte-1uha8ag"><p class="card-kicker svelte-1uha8ag">Obiettivo del progetto</p> <h2 class="svelte-1uha8ag">Un processo di correzione più semplice e consapevole.</h2> <p class="svelte-1uha8ag">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor
-				incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud
-				exercitation ullamco laboris.</p> <div class="alpha-note svelte-1uha8ag"><i class="ri-flask-line svelte-1uha8ag" aria-hidden="true"></i> <div class="svelte-1uha8ag"><strong class="svelte-1uha8ag">Progetto in fase Alpha</strong><span class="svelte-1uha8ag">Funzionalità e contenuti sono in evoluzione.</span></div></div></div></section></main>`);
 }
 //#endregion
 export { _page as default };

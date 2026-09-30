@@ -2,6 +2,7 @@
 	//Import Components
 	import { Container } from '@sveltestrap/sveltestrap';
 	import HorizontalLayout from "./HorizontalLayout.svelte";
+	import { _ } from 'svelte-i18n';
 	export let user = null;
 
 	function removesidebar() {
@@ -43,7 +44,7 @@
 		<!-- Dark Logo-->
 		<a href="/#" class="logo logo-dark">
 			<span class="logo-sm">
-				<img src="/images/favicon.ico" alt="Portale correzione automatica" height="22" />
+				<img src="/images/favicon.ico" alt={$_('home.eyebrow')} height="22" />
 			</span>
 			<span class="logo-lg">
 				<img src="/images/polito_logo_desktop.svg" alt="Politecnico di Torino" height="42" />
@@ -52,7 +53,7 @@
 		<!-- Light Logo-->
 		<a href="/#" class="logo logo-light">
 			<span class="logo-sm">
-				<img src="/images/favicon.ico" alt="Portale correzione automatica" height="22" />
+				<img src="/images/favicon.ico" alt={$_('home.eyebrow')} height="22" />
 			</span>
 			<span class="logo-lg">
 				<img src="/images/polito_logo_desktop_bianco.png" alt="Politecnico di Torino" height="42" />
@@ -63,7 +64,7 @@
 			class="btn btn-sm p-0 fs-20 header-item float-end btn-vertical-sm-hover"
 			id="vertical-hover"
 			on:click={verticalSidebarClass}
-			aria-label="Ridimensiona il menu laterale"
+			aria-label={$_('common.resizeSidebar')}
 		>
 			<i class="ri-record-circle-line"></i>
 		</button>

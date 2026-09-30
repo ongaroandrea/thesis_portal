@@ -1,15 +1,9 @@
 import { a as numericId, c as paginationParams, i as dateValue, l as requireUser, o as optionalText, r as ApiError, s as paginated, u as requiredText } from "./handler.js";
 import { a as correctionSession, i as correctionAttempt, n as activity, t as db } from "./db.js";
+import { t as CORRECTION_FOCUS_IDS } from "./correction-focus.js";
 import { t as correctionSessionService } from "./correction-session.service.js";
 import { and, asc, count, eq, max, sql } from "drizzle-orm";
 //#region src/lib/server/services/correction-attempt.service.js
-var FOCUSES = /* @__PURE__ */ new Set([
-	"Illuminazione",
-	"Camera",
-	"Materiali",
-	"Texture",
-	"Qualità generale"
-]);
 var VIEW_TYPES = /* @__PURE__ */ new Set([
 	"FRONT",
 	"SIDE",
@@ -62,9 +56,9 @@ var correctionAttemptService = {
 		requireUser(currentUser);
 		const sessionRecord = await correctionSessionService.requireSessionAccess(input.sessionId, currentUser);
 		if (sessionRecord.studentUserId !== numericId(currentUser.id, "userId")) throw new ApiError(403, "Only the session owner can submit a correction.", "CORRECTION_ATTEMPT_CREATE_DENIED");
-		if (["CLOSED", "FAILED"].includes(sessionRecord.status)) throw new ApiError(409, "Attempts cannot be added to this correction session.", "CORRECTION_SESSION_CLOSED");
+		if (sessionRecord.status === "FAILED") throw new ApiError(409, "Attempts cannot be added to this correction session.", "CORRECTION_SESSION_CLOSED");
 		const focus = requiredText(input.focus, "focus", 100);
-		if (!FOCUSES.has(focus) || focus !== sessionRecord.analysisFocus) throw new ApiError(409, "The analysis focus does not match this correction session.", "CONVERSATION_SETTINGS_LOCKED");
+		if (!CORRECTION_FOCUS_IDS.has(focus) || focus !== sessionRecord.analysisFocus) throw new ApiError(409, "The analysis focus does not match this correction session.", "CONVERSATION_SETTINGS_LOCKED");
 		const viewType = requiredText(input.viewType, "viewType", 20);
 		if (!VIEW_TYPES.has(viewType)) throw new ApiError(400, "Invalid view type.", "VALIDATION_ERROR");
 		const referenceImageId = numericId(input.referenceImageId, "referenceImageId");

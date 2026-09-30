@@ -20,6 +20,7 @@
     } from "@sveltestrap/sveltestrap";
     import { authClient } from "$lib/client/auth/auth-client";
     import { formatNameForDisplay } from "$lib/utils/text.js";
+    import { _ } from 'svelte-i18n';
 
     // --- State ---
     const session = authClient.useSession();
@@ -29,11 +30,11 @@
     let isLoading = false;
     let message = { text: "", type: "success" }; // For success/error alerts
     const roleNames = {
-        developer: "Sviluppatore",
-        professor: "Professore",
-        student: "Studente",
+        developer: 'role.developer',
+        professor: 'role.professor',
+        student: 'role.student',
     };
-    $: role = roleNames[$session.data?.user.role] ?? "Utente";
+    $: role = roleNames[$session.data?.user.role] ? $_(roleNames[$session.data?.user.role]) : $_('role.user');
 
     // Password Form Data
     let pwData = { current: "", new: "", confirm: "" };
@@ -99,15 +100,15 @@
         if (/[0-9]/.test(pwData.new)) score++;
         if (/[^A-Za-z0-9]/.test(pwData.new)) score++;
         if (score <= 2)
-            return { score, label: "Debole", color: "danger", hex: "#dc3545" };
+			return { score, label: 'password.weak', color: "danger", hex: "#dc3545" };
         if (score <= 4)
             return {
                 score,
-                label: "Discreta",
+				label: 'password.fair',
                 color: "warning",
                 hex: "#ffc107",
             };
-        return { score, label: "Forte", color: "success", hex: "#198754" };
+		return { score, label: 'password.strong', color: "success", hex: "#198754" };
     })();
 
     // --- Actions ---
@@ -124,7 +125,7 @@
     async function handleChangePassword() {
         if (pwData.new !== pwData.confirm) {
             message = {
-                text: "Le password non corrispondono.",
+				text: $_('password.mismatch'),
                 type: "danger",
             };
             return;
@@ -153,12 +154,12 @@
                     .catch(() => ({}));
                 throw new Error(
                     payload.message ||
-                        "Password aggiornata, ma non e stato possibile completare il profilo."
+						$_('profile.passwordProfileError')
                 );
             }
 
             message = {
-                text: "Password aggiornata con successo. Tutte le altre sessioni sono state disconnesse.",
+				text: $_('profile.passwordSuccess'),
                 type: "success",
             };
 
@@ -167,7 +168,7 @@
             message = {
                 text:
                     err.message ||
-                    "Errore durante l'aggiornamento della password.",
+					$_('profile.passwordError'),
                 type: "danger",
             };
         } finally {
@@ -178,7 +179,7 @@
 </script>
 
 <svelte:head>
-    <title>Profilo | Portale correzione automatica</title>
+	<title>{$_('profile.title')} | {$_('home.eyebrow')}</title>
 </svelte:head>
 
 <Container class="py-5">
@@ -189,24 +190,20 @@
     {:else if $session.data}
         <Row>
             <Col xs="12" class="mb-4">
-                <h2>Profilo</h2>
-                <p class="text-muted">
-                    Gestisci le impostazioni del tuo account e la sicurezza.
-                </p>
+				<h2>{$_('profile.title')}</h2>
+				<p class="text-muted">{$_('profile.subtitle')}</p>
             </Col>
 
             <Col lg="8" class="mb-4">
                 <Card class="h-100 shadow-sm">
                     <CardHeader>
-                        <CardTitle class="m-0">Informazioni Personali</CardTitle
+						<CardTitle class="m-0">{$_('profile.personalInfo')}</CardTitle
                         >
                     </CardHeader>
                     <CardBody>
                         <Alert color="info">
-                            <strong>Nota:</strong> Per modificare le tue
-                            informazioni personali, contatta l'amministratore
-                            del sistema tramite la pagina di supporto
-                            <a href="/supporto" class="alert-link">qui</a>.
+							<strong>{$_('profile.note')}</strong> {$_('profile.editInfoHelp')}
+							<a href="/supporto" class="alert-link">{$_('profile.here')}</a>.
                         </Alert>
 
                         <Row class="mb-3">
@@ -214,7 +211,7 @@
                                 <FormGroup>
                                     <Label
                                         class="text-muted mb-1 small text-uppercase fw-bold"
-                                        >Nome</Label
+										>{$_('common.name')}</Label
                                     >
                                     <div class="fs-6 fw-medium">
                                         {formatNameForDisplay(
@@ -227,7 +224,7 @@
                                 <FormGroup>
                                     <Label
                                         class="text-muted mb-1 small text-uppercase fw-bold"
-                                        >Cognome</Label
+										>{$_('common.surname')}</Label
                                     >
                                     <div class="fs-6 fw-medium">
                                         {formatNameForDisplay(
@@ -242,7 +239,7 @@
                                 <FormGroup>
                                     <Label
                                         class="text-muted mb-1 small text-uppercase fw-bold"
-                                        >Indirizzo Email</Label
+										>{$_('profile.emailAddress')}</Label
                                     >
                                     <div class="fs-6 fw-medium">
                                         {$session.data.user.email}
@@ -255,7 +252,7 @@
                                 <FormGroup>
                                     <Label
                                         class="text-muted mb-1 small text-uppercase fw-bold"
-                                        >Ruolo</Label
+										>{$_('common.role')}</Label
                                     >
                                     <div class="fs-6 fw-medium">{role}</div>
                                 </FormGroup>
@@ -268,19 +265,19 @@
             <Col lg="4" class="mb-4">
                 <Card class="h-100 shadow-sm border-warning">
                     <CardHeader class="bg-warning  bg-opacity-10">
-                        <CardTitle class="m-0">Sicurezza</CardTitle>
+						<CardTitle class="m-0">{$_('profile.security')}</CardTitle>
                     </CardHeader>
                     <CardBody class="d-flex flex-column gap-3">
                         <div>
                             <h6>Password</h6>
-                            <p class="text-muted small">Ultima modifica: Mai</p>
+							<p class="text-muted small">{$_('profile.lastChangedNever')}</p>
                             <Button
                                 outline
                                 color="dark"
                                 class="w-100"
                                 on:click={togglePwModal}
                             >
-                                Cambia Password
+								{$_('password.change')}
                             </Button>
                         </div>
                     </CardBody>
@@ -289,20 +286,20 @@
         </Row>
     {:else}
         <Alert color="warning"
-            >Devi essere loggato per visualizzare questa pagina.</Alert
+			>{$_('profile.loginRequired')}</Alert
         >
     {/if}
 </Container>
 
 <Modal isOpen={pwModalOpen} toggle={togglePwModal}>
-    <ModalHeader toggle={togglePwModal}>Cambia Password</ModalHeader>
+	<ModalHeader toggle={togglePwModal}>{$_('password.change')}</ModalHeader>
     <ModalBody>
         {#if message.text}
             <Alert color={message.type}>{message.text}</Alert>
         {/if}
 
         <FormGroup>
-            <Label>Password Attuale</Label>
+			<Label>{$_('password.current')}</Label>
             <div class="input-group">
                 <Input
                     type={showCurrent ? "text" : "password"}
@@ -312,7 +309,7 @@
                     type="button"
                     class="btn btn-outline-secondary"
                     on:click={() => (showCurrent = !showCurrent)}
-                    title={showCurrent ? "Nascondi" : "Mostra"}
+					title={$_(showCurrent ? 'common.hide' : 'common.show')}
                 >
                     <i
                         class={showCurrent ? "ri-eye-off-line" : "ri-eye-line"}
@@ -322,7 +319,7 @@
         </FormGroup>
 
         <FormGroup>
-            <Label>Nuova Password</Label>
+			<Label>{$_('password.new')}</Label>
             <div class="input-group">
                 <Input
                     type={showNew ? "text" : "password"}
@@ -333,7 +330,7 @@
                     type="button"
                     class="btn btn-outline-secondary"
                     on:click={() => (showNew = !showNew)}
-                    title={showNew ? "Nascondi" : "Mostra"}
+					title={$_(showNew ? 'common.hide' : 'common.show')}
                 >
                     <i class={showNew ? "ri-eye-off-line" : "ri-eye-line"}></i>
                 </button>
@@ -342,7 +339,7 @@
                     class="btn btn-outline-secondary"
                     on:click={copyNewPassword}
                     disabled={!pwData.new}
-                    title="Copia password"
+					title={$_('password.copy')}
                 >
                     <i
                         class={passwordCopied
@@ -354,9 +351,9 @@
                     type="button"
                     class="btn btn-primary"
                     on:click={generateStrongPassword}
-                    title="Genera password sicura"
+					title={$_('password.generateSecure')}
                 >
-                    <i class="ri-shield-keyhole-line me-1"></i> Genera
+					<i class="ri-shield-keyhole-line me-1"></i> {$_('common.generate')}
                 </button>
             </div>
 
@@ -374,17 +371,17 @@
                         {/each}
                     </div>
                     <small class="text-{passwordStrength.color} fw-semibold"
-                        >{passwordStrength.label}</small
+						>{$_(passwordStrength.label)}</small
                     >
                     <small class="text-muted ms-2"
-                        >{pwData.new.length} caratteri</small
+						>{$_('password.characters', { values: { count: pwData.new.length } })}</small
                     >
                 </div>
             {/if}
         </FormGroup>
 
         <FormGroup>
-            <Label>Conferma Nuova Password</Label>
+			<Label>{$_('password.confirmNew')}</Label>
             <div class="input-group">
                 <Input
                     type={showConfirm ? "text" : "password"}
@@ -397,7 +394,7 @@
                     type="button"
                     class="btn btn-outline-secondary"
                     on:click={() => (showConfirm = !showConfirm)}
-                    title={showConfirm ? "Nascondi" : "Mostra"}
+					title={$_(showConfirm ? 'common.hide' : 'common.show')}
                 >
                     <i
                         class={showConfirm ? "ri-eye-off-line" : "ri-eye-line"}
@@ -406,13 +403,13 @@
             </div>
             {#if pwData.new !== "" && pwData.confirm !== "" && pwData.new !== pwData.confirm}
                 <div class="text-danger small mt-1">
-                    Le password non corrispondono
+					{$_('password.mismatch')}
                 </div>
             {/if}
         </FormGroup>
     </ModalBody>
     <ModalFooter>
-        <Button color="secondary" on:click={togglePwModal}>Annulla</Button>
+		<Button color="secondary" on:click={togglePwModal}>{$_('common.cancel')}</Button>
         <Button
             color="primary"
             on:click={handleChangePassword}
@@ -421,7 +418,7 @@
             {#if isLoading}
                 <Spinner size="sm" />
             {:else}
-                Aggiorna Password
+				{$_('password.update')}
             {/if}
         </Button>
     </ModalFooter>

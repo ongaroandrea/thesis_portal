@@ -23,6 +23,7 @@ thesis project for Politecnico di Torino.
 - [Usage](#usage)
   - [Image-correction workflow](#image-correction-workflow)
   - [Roles](#roles)
+  - [Localization](#localization)
 - [Project structure](#project-structure)
 - [Available scripts](#available-scripts)
 - [Testing](#testing)
@@ -62,6 +63,7 @@ polls the worker until the job completes or fails.
 
 - [SvelteKit](https://svelte.dev/docs/kit)
 - [Svelte](https://svelte.dev/)
+- [svelte-i18n](https://github.com/kaisermann/svelte-i18n)
 - [Vite](https://vite.dev/)
 - [Bootstrap](https://getbootstrap.com/) and
   [Sveltestrap](https://sveltestrap.js.org/)
@@ -188,6 +190,8 @@ Create a PostgreSQL database, set `DATABASE_URL`, and load the complete baseline
 psql "$DATABASE_URL" -f drizzle/0000_initial_schema.sql
 ```
 
+For a database that already uses the baseline, apply the newer numbered migrations in order (currently `0002` through `0004`) instead of reloading `0000`.
+
 Do not run `drizzle/0001_nuke_system.sql` as part of normal setup: it drops and
 recreates the entire `public` schema.
 
@@ -244,6 +248,36 @@ profile information if they already exist.
 Application roles and course memberships are intentionally separate. A global
 professor does not automatically manage every course.
 
+### Localization
+
+The interface supports Italian and English with `svelte-i18n`. Italian is the
+default language, and the language switcher stores the user's choice in
+`localStorage` so it persists across navigation and browser refreshes.
+
+Translations are defined in `src/lib/i18n.js`. Add the same key to both the
+`it` and `en` message objects, then use it in a Svelte component:
+
+```svelte
+<script>
+  import { _ } from 'svelte-i18n';
+</script>
+
+<h1>{$_('home.title')}</h1>
+```
+
+Use the shared switcher wherever a language control is needed:
+
+```svelte
+<script>
+  import LanguageSwitcher from '$lib/components/common/LanguageSwitcher.svelte';
+</script>
+
+<LanguageSwitcher />
+```
+
+The root layout imports `src/lib/i18n.js` once, so individual pages should not
+call `init()` again.
+
 ## Project structure
 
 ```text
@@ -256,6 +290,7 @@ sveltekit_website/
 │   ├── lib/
 │   │   ├── client/             Browser-side API helpers
 │   │   ├── components/         Shared Svelte components
+│   │   ├── i18n.js             Italian and English translations
 │   │   └── server/             Authentication, database, mail, and services
 │   ├── routes/                 Pages, layouts, and JSON API endpoints
 │   ├── hooks.server.js         Authentication and request hooks

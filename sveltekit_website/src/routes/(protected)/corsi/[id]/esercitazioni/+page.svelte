@@ -7,6 +7,7 @@
         formatDateTime,
     } from "$lib/client/api.js";
     import PageHeader from "$lib/components/portal/PageHeader.svelte";
+    import { _ } from 'svelte-i18n';
     let course;
     let activities = [];
     let loading = true;
@@ -30,14 +31,14 @@
     });
 </script>
 
-<svelte:head><title>Attività del corso</title></svelte:head>
+<svelte:head><title>{$_('activity.courseActivities')}</title></svelte:head>
 <div class="page-content">
     <div class="container-fluid py-4">
         <PageHeader
-            title="Attività"
-            subtitle={course ? course.name : "Attività del corso"}
+            title={$_('activity.activities')}
+            subtitle={course ? course.name : $_('activity.courseActivities')}
             parentHref={`/corsi/${courseId}`}
-            parentLabel="Corso"
+            parentLabel={$_('activity.course')}
         />
         {#if errorMessage}<div class="alert alert-danger">
                 {errorMessage}
@@ -51,24 +52,24 @@
                         class="btn {filter === 'ALL'
                             ? 'btn-primary'
                             : 'btn-light'}"
-                        on:click={() => (filter = "ALL")}>Tutte</button
+                        on:click={() => (filter = "ALL")}>{$_('common.allFeminine')}</button
                     ><button
                         class="btn {filter === 'PUBLISHED'
                             ? 'btn-primary'
                             : 'btn-light'}"
                         on:click={() => (filter = "PUBLISHED")}
-                        >Pubblicate</button
+                        >{$_('status.publishedPlural')}</button
                     ><button
                         class="btn {filter === 'DRAFT'
                             ? 'btn-primary'
                             : 'btn-light'}"
-                        on:click={() => (filter = "DRAFT")}>Bozze</button
+                        on:click={() => (filter = "DRAFT")}>{$_('status.draftPlural')}</button
                     >
                 </div>
                 {#if course?.canManage}<a
                         class="btn btn-success"
                         href={`/corsi/${courseId}/esercitazioni/aggiungi`}
-                        ><i class="ri-add-line me-1"></i>Nuova attività</a
+                        ><i class="ri-add-line me-1"></i>{$_('activity.new')}</a
                     >{/if}
             </div>
             <div class="card-body p-0">
@@ -77,15 +78,15 @@
                     </div>{:else if filtered.length === 0}<div
                         class="text-center text-muted py-5"
                     >
-                        Nessuna attività disponibile.
+                        {$_('activity.noneAvailable')}
                     </div>{:else}<div class="table-responsive">
                         <table class="table table-hover align-middle mb-0">
                             <thead class="table-light"
                                 ><tr
-                                    ><th class="ps-4">Attività</th><th
-                                        >Tipologia</th
-                                    ><th>Disponibilità</th><th>Stato</th><th
-                                        class="text-end pe-4">Azioni</th
+                                    ><th class="ps-4">{$_('activity.activity')}</th><th
+                                        >{$_('activity.kind')}</th
+                                    ><th>{$_('activity.availability')}</th><th>{$_('common.status')}</th><th
+                                        class="text-end pe-4">{$_('common.actions')}</th
                                     ></tr
                                 ></thead
                             ><tbody
@@ -98,9 +99,9 @@
                                                 >{activity.objective}</small
                                             ></td
                                         ><td
-                                            >{activity.kind === "EXAM"
-                                                ? "Esame"
-                                                : "Esercitazione"}</td
+                                            >{$_(activity.kind === "EXAM"
+                                                ? 'activity.exam'
+                                                : 'activity.exercise')}</td
                                         ><td
                                             ><small
                                                 >{formatDateTime(
@@ -118,16 +119,16 @@
                                                         'DRAFT'
                                                       ? 'bg-warning-subtle text-warning'
                                                       : 'bg-secondary-subtle text-secondary'}"
-                                                >{activity.status}</span
+                                                >{$_(`status.${activity.status.toLowerCase()}`)}</span
                                             ></td
                                         ><td class="text-end pe-4"
                                             ><a
                                                 class="btn btn-sm btn-primary"
                                                 href={`/corsi/${courseId}/esercitazioni/${activity.id}`}
-                                                >Apri</a
+                                                >{$_('common.open')}</a
                                             >{#if course?.canManage}<a
                                                     class="btn btn-sm btn-light ms-1"
-                                                    aria-label={`Modifica ${activity.title}`}
+                                                    aria-label={$_('activity.editNamed', { values: { title: activity.title } })}
                                                     href={`/corsi/${courseId}/esercitazioni/${activity.id}/modifica`}
                                                     ><i class="ri-edit-line"
                                                     ></i></a

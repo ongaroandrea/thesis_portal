@@ -1,5 +1,5 @@
 import { a as numericId, l as requireUser, n as readJson, r as ApiError, t as apiResponse, u as requiredText } from "../../../../../chunks/handler.js";
-import { c as courseInvitation, l as courseMember, p as user, s as courseImport, t as db } from "../../../../../chunks/db.js";
+import { c as courseInvitation, h as user, l as courseMember, s as courseImport, t as db } from "../../../../../chunks/db.js";
 import { t as courseService } from "../../../../../chunks/course.service.js";
 import { and, eq, sql } from "drizzle-orm";
 //#region src/lib/server/services/course-import.service.js

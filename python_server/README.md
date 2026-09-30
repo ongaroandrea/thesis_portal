@@ -48,9 +48,9 @@ After validating both files, the server returns `202 Accepted` and places the
 job in memory. A single consumer processes queued jobs in submission order. The
 web application can then read the job status until the result is available.
 
-The actual AI integration is not implemented yet. The current processor waits
-for three minutes and returns a placeholder response so the complete queue and
-polling workflow can be exercised.
+Camera jobs are processed by Ollama using the configured vision model and the
+prompt files under `app/input`. Other analysis categories still return a
+placeholder response.
 
 ### Main features
 
@@ -133,9 +133,8 @@ After `POST /v1/jobs` returns `202`, the SvelteKit page requests
 `processing`. These repeated requests contain no images; they only retrieve job
 metadata and status.
 
-The current placeholder processor runs for 180 seconds, so approximately 36
-status requests for one active job are expected. Polling stops when SvelteKit
-observes `completed` or `failed`.
+Camera processing time depends on the configured model and Ollama host. Polling
+stops when SvelteKit observes `completed` or `failed`.
 
 ## Getting started
 
@@ -221,6 +220,7 @@ still require valid signature headers.
 | `MAX_IMAGE_BYTES` | `12582912` | Positive integer | Maximum size of each image; default is 12 MiB. |
 | `MAX_IMAGE_PIXELS` | `40000000` | Positive integer | Maximum width multiplied by height for each image. |
 | `API_PORT` | `8000` | Valid host port | Host port used by Docker Compose. |
+| `DEVELOPMENT_MODE` | `false` | Boolean | Return an immediate mock result without contacting Ollama. |
 
 The application rejects known placeholder secrets such as
 `replace-with-a-long-random-secret`.
@@ -425,38 +425,35 @@ python -m compileall -q app tests
 
 ## Current limitations
 
-1. `app/processor.py` is a placeholder and does not call Ollama or another AI
-   model yet.
-2. Every job currently takes 180 seconds to simulate processing.
-3. Queue and nonce state are stored only in memory.
-4. There is no recovery after a restart.
-5. Horizontal scaling is not supported by the current single-GPU queue design.
-6. Clients learn about state changes through polling rather than server-sent
+1. Only camera analysis is connected to Ollama; the other categories still
+   return a placeholder response.
+2. Queue and nonce state are stored only in memory.
+3. There is no recovery after a restart.
+4. Horizontal scaling is not supported by the current single-GPU queue design.
+5. Clients learn about state changes through polling rather than server-sent
    events, WebSockets, or long polling.
-7. JPEG, PNG, and WEBP are the only supported image formats.
-8. There is no independent end-user authentication; the SvelteKit backend is
+6. JPEG, PNG, and WEBP are the only supported image formats.
+7. There is no independent end-user authentication; the SvelteKit backend is
    the trusted client.
 
 ## Extending the processor
 
-Implement the real comparison logic in `app/processor.py`:
+Camera model and prompt behaviour are configured in `app/ollama/main.py`:
 
 ```python
-async def process_image(request: ImageJobRequest) -> dict:
-    submitted = request.image
-    reference = request.reference_image
-
-    # Run the model comparison here.
-    return {
-        "summary": "...",
-        "score": 0,
-        "type": request.type.value,
-    }
+"camera": {
+    "model": "qwen3.8:27b",
+    "prompt": "prompt.txt",
+    "parameter_explanation": True,
+    "magnitude": True,
+}
 ```
 
-The processor receives validated bytes and metadata for both images. It should
-return a JSON-serializable dictionary. Exceptions are caught by the queue and
-stored as a failed job's `error` value.
+The processor sends the reference as Image A and the submitted image as Image
+B. Set `parameter_explanation` to control the dataset-convention block and set
+`magnitude` to control magnitude estimation. With magnitude disabled, the
+response schema is preserved but all magnitude values are forced to `none`.
+Exceptions are caught by the queue and stored as a failed job's `error` value.
 
 Avoid adding concurrency inside the processor unless the deployment and GPU
 resource model are changed deliberately.

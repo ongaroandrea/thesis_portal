@@ -8,17 +8,11 @@
 
 	let user = browser && localStorage.authUser;
 
-	import { addMessages, init, getLocaleFromNavigator } from "svelte-i18n";
-
-	init({
-		fallbackLocale: "en",
-		initialLocale: getLocaleFromNavigator(),
-	});
-
 	import Sidebar from '$lib/components/layouts/Sidebar.svelte';
 	import Header from '$lib/components/layouts/Header.svelte';
 	import Footer from '$lib/components/layouts/Footer.svelte';
 	import Rightbar from '$lib/components/common/RightSidebar.svelte';
+	import { _ } from 'svelte-i18n';
 
 	let open = false;
 	$: isPublic = false;
@@ -68,7 +62,7 @@
 <div id="preloader">
 	<div id="status">
 		<div class="spinner-border text-primary avatar-sm" role="status">
-			<span class="visually-hidden">Caricamento...</span>
+			<span class="visually-hidden">{$_('common.loading')}</span>
 		</div>
 	</div>
 </div>

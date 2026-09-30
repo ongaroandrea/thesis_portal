@@ -1,8 +1,9 @@
-import { and, asc, count, eq, gt, isNull, or, sql } from 'drizzle-orm';
+import { and, asc, eq, gt, isNull, or, sql } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { courseInvitation, courseMember, user } from '$lib/server/db/schema';
 import { ApiError, numericId, paginated, paginationParams, requireUser } from './api.service.js';
 import { courseService } from './course.service.js';
+import { combineCourseAuthorizations } from './course-member-view.js';
 
 async function findMember(id) {
 	const [record] = await db.select().from(courseMember).where(eq(courseMember.id, numericId(id, 'memberId'))).limit(1);
@@ -55,14 +56,22 @@ export const courseMemberService = {
 			createdAt: courseMember.createdAt,
 			updatedAt: courseMember.updatedAt
 		};
-		const condition = eq(courseMember.courseId, courseRecord.id);
-		const [items, [{ total }]] = await Promise.all([
+		const [memberItems, invitations] = await Promise.all([
 			db.select(selection).from(courseMember).innerJoin(user, eq(user.id, courseMember.userId))
-				.where(condition).orderBy(asc(user.surname), asc(user.name), asc(courseMember.id))
-				.limit(pagination.pageSize).offset(pagination.offset),
-			db.select({ total: count() }).from(courseMember).where(condition)
+				.where(eq(courseMember.courseId, courseRecord.id)).orderBy(asc(user.surname), asc(user.name), asc(courseMember.id)),
+			db.select({
+				id: courseInvitation.id,
+				courseId: courseInvitation.courseId,
+				matchedUserId: courseInvitation.matchedUserId,
+				name: user.name,
+				surname: user.surname,
+				email: courseInvitation.email,
+				createdAt: courseInvitation.createdAt
+			}).from(courseInvitation).leftJoin(user, eq(user.id, courseInvitation.matchedUserId))
+				.where(eq(courseInvitation.courseId, courseRecord.id)).orderBy(asc(courseInvitation.email))
 		]);
-		return paginated(items, total, pagination);
+		const authorizations = combineCourseAuthorizations(memberItems, invitations);
+		return paginated(authorizations.slice(pagination.offset, pagination.offset + pagination.pageSize), authorizations.length, pagination);
 	},
 
 	async get(id, currentUser) {

@@ -7,7 +7,15 @@ from fastapi.routing import APIRoute
 from PIL import Image
 
 from app.main import app, settings
+from app.config import Settings
 from app.security import create_signature
+
+
+def test_development_mode_parses_boolean_environment_values() -> None:
+    common = {"hmac_secret": "x" * 32}
+
+    assert Settings(**common, development_mode="true").development_mode is True
+    assert Settings(**common, development_mode="False").development_mode is False
 
 
 def test_delete_job_declares_an_empty_204_response() -> None:

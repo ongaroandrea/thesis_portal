@@ -1,4 +1,6 @@
 <script>
+	import LanguageSwitcher from '$lib/components/common/LanguageSwitcher.svelte';
+	import { _ } from 'svelte-i18n';
 	// import Particles from "svelte-particles";
 	// import { loadFull } from "tsparticles";
 
@@ -135,6 +137,7 @@
 </script>
 
 <div class="auth-page-wrapper pt-5">
+	<div class="language-position"><LanguageSwitcher /></div>
 	<div class="auth-one-bg-position auth-one-bg" id="auth-particles">
 		<div class="bg-overlay"></div>
 
@@ -159,7 +162,7 @@
 				<div class="col-lg-12">
 					<div class="text-center">
 						<p class="mb-0 text-muted">
-							&copy; {new Date().getFullYear()} Portale correzione automatica · Versione Alpha
+							&copy; {new Date().getFullYear()} {$_('home.eyebrow')} · {$_('common.alphaVersion')}
 							
 						</p>
 					</div>
@@ -170,6 +173,7 @@
 </div>
 
 <style>
+	.language-position { position: absolute; z-index: 10; top: 1rem; right: 1rem; }
 	:global(.auth-page-wrapper) { min-height: 100vh; background: #ffffff; }
 	:global(.auth-one-bg) { background: linear-gradient(135deg, #00284b 0%, #007ba1 100%) !important; }
 	:global(.auth-one-bg .bg-overlay) { background: transparent !important; opacity: 1 !important; }

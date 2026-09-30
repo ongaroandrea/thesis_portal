@@ -1,7 +1,28 @@
 import { a as numericId, c as paginationParams, l as requireUser, r as ApiError, s as paginated } from "./handler.js";
-import { c as courseInvitation, l as courseMember, p as user, t as db } from "./db.js";
+import { c as courseInvitation, h as user, l as courseMember, t as db } from "./db.js";
 import { t as courseService } from "./course.service.js";
-import { and, asc, count, eq, gt, isNull, or, sql } from "drizzle-orm";
+import { and, asc, eq, gt, isNull, or, sql } from "drizzle-orm";
+//#region src/lib/server/services/course-member-view.js
+function combineCourseAuthorizations(members, invitations) {
+	const memberEmails = new Set(members.map((member) => member.email.trim().toLowerCase()));
+	const pending = invitations.filter((invitation) => !memberEmails.has(invitation.email.trim().toLowerCase())).map((invitation) => ({
+		id: `invitation-${invitation.id}`,
+		invitationId: invitation.id,
+		courseId: invitation.courseId,
+		userId: invitation.matchedUserId,
+		name: invitation.name ?? "",
+		surname: invitation.surname ?? "",
+		email: invitation.email,
+		role: "STUDENT",
+		status: "PENDING",
+		joinedAt: null,
+		createdAt: invitation.createdAt,
+		updatedAt: invitation.createdAt,
+		isPendingInvitation: true
+	})).sort((left, right) => left.email.localeCompare(right.email, void 0, { sensitivity: "base" }));
+	return [...members, ...pending];
+}
+//#endregion
 //#region src/lib/server/services/course-member.service.js
 async function findMember(id) {
 	const [record] = await db.select().from(courseMember).where(eq(courseMember.id, numericId(id, "memberId"))).limit(1);
@@ -42,9 +63,17 @@ var courseMemberService = {
 			createdAt: courseMember.createdAt,
 			updatedAt: courseMember.updatedAt
 		};
-		const condition = eq(courseMember.courseId, courseRecord.id);
-		const [items, [{ total }]] = await Promise.all([db.select(selection).from(courseMember).innerJoin(user, eq(user.id, courseMember.userId)).where(condition).orderBy(asc(user.surname), asc(user.name), asc(courseMember.id)).limit(pagination.pageSize).offset(pagination.offset), db.select({ total: count() }).from(courseMember).where(condition)]);
-		return paginated(items, total, pagination);
+		const [memberItems, invitations] = await Promise.all([db.select(selection).from(courseMember).innerJoin(user, eq(user.id, courseMember.userId)).where(eq(courseMember.courseId, courseRecord.id)).orderBy(asc(user.surname), asc(user.name), asc(courseMember.id)), db.select({
+			id: courseInvitation.id,
+			courseId: courseInvitation.courseId,
+			matchedUserId: courseInvitation.matchedUserId,
+			name: user.name,
+			surname: user.surname,
+			email: courseInvitation.email,
+			createdAt: courseInvitation.createdAt
+		}).from(courseInvitation).leftJoin(user, eq(user.id, courseInvitation.matchedUserId)).where(eq(courseInvitation.courseId, courseRecord.id)).orderBy(asc(courseInvitation.email))]);
+		const authorizations = combineCourseAuthorizations(memberItems, invitations);
+		return paginated(authorizations.slice(pagination.offset, pagination.offset + pagination.pageSize), authorizations.length, pagination);
 	},
 	async get(id, currentUser) {
 		requireUser(currentUser);

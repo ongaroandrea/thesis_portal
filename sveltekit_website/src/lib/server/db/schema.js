@@ -1,3 +1,4 @@
+import { sql } from 'drizzle-orm';
 import { bigint, boolean, index, integer, jsonb, numeric, pgEnum, pgTable, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
 
 const identity = (name) => bigint(name, { mode: 'number' }).primaryKey().generatedAlwaysAsIdentity();
@@ -9,7 +10,6 @@ export const courseMemberStatusEnum = pgEnum('course_member_status', ['ACTIVE', 
 export const activityKindEnum = pgEnum('activity_kind', ['LESSON', 'EXAM']);
 export const activityStatusEnum = pgEnum('activity_status', ['DRAFT', 'PUBLISHED', 'ARCHIVED']);
 export const imageViewTypeEnum = pgEnum('image_view_type', ['FRONT', 'SIDE', 'TOP', 'ANGLED', 'OTHER']);
-export const correctionSessionStatusEnum = pgEnum('correction_session_status', ['OPEN', 'PROCESSING', 'ANSWERED', 'CLOSED', 'FAILED']);
 export const resultStatusEnum = pgEnum('result_status', ['DRAFT', 'READY', 'PUBLISHED']);
 
 export const user = pgTable('user', {
@@ -128,6 +128,7 @@ export const activity = pgTable('course_activity', {
 	objective: text('objective').notNull(),
 	durationMinutes: integer('duration_minutes'),
 	maxCorrectionsPerStudent: integer('max_corrections_per_student'),
+	allowedCorrectionFocuses: jsonb('allowed_correction_focuses').notNull().default(['LIGHT', 'CAMERA', 'MATERIAL', 'TEXTURE', 'GENERAL']),
 	availableFrom: dateTime('available_from'),
 	availableUntil: dateTime('available_until'),
 	resultsReleasedAt: dateTime('results_released_at'),
@@ -158,9 +159,7 @@ export const correctionSession = pgTable('correction_session', {
 	studentUserId: bigint('student_user_id', { mode: 'number' }).references(() => user.id, { onDelete: 'set null' }),
 	anonymousAlias: text('anonymous_alias'),
 	isAnonymous: boolean('is_anonymous').notNull().default(false),
-	status: correctionSessionStatusEnum('status').notNull().default('OPEN'),
 	openedAt: dateTime('opened_at').notNull().defaultNow(),
-	closedAt: dateTime('closed_at'),
 	updatedAt: dateTime('updated_at').notNull().defaultNow()
 }, (table) => [
 	index('correction_session_activity_idx').on(table.activityId),
@@ -195,6 +194,35 @@ export const correctionAttempt = pgTable('correction_attempt', {
 	uniqueIndex('correction_attempt_session_number_uidx').on(table.sessionId, table.attemptNumber),
 	index('correction_attempt_job_idx').on(table.jobId),
 	index('correction_attempt_status_idx').on(table.jobStatus)
+]);
+
+export const examSubmission = pgTable('exam_submission', {
+	id: identity('id'),
+	activityId: bigint('activity_id', { mode: 'number' }).notNull().references(() => activity.id, { onDelete: 'cascade' }),
+	studentUserId: bigint('student_user_id', { mode: 'number' }).notNull().references(() => user.id, { onDelete: 'cascade' }),
+	createdAt: dateTime('created_at').notNull().defaultNow(),
+	updatedAt: dateTime('updated_at').notNull().defaultNow()
+}, (table) => [
+	uniqueIndex('exam_submission_activity_student_unique').on(table.activityId, table.studentUserId),
+	index('exam_submission_activity_idx').on(table.activityId)
+]);
+
+export const examSubmissionFile = pgTable('exam_submission_file', {
+	id: identity('id'),
+	submissionId: bigint('submission_id', { mode: 'number' }).notNull().references(() => examSubmission.id, { onDelete: 'cascade' }),
+	referenceImageId: bigint('reference_image_id', { mode: 'number' }).notNull().references(() => activityReferenceImage.id),
+	revision: integer('revision').notNull(),
+	originalFilename: text('original_filename').notNull(),
+	mimeType: text('mime_type').notNull(),
+	storageKey: text('storage_key').notNull(),
+	isCurrent: boolean('is_current').notNull().default(true),
+	replacedAt: dateTime('replaced_at'),
+	removedAt: dateTime('removed_at'),
+	uploadedAt: dateTime('uploaded_at').notNull().defaultNow()
+}, (table) => [
+	uniqueIndex('exam_submission_file_revision_unique').on(table.submissionId, table.referenceImageId, table.revision),
+	uniqueIndex('exam_submission_file_current_view_uidx').on(table.submissionId, table.referenceImageId).where(sql`${table.isCurrent}`),
+	index('exam_submission_file_submission_idx').on(table.submissionId, table.uploadedAt)
 ]);
 
 export const examResult = pgTable('exam_result', {

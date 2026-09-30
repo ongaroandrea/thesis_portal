@@ -1,0 +1,16 @@
+## TEXTURE CHECK
+
+Evaluate only texture and UV differences. Ignore material roughness, metallic/specular/Fresnel behavior, lighting, shadows, HDRI, exposure, camera, geometry, render style, and artistic intent.
+
+Use only texture evidence:
+- pattern content, color zones, markings, visible detail
+- texture scale, tiling frequency, repetition rhythm
+- rotation and U/V offset
+- UV stretching or squeezed pattern elements
+- visible UV discontinuities
+- microdetail, noise, normal/bump/displacement relief as texture evidence
+- transparency/refraction only when part of texture appearance
+
+Do not treat lighting, perspective, compression, highlights, or hidden shader settings as texture changes.
+
+Silently compare content, scale, rotation, offset, UV distortion, seams, tiling, microdetail, relief, and transmission if visible. Output only in the required schema.

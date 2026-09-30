@@ -2,9 +2,21 @@
 	import { browser } from '$app/environment';
 	import { page } from '$app/stores';
 	import data from './LayoutMenuData.js';
+	import { _ } from 'svelte-i18n';
 
 	export let user = null;
 	const menuItems = data.Navdata;
+	const translationKeys = {
+		corsi: 'nav.courses',
+		'lista-corsi': 'nav.courseList',
+		'aggiungi-corso': 'nav.addCourse',
+		studenti: 'nav.students',
+		'lista-studenti': 'nav.studentList',
+		'aggiungi-studente': 'nav.addStudent',
+		support: 'nav.support',
+		'apri-ticket-supporto': 'nav.openTicket',
+		'gestione-ticket-supporto': 'nav.manageTickets'
+	};
 	let openMenuId = '';
 
 	$: currentPath = normalizePath($page.url.pathname);
@@ -54,7 +66,7 @@
 					aria-controls={`menu-${item.id}`}
 				>
 					<i class={item.icon}></i>
-					<span>{item.label}</span>
+					<span>{translationKeys[item.id] ? $_(translationKeys[item.id]) : item.label}</span>
 				</a>
 				<div
 					id={`menu-${item.id}`}
@@ -70,7 +82,7 @@
 										class="nav-link"
 										class:active={normalizePath(subItem.link) === currentPath}
 									>
-										{subItem.label}
+										{translationKeys[subItem.id] ? $_(translationKeys[subItem.id]) : subItem.label}
 									</a>
 								</li>
 							{/if}
@@ -86,7 +98,7 @@
 					href={item.link ?? '/'}
 				>
 					<i class={item.icon}></i>
-					<span>{item.label}</span>
+					<span>{translationKeys[item.id] ? $_(translationKeys[item.id]) : item.label}</span>
 				</a>
 			</li>
 		{/if}

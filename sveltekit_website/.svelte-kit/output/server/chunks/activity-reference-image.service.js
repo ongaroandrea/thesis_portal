@@ -55,6 +55,12 @@ async function requireManager(activityId, currentUser) {
 	return record;
 }
 var activityReferenceImageService = {
+	async get(activityId, imageId, currentUser) {
+		const record = await activityService.requireActivityAccess(activityId, currentUser);
+		const [image] = await db.select().from(activityReferenceImage).where(and(eq(activityReferenceImage.id, numericId(imageId, "imageId")), eq(activityReferenceImage.activityId, record.id))).limit(1);
+		if (!image) throw new ApiError(404, "Reference image not found.", "IMAGE_NOT_FOUND");
+		return image;
+	},
 	async list(activityId, currentUser) {
 		const record = await activityService.requireActivityAccess(activityId, currentUser);
 		return db.select().from(activityReferenceImage).where(eq(activityReferenceImage.activityId, record.id)).orderBy(asc(activityReferenceImage.displayOrder), asc(activityReferenceImage.id));

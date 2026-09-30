@@ -1,7 +1,8 @@
-import { A as escape_html, a as derived, s as head, w as getContext } from "../../chunks/server.js";
+import { A as escape_html, O as attr, a as derived, g as unsubscribe_stores, m as store_get, s as head, w as getContext } from "../../chunks/server.js";
 import "../../chunks/index-server2.js";
+import { t as $format } from "../../chunks/runtime.js";
 import "../../chunks/client.js";
-import { h as Col, m as Container, n as Row } from "../../chunks/dist.js";
+import { h as Col, m as Container, n as Row, v as CardBody, y as Card } from "../../chunks/dist.js";
 import { t as ParticlesAuth } from "../../chunks/ParticlesAuth.js";
 //#endregion
 //#region node_modules/@sveltejs/kit/src/runtime/app/state/server.js
@@ -77,48 +78,65 @@ var page = {
 //#region src/routes/+error.svelte
 function _error($$renderer, $$props) {
 	$$renderer.component(($$renderer) => {
+		var $$store_subs;
 		const messages = {
-			403: {
-				title: "Accesso negato",
-				body: "Non hai i permessi necessari per visualizzare questa pagina."
-			},
-			404: {
-				title: "Pagina non trovata",
-				body: "La pagina che stai cercando non esiste o è stata spostata."
-			},
-			500: {
-				title: "Errore interno del server",
-				body: "Si è verificato un problema inatteso. Riprova tra poco."
-			}
+			400: ["error.badRequest", "error.badRequestBody"],
+			403: ["error.forbidden", "error.forbiddenBody"],
+			404: ["error.notFound", "error.notFoundBody"],
+			500: ["error.server", "error.serverBody"]
 		};
-		let content = derived(() => messages[page.status] ?? {
-			title: "Qualcosa è andato storto",
-			body: page.error?.message ?? "Si è verificato un errore inatteso."
-		});
+		let content = derived(() => messages[page.status] ?? ["error.generic", "error.genericBody"]);
 		head("1j96wlh", $$renderer, ($$renderer) => {
 			$$renderer.title(($$renderer) => {
-				$$renderer.push(`<title>${escape_html(page.status)} | Portale correzione automatica</title>`);
+				$$renderer.push(`<title>${escape_html(page.status)} | ${escape_html(store_get($$store_subs ??= {}, "$_", $format)("home.eyebrow"))}</title>`);
 			});
 		});
 		ParticlesAuth($$renderer, {
 			children: ($$renderer) => {
-				$$renderer.push(`<div class="auth-page-content d-flex align-items-center">`);
+				$$renderer.push(`<div class="auth-page-content">`);
 				Container($$renderer, {
 					children: ($$renderer) => {
 						Row($$renderer, {
-							class: "justify-content-center",
 							children: ($$renderer) => {
 								Col($$renderer, {
-									lg: 8,
-									class: "text-center text-white",
+									lg: 12,
 									children: ($$renderer) => {
-										$$renderer.push(`<img src="/images/polito_logo_desktop.svg" alt="Politecnico di Torino" height="80" class="mb-4 bg-white p-2 rounded"/> <h1 class="display-1 fw-semibold">${escape_html(page.status)}</h1> <h2>${escape_html(content().title)}</h2> <p class="mb-4">${escape_html(content().body)}</p> <a href="/" class="btn btn-success"><i class="mdi mdi-home me-1"></i>Torna alla home</a>`);
+										$$renderer.push(`<div class="text-center mt-sm-5 mb-4"><a href="/"${attr("aria-label", store_get($$store_subs ??= {}, "$_", $format)("common.backHome"))}><img src="/images/polito_logo_desktop.svg" alt="Politecnico di Torino" height="76"/></a></div>`);
 									},
 									$$slots: { default: true }
 								});
 							},
 							$$slots: { default: true }
 						});
+						$$renderer.push(`<!----> `);
+						Row($$renderer, {
+							class: "justify-content-center",
+							children: ($$renderer) => {
+								Col($$renderer, {
+									md: 8,
+									lg: 6,
+									xl: 5,
+									children: ($$renderer) => {
+										Card($$renderer, {
+											class: "mt-4",
+											children: ($$renderer) => {
+												CardBody($$renderer, {
+													class: "p-4 p-sm-5 text-center",
+													children: ($$renderer) => {
+														$$renderer.push(`<p class="display-1 fw-semibold text-primary mb-2">${escape_html(page.status)}</p> <h1 class="h3 mb-3">${escape_html(store_get($$store_subs ??= {}, "$_", $format)(content()[0]))}</h1> <p class="text-muted mb-4">${escape_html(store_get($$store_subs ??= {}, "$_", $format)(content()[1]))}</p> <a href="/" class="btn btn-primary"><i class="mdi mdi-home me-1" aria-hidden="true"></i>${escape_html(store_get($$store_subs ??= {}, "$_", $format)("common.backHome"))}</a>`);
+													},
+													$$slots: { default: true }
+												});
+											},
+											$$slots: { default: true }
+										});
+									},
+									$$slots: { default: true }
+								});
+							},
+							$$slots: { default: true }
+						});
+						$$renderer.push(`<!---->`);
 					},
 					$$slots: { default: true }
 				});
@@ -126,6 +144,7 @@ function _error($$renderer, $$props) {
 			},
 			$$slots: { default: true }
 		});
+		if ($$store_subs) unsubscribe_stores($$store_subs);
 	});
 }
 //#endregion

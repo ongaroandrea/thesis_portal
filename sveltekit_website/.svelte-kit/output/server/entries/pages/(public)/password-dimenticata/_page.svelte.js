@@ -1,4 +1,5 @@
-import { O as attr, s as head } from "../../../../chunks/server.js";
+import { A as escape_html, O as attr, g as unsubscribe_stores, m as store_get, s as head } from "../../../../chunks/server.js";
+import { t as $format } from "../../../../chunks/runtime.js";
 import { S as Alert, h as Col, m as Container, n as Row, s as Label, v as CardBody, y as Card } from "../../../../chunks/dist.js";
 import { t as ParticlesAuth } from "../../../../chunks/ParticlesAuth.js";
 import "../../../../chunks/auth-client.js";
@@ -6,11 +7,12 @@ import { t as Link } from "../../../../chunks/svelte-link.js";
 //#region src/routes/(public)/password-dimenticata/+page.svelte
 function _page($$renderer, $$props) {
 	$$renderer.component(($$renderer) => {
+		var $$store_subs;
 		let email = "";
 		let loading = false;
 		head("19zmier", $$renderer, ($$renderer) => {
 			$$renderer.title(($$renderer) => {
-				$$renderer.push(`<title>Password dimenticata | Portale correzione automatica</title>`);
+				$$renderer.push(`<title>${escape_html(store_get($$store_subs ??= {}, "$_", $format)("auth.forgotPassword"))} | ${escape_html(store_get($$store_subs ??= {}, "$_", $format)("home.eyebrow"))}</title>`);
 			});
 		});
 		ParticlesAuth($$renderer, {
@@ -32,7 +34,7 @@ function _page($$renderer, $$props) {
 											},
 											$$slots: { default: true }
 										});
-										$$renderer.push(`<!----></div> <p class="mt-3 fs-15 fw-medium">Portale correzione automatica</p></div>`);
+										$$renderer.push(`<!----></div> <p class="mt-3 fs-15 fw-medium">${escape_html(store_get($$store_subs ??= {}, "$_", $format)("home.eyebrow"))}</p></div>`);
 									},
 									$$slots: { default: true }
 								});
@@ -54,14 +56,12 @@ function _page($$renderer, $$props) {
 												CardBody($$renderer, {
 													class: "p-4",
 													children: ($$renderer) => {
-														$$renderer.push(`<div class="text-center mt-2"><h5 class="text-primary">Password Dimenticata?</h5> <p class="text-muted">Inserisci la tua email per ricevere istruzioni su come
-                  reimpostare la tua password.</p> <lord-icon src="//cdn.lordicon.com/rhvddzym.json" trigger="loop" colors="primary:#0ab39c" class="avatar-xl" style="width: 120px; height: 125px"></lord-icon></div> `);
+														$$renderer.push(`<div class="text-center mt-2"><h5 class="text-primary">${escape_html(store_get($$store_subs ??= {}, "$_", $format)("auth.forgotPassword"))}</h5> <p class="text-muted">${escape_html(store_get($$store_subs ??= {}, "$_", $format)("auth.forgotHelp"))}</p> <lord-icon src="//cdn.lordicon.com/rhvddzym.json" trigger="loop" colors="primary:#0ab39c" class="avatar-xl" style="width: 120px; height: 125px"></lord-icon></div> `);
 														Alert($$renderer, {
 															class: "border-0 alert-warning text-center mb-2 mx-2",
 															role: "alert",
 															children: ($$renderer) => {
-																$$renderer.push(`<!---->Inserisci la tua email e riceverai le istruzioni per reimpostare
-                la password.`);
+																$$renderer.push(`<!---->${escape_html(store_get($$store_subs ??= {}, "$_", $format)("auth.forgotAlert"))}`);
 															},
 															$$slots: { default: true }
 														});
@@ -74,8 +74,8 @@ function _page($$renderer, $$props) {
 															},
 															$$slots: { default: true }
 														});
-														$$renderer.push(`<!----> <input type="email" class="form-control" id="email" placeholder="Inserisci la tua email"${attr("value", email)}/></div> <div class="text-center mt-4"><button class="btn btn-primary w-100" type="submit"${attr("disabled", loading, true)}>`);
-														$$renderer.push(`<!--[-1-->Invia richiesta di cambio password`);
+														$$renderer.push(`<!----> <input type="email" class="form-control" id="email"${attr("placeholder", store_get($$store_subs ??= {}, "$_", $format)("auth.emailPlaceholder"))}${attr("value", email)}/></div> <div class="text-center mt-4"><button class="btn btn-primary w-100" type="submit"${attr("disabled", loading, true)}>`);
+														$$renderer.push(`<!--[-1-->${escape_html(store_get($$store_subs ??= {}, "$_", $format)("auth.sendReset"))}`);
 														$$renderer.push(`<!--]--></button></div> `);
 														$$renderer.push("<!--[-1-->");
 														$$renderer.push(`<!--]--> `);
@@ -87,12 +87,12 @@ function _page($$renderer, $$props) {
 											},
 											$$slots: { default: true }
 										});
-										$$renderer.push(`<!----> <div class="mt-4 text-center"><p class="mb-0">Clicca qui per tornare al login `);
+										$$renderer.push(`<!----> <div class="mt-4 text-center"><p class="mb-0">${escape_html(store_get($$store_subs ??= {}, "$_", $format)("auth.backToLoginPrompt"))} `);
 										Link($$renderer, {
 											href: "/login",
 											class: "fw-semibold text-primary text-decoration-underline",
 											children: ($$renderer) => {
-												$$renderer.push(`<!---->Clicca qui`);
+												$$renderer.push(`<!---->${escape_html(store_get($$store_subs ??= {}, "$_", $format)("auth.clickHere"))}`);
 											},
 											$$slots: { default: true }
 										});
@@ -111,6 +111,7 @@ function _page($$renderer, $$props) {
 			},
 			$$slots: { default: true }
 		});
+		if ($$store_subs) unsubscribe_stores($$store_subs);
 	});
 }
 //#endregion

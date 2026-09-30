@@ -1,4 +1,6 @@
 import { n as readJson, r as ApiError, t as apiResponse, u as requiredText } from "../../../../../../chunks/handler.js";
+import { a as correctionFocusOption } from "../../../../../../chunks/correction-focus.js";
+import { t as activityReferenceImageService } from "../../../../../../chunks/activity-reference-image.service.js";
 import { t as correctionSessionService } from "../../../../../../chunks/correction-session.service.js";
 import { createHash, createHmac, randomUUID } from "node:crypto";
 //#region src/lib/server/services/conversation.service.js
@@ -38,15 +40,22 @@ function signedHeaders(secret, method, path, body, contentType = "application/js
 		"X-Request-Signature": `v1=${createHmac("sha256", secret).update(canonicalRequest).digest("hex")}`
 	};
 }
-function multipartImage(image, filename, mimeType, type) {
+function filePart(boundary, fieldName, image, filename, mimeType) {
+	const safeFilename = String(filename || fieldName).replace(/[\r\n"]/g, "_");
+	return [
+		Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="${fieldName}"; filename="${safeFilename}"\r\nContent-Type: ${mimeType}\r\n\r\n`),
+		image,
+		Buffer.from("\r\n")
+	];
+}
+function multipartImages(image, referenceImage, type) {
 	if (!ALLOWED_TYPES.has(type)) throw new ApiError(400, "Invalid correction type.", "VALIDATION_ERROR");
 	const boundary = `----correction-${randomUUID()}`;
-	const safeFilename = String(filename || "image").replace(/[\r\n"]/g, "_");
 	const chunks = [
 		Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="type"\r\n\r\n${type}\r\n`),
-		Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="image"; filename="${safeFilename}"\r\nContent-Type: ${mimeType}\r\n\r\n`),
-		image,
-		Buffer.from(`\r\n--${boundary}--\r\n`)
+		...filePart(boundary, "image", image.data, image.filename, image.mimeType),
+		...filePart(boundary, "reference_image", referenceImage.data, referenceImage.filename, referenceImage.mimeType),
+		Buffer.from(`--${boundary}--\r\n`)
 	];
 	return {
 		body: Buffer.concat(chunks),
@@ -78,8 +87,8 @@ async function request(path, method, body = Buffer.alloc(0), contentType) {
 }
 var conversationService = {
 	isConfigured,
-	async start({ image, filename, mimeType, type }) {
-		const payload = multipartImage(image, filename, mimeType, type);
+	async start({ image, referenceImage, type }) {
+		const payload = multipartImages(image, referenceImage, type);
 		return request(JOBS_PATH, "POST", payload.body, payload.contentType);
 	},
 	async get(jobId) {
@@ -103,14 +112,9 @@ var IMAGE_TYPES = /* @__PURE__ */ new Set([
 	"image/webp"
 ]);
 var MAX_IMAGE_BYTES = 12582912;
+var DATA_URL_PATTERN = /^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/]+={0,2})$/;
 function analysisType(focus) {
-	if (focus.startsWith("Camera")) return "camera";
-	return {
-		Illuminazione: "light",
-		Materiali: "material",
-		Texture: "texture",
-		"Qualità generale": "texture"
-	}[focus];
+	return correctionFocusOption(focus)?.analysisType;
 }
 function jobId(input) {
 	return requiredText(input, "jobId", 100);
@@ -133,14 +137,22 @@ var POST = ({ params, request, locals }) => apiResponse(async () => {
 		status: "unavailable",
 		position: null
 	};
-	const result = await conversationService.start({
-		image: Buffer.from(await image.arrayBuffer()),
-		filename: image.name,
-		mimeType: image.type,
+	const referenceImage = await activityReferenceImageService.get(session.activityId, session.referenceImageId, locals.user);
+	const referenceMatch = referenceImage.storageKey.match(DATA_URL_PATTERN);
+	if (!referenceMatch) throw new ApiError(415, "The selected reference image must be JPEG, PNG or WEBP for analysis.", "INVALID_REFERENCE_IMAGE");
+	return await conversationService.start({
+		image: {
+			data: Buffer.from(await image.arrayBuffer()),
+			filename: image.name,
+			mimeType: image.type
+		},
+		referenceImage: {
+			data: Buffer.from(referenceMatch[2], "base64"),
+			filename: referenceImage.originalFilename,
+			mimeType: referenceMatch[1]
+		},
 		type
 	});
-	await correctionSessionService.update(params.id, { status: "PROCESSING" }, locals.user);
-	return result;
 }, 202);
 var GET = ({ params, url, locals }) => apiResponse(async () => {
 	await correctionSessionService.requireSessionAccess(params.id, locals.user);

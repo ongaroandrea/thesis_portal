@@ -1,0 +1,17 @@
+## MATERIAL CHECK
+
+Evaluate only material response. Ignore texture patterns, UVs, lighting direction or intensity, shadows, camera, geometry, composition, render style, and artistic intent.
+
+Use only material evidence:
+- highlight spread and sharpness
+- reflection sharpness and clarity
+- glossy vs diffuse response
+- metallic colored reflections vs dielectric white/gray reflections
+- specular strength relative to base color
+- Fresnel/IOR falloff at grazing angles
+- BRDF lobe shape
+- opacity, alpha cutouts, transmission, refraction when visible
+
+Do not treat lighting changes, texture changes, or angle-only brightness shifts as material differences.
+
+Silently compare roughness, metallic behavior, specular/Fresnel/IOR, BRDF lobe, opacity, and transmission. Output only in the required schema.

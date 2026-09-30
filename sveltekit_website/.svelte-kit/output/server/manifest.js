@@ -10,7 +10,7 @@ return {
 	assets: new Set(["images/favicon.ico","images/polito_logo_desktop.svg","images/polito_logo_desktop_bianco.png","robots.txt"]),
 	mimeTypes: {".svg":"image/svg+xml",".png":"image/png",".txt":"text/plain"},
 	_: {
-		client: {start:"_app/immutable/entry/start.Ds2nwFu3.js",app:"_app/immutable/entry/app.WilaiCX5.js",imports:["_app/immutable/entry/start.Ds2nwFu3.js","_app/immutable/chunks/BSlbTSE3.js","_app/immutable/chunks/QWA6UrYV.js","_app/immutable/chunks/BjR_Dw5y.js","_app/immutable/entry/app.WilaiCX5.js","_app/immutable/chunks/QWA6UrYV.js","_app/immutable/chunks/uBIymjUX.js","_app/immutable/chunks/xihTtKlq.js"],stylesheets:[],fonts:[],uses_env_dynamic_public:false},
+		client: {start:"_app/immutable/entry/start.Cj-ctvYV.js",app:"_app/immutable/entry/app.CZZZKTvH.js",imports:["_app/immutable/entry/start.Cj-ctvYV.js","_app/immutable/chunks/R-xf7ibW.js","_app/immutable/chunks/CLKU1sNR.js","_app/immutable/chunks/CtaBhaFl.js","_app/immutable/entry/app.CZZZKTvH.js","_app/immutable/chunks/CLKU1sNR.js","_app/immutable/chunks/uBIymjUX.js","_app/immutable/chunks/xihTtKlq.js"],stylesheets:[],fonts:[],uses_env_dynamic_public:false},
 		nodes: [
 			__memo(() => import('./nodes/0.js')),
 			__memo(() => import('./nodes/1.js')),
@@ -48,6 +48,20 @@ return {
 				params: [],
 				page: { layouts: [0,], errors: [1,], leaf: 7 },
 				endpoint: null
+			},
+			{
+				id: "/api/consegne-esame",
+				pattern: /^\/api\/consegne-esame\/?$/,
+				params: [],
+				page: null,
+				endpoint: __memo(() => import('./entries/endpoints/api/consegne-esame/_server.js'))
+			},
+			{
+				id: "/api/consegne-esame/[fileId]",
+				pattern: /^\/api\/consegne-esame\/([^/]+?)\/?$/,
+				params: [{"name":"fileId","optional":false,"rest":false,"chained":false}],
+				page: null,
+				endpoint: __memo(() => import('./entries/endpoints/api/consegne-esame/_fileId_/_server.js'))
 			},
 			{
 				id: "/api/corsi",

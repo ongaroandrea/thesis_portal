@@ -1,5 +1,5 @@
 import { a as numericId, c as paginationParams, i as dateValue, l as requireUser, o as optionalText, r as ApiError, s as paginated } from "./handler.js";
-import { l as courseMember, n as activity, p as user, t as db, u as examResult } from "./db.js";
+import { h as user, l as courseMember, n as activity, t as db, u as examResult } from "./db.js";
 import { t as courseService } from "./course.service.js";
 import { t as activityService } from "./activity.service.js";
 import { and, asc, count, eq, isNull, lte, or } from "drizzle-orm";

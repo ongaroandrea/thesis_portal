@@ -11,6 +11,7 @@
 	import ParticlesAuth from '$lib/components/layouts/ParticlesAuth.svelte';
 	import { authClient } from "$lib/client/auth/auth-client";
 	import { goto } from "$app/navigation";
+	import { _ } from 'svelte-i18n';
 	let email = $state("");
 	let password = $state("");
 	let displayPassword = $state(false);
@@ -55,7 +56,7 @@
 			);
 		} catch (error) {
 			console.error("Authentication error:", error);
-			errorMessage = "Impossibile accedere. Riprova tra qualche istante.";
+			errorMessage = $_('auth.error');
 		} finally {
 			loading = false;
 		}
@@ -63,7 +64,7 @@
 </script>
 
 <svelte:head>
-	<title>Login | Portale correzione automatica</title>
+	<title>{$_('login')} | {$_('home.eyebrow')}</title>
 </svelte:head>
 <ParticlesAuth>
 	<div class="auth-page-content">
@@ -84,10 +85,8 @@
 					<Card class="mt-4">
 						<CardBody class="p-4">
 							<div class="text-center mt-2">
-								<h5 class="text-primary">Benvenuto!</h5>
-								<p class="text-muted">
-									Accedi al tuo account per continuare.
-								</p>
+								<h5 class="text-primary">{$_('auth.welcome')}</h5>
+								<p class="text-muted">{$_('auth.subtitle')}</p>
 							</div>
 							<div class="p-2 mt-4">
 								{#if errorMessage}
@@ -107,7 +106,7 @@
 											type="email"
 											class="form-control"
 											id="email"
-											placeholder="Inserisci la tua email"
+											placeholder={$_('auth.emailPlaceholder')}
 											bind:value={email}
 										/>
 									</div>
@@ -117,7 +116,7 @@
 											<Link
 												href="/password-dimenticata"
 												class="text-muted"
-												>Password dimenticata?</Link
+												>{$_('auth.forgotPassword')}</Link
 											>
 										</div>
 										<Label
@@ -131,7 +130,7 @@
 												<input
 													type="text"
 													class="form-control pe-5"
-													placeholder="Inserisci la tua password"
+													placeholder={$_('auth.passwordPlaceholder')}
 													id="password-input"
 													bind:value={password}
 												/>
@@ -139,7 +138,7 @@
 												<input
 													type="password"
 													class="form-control pe-5"
-													placeholder="Inserisci la tua password"
+													placeholder={$_('auth.passwordPlaceholder')}
 													id="password-input"
 													bind:value={password}
 												/>
@@ -149,7 +148,7 @@
 												type="button"
 												id="password-addon"
 												onclick={() => (displayPassword = !displayPassword)}
-												aria-label={displayPassword ? "Nascondi password" : "Mostra password"}
+												aria-label={$_(displayPassword ? 'auth.hidePassword' : 'auth.showPassword')}
 												><i class="ri-eye-fill align-middle"></i></button
 											>
 										</div>
@@ -165,7 +164,7 @@
 										<Label
 											class="form-check-label"
 											for="auth-remember-check"
-											>Ricordami</Label
+											>{$_('auth.remember')}</Label
 										>
 									</div>
 
@@ -175,7 +174,7 @@
 											type="submit"
 											disabled={loading}
 										>
-											{loading ? "Accesso in corso…" : "Accedi"}
+											{loading ? $_('auth.loading') : $_('login')}
 										</button>
 									</div>
 								</form>

@@ -3,6 +3,7 @@ import { db } from '$lib/server/db';
 import { activity } from '$lib/server/db/schema';
 import { ApiError, dateValue, numericId, optionalText, paginated, paginationParams, requiredText, requireUser } from './api.service.js';
 import { courseService } from './course.service.js';
+import { CORRECTION_FOCUS_IDS, DEFAULT_CORRECTION_FOCUS_IDS } from '$lib/correction-focus.js';
 
 async function findActivity(id) {
 	const [record] = await db.select().from(activity).where(eq(activity.id, numericId(id, 'activityId'))).limit(1);
@@ -12,7 +13,7 @@ async function findActivity(id) {
 
 const isAvailable = (record, now = new Date()) => record.status === 'PUBLISHED'
 	&& (!record.availableFrom || record.availableFrom <= now)
-	&& (!record.availableUntil || record.availableUntil >= now);
+	&& (record.kind === 'EXAM' || !record.availableUntil || record.availableUntil >= now);
 
 function nullableDate(input, field) {
 	if (input[field] === undefined) return undefined;
@@ -49,6 +50,13 @@ function activityValues(input, partial = false) {
 		const value = optionalPositiveInteger(input[field], field);
 		if (value !== undefined) values[field] = value;
 	}
+	if (!partial || input.allowedCorrectionFocuses !== undefined) {
+		const focuses = input.allowedCorrectionFocuses ?? DEFAULT_CORRECTION_FOCUS_IDS;
+		if (!Array.isArray(focuses) || focuses.length === 0 || focuses.some((focus) => !CORRECTION_FOCUS_IDS.has(focus))) {
+			throw new ApiError(400, 'Select at least one valid correction topic.', 'VALIDATION_ERROR');
+		}
+		values.allowedCorrectionFocuses = [...new Set(focuses)];
+	}
 	if (input.displayOrder !== undefined) {
 		const displayOrder = Number(input.displayOrder);
 		if (!Number.isInteger(displayOrder)) throw new ApiError(400, 'displayOrder must be an integer.', 'VALIDATION_ERROR');
@@ -64,6 +72,7 @@ function validateActivity(values, existing = null) {
 	const kind = values.kind ?? existing?.kind;
 	const resultsReleasedAt = values.resultsReleasedAt === undefined ? existing?.resultsReleasedAt : values.resultsReleasedAt;
 	if (from && until && from >= until) throw new ApiError(400, 'availableUntil must be later than availableFrom.', 'INVALID_AVAILABILITY');
+	if (kind === 'EXAM' && !until) throw new ApiError(400, 'An exam submission deadline is required.', 'EXAM_DEADLINE_REQUIRED');
 	if (resultsReleasedAt && kind !== 'EXAM') throw new ApiError(400, 'resultsReleasedAt is only valid for exams.', 'VALIDATION_ERROR');
 }
 
@@ -107,7 +116,7 @@ export const activityService = {
 			eq(activity.courseId, id),
 			eq(activity.status, 'PUBLISHED'),
 			or(isNull(activity.availableFrom), lte(activity.availableFrom, now)),
-			or(isNull(activity.availableUntil), gte(activity.availableUntil, now))
+			or(eq(activity.kind, 'EXAM'), isNull(activity.availableUntil), gte(activity.availableUntil, now))
 		);
 		const [items, [{ total }]] = await Promise.all([
 			db.select().from(activity).where(condition).orderBy(asc(activity.displayOrder), asc(activity.id))

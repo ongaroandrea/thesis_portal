@@ -2,6 +2,8 @@ services:
   image-api:
     build: .
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
       HMAC_SECRET: ${HMAC_SECRET:?Set HMAC_SECRET in server/.env}
       HMAC_MAX_AGE_SECONDS: ${HMAC_MAX_AGE_SECONDS:-300}
@@ -11,6 +13,9 @@ services:
       MAX_IMAGE_PIXELS: ${MAX_IMAGE_PIXELS:-40000000}
     ports:
       - "127.0.0.1:${API_PORT:-8000}:8000"
+      volumes:
+      - ./app/input:/app/input
+      - ./app/output:/app/output
     healthcheck:
       test:
         [

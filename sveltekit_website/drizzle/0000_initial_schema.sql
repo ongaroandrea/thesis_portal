@@ -9,7 +9,6 @@ CREATE TYPE "course_member_status" AS ENUM ('ACTIVE', 'SUSPENDED', 'REMOVED');
 CREATE TYPE "activity_kind" AS ENUM ('LESSON', 'EXAM');
 CREATE TYPE "activity_status" AS ENUM ('DRAFT', 'PUBLISHED', 'ARCHIVED');
 CREATE TYPE "image_view_type" AS ENUM ('FRONT', 'SIDE', 'TOP', 'ANGLED', 'OTHER');
-CREATE TYPE "correction_session_status" AS ENUM ('OPEN', 'PROCESSING', 'ANSWERED', 'CLOSED', 'FAILED');
 CREATE TYPE "error_severity" AS ENUM ('LOW', 'MEDIUM', 'HIGH', 'CRITICAL');
 CREATE TYPE "result_status" AS ENUM ('DRAFT', 'READY', 'PUBLISHED');
 
@@ -184,6 +183,7 @@ CREATE TABLE "course_activity" (
 	"objective" text NOT NULL,
 	"duration_minutes" integer,
 	"max_corrections_per_student" integer,
+	"allowed_correction_focuses" jsonb NOT NULL DEFAULT '["LIGHT", "CAMERA", "MATERIAL", "TEXTURE", "GENERAL"]'::jsonb,
 	"available_from" timestamptz,
 	"available_until" timestamptz,
 	"results_released_at" timestamptz,
@@ -251,9 +251,7 @@ CREATE TABLE "correction_session" (
 	"student_user_id" bigint,
 	"anonymous_alias" text,
 	"is_anonymous" boolean NOT NULL DEFAULT false,
-	"status" "correction_session_status" NOT NULL DEFAULT 'OPEN',
 	"opened_at" timestamptz NOT NULL DEFAULT now(),
-	"closed_at" timestamptz,
 	"updated_at" timestamptz NOT NULL DEFAULT now(),
 	CONSTRAINT "correction_session_activity_fk"
 		FOREIGN KEY ("activity_id") REFERENCES "course_activity"("id") ON DELETE CASCADE,
@@ -263,8 +261,8 @@ CREATE TABLE "correction_session" (
 		FOREIGN KEY ("student_user_id") REFERENCES "user"("id") ON DELETE SET NULL,
 	CONSTRAINT "correction_session_anonymous_alias_required"
 		CHECK (NOT "is_anonymous" OR nullif(trim("anonymous_alias"), '') IS NOT NULL),
-	CONSTRAINT "correction_session_closed_after_open"
-		CHECK ("closed_at" IS NULL OR "closed_at" >= "opened_at")
+	CONSTRAINT "correction_session_analysis_focus"
+		CHECK ("analysis_focus" IS NULL OR "analysis_focus" IN ('LIGHT', 'CAMERA', 'MATERIAL', 'TEXTURE', 'GENERAL'))
 );
 
 -- One attempt represents one submitted image and its analysis lifecycle.
@@ -299,7 +297,7 @@ CREATE TABLE "correction_attempt" (
 	CONSTRAINT "correction_attempt_positive_number" CHECK ("attempt_number" > 0),
 	CONSTRAINT "correction_attempt_unique_number" UNIQUE ("session_id", "attempt_number"),
 	CONSTRAINT "correction_attempt_focus"
-		CHECK ("focus" IN ('Illuminazione', 'Camera e prospettiva', 'Materiali', 'Texture', 'Qualità generale')),
+		CHECK ("focus" IN ('LIGHT', 'CAMERA', 'MATERIAL', 'TEXTURE', 'GENERAL')),
 	CONSTRAINT "correction_attempt_job_status"
 		CHECK ("job_status" IS NULL OR "job_status" IN ('queued', 'processing', 'completed', 'failed', 'unavailable')),
 	CONSTRAINT "correction_attempt_score_range"
@@ -348,6 +346,36 @@ CREATE TABLE "analysis_error" (
 		FOREIGN KEY ("error_type_id") REFERENCES "error_type"("id") ON DELETE RESTRICT,
 	CONSTRAINT "analysis_error_confidence_range"
 		CHECK ("confidence" IS NULL OR ("confidence" >= 0 AND "confidence" <= 1))
+);
+
+-- Exam uploads are versioned: replacing or removing a file never erases history.
+CREATE TABLE "exam_submission" (
+	"id" bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+	"activity_id" bigint NOT NULL,
+	"student_user_id" bigint NOT NULL,
+	"created_at" timestamptz NOT NULL DEFAULT now(),
+	"updated_at" timestamptz NOT NULL DEFAULT now(),
+	CONSTRAINT "exam_submission_activity_fk" FOREIGN KEY ("activity_id") REFERENCES "course_activity"("id") ON DELETE CASCADE,
+	CONSTRAINT "exam_submission_student_fk" FOREIGN KEY ("student_user_id") REFERENCES "user"("id") ON DELETE CASCADE,
+	CONSTRAINT "exam_submission_activity_student_unique" UNIQUE ("activity_id", "student_user_id")
+);
+
+CREATE TABLE "exam_submission_file" (
+	"id" bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+	"submission_id" bigint NOT NULL,
+	"reference_image_id" bigint NOT NULL,
+	"revision" integer NOT NULL,
+	"original_filename" text NOT NULL,
+	"mime_type" text NOT NULL,
+	"storage_key" text NOT NULL,
+	"is_current" boolean NOT NULL DEFAULT true,
+	"replaced_at" timestamptz,
+	"removed_at" timestamptz,
+	"uploaded_at" timestamptz NOT NULL DEFAULT now(),
+	CONSTRAINT "exam_submission_file_submission_fk" FOREIGN KEY ("submission_id") REFERENCES "exam_submission"("id") ON DELETE CASCADE,
+	CONSTRAINT "exam_submission_file_reference_fk" FOREIGN KEY ("reference_image_id") REFERENCES "activity_reference_image"("id") ON DELETE NO ACTION,
+	CONSTRAINT "exam_submission_file_positive_revision" CHECK ("revision" > 0),
+	CONSTRAINT "exam_submission_file_revision_unique" UNIQUE ("submission_id", "reference_image_id", "revision")
 );
 
 -- Official exam result, separate from the LLM's indicative score.
@@ -466,6 +494,8 @@ CREATE TRIGGER "correction_session_set_updated_at" BEFORE UPDATE ON "correction_
 FOR EACH ROW EXECUTE FUNCTION "set_updated_at_snake_case"();
 CREATE TRIGGER "correction_attempt_set_updated_at" BEFORE UPDATE ON "correction_attempt"
 FOR EACH ROW EXECUTE FUNCTION "set_updated_at_snake_case"();
+CREATE TRIGGER "exam_submission_set_updated_at" BEFORE UPDATE ON "exam_submission"
+FOR EACH ROW EXECUTE FUNCTION "set_updated_at_snake_case"();
 CREATE TRIGGER "exam_result_set_updated_at" BEFORE UPDATE ON "exam_result"
 FOR EACH ROW EXECUTE FUNCTION "set_updated_at_snake_case"();
 
@@ -480,13 +510,16 @@ CREATE INDEX "course_activity_availability_idx" ON "course_activity" ("available
 CREATE INDEX "reference_image_activity_idx" ON "activity_reference_image" ("activity_id", "display_order");
 CREATE INDEX "correction_aspect_course_idx" ON "correction_aspect" ("course_id", "display_order");
 CREATE INDEX "correction_session_student_idx" ON "correction_session" ("student_user_id", "activity_id");
-CREATE INDEX "correction_session_activity_status_idx" ON "correction_session" ("activity_id", "status");
+CREATE INDEX "correction_session_activity_idx" ON "correction_session" ("activity_id");
 CREATE INDEX "correction_session_reference_image_idx" ON "correction_session" ("reference_image_id");
 CREATE INDEX "correction_attempt_session_idx" ON "correction_attempt" ("session_id", "attempt_number");
 CREATE INDEX "correction_attempt_job_idx" ON "correction_attempt" ("job_id");
 CREATE INDEX "correction_attempt_status_idx" ON "correction_attempt" ("job_status");
 CREATE INDEX "analysis_error_attempt_idx" ON "analysis_error" ("attempt_id");
 CREATE INDEX "analysis_error_type_idx" ON "analysis_error" ("error_type_id", "severity");
+CREATE INDEX "exam_submission_activity_idx" ON "exam_submission" ("activity_id");
+CREATE INDEX "exam_submission_file_submission_idx" ON "exam_submission_file" ("submission_id", "uploaded_at");
+CREATE UNIQUE INDEX "exam_submission_file_current_view_uidx" ON "exam_submission_file" ("submission_id", "reference_image_id") WHERE "is_current";
 CREATE INDEX "exam_result_student_idx" ON "exam_result" ("student_user_id", "status");
 
 -- Privacy-safe projection for professor-facing lists. The application must also
@@ -497,7 +530,12 @@ SELECT
 	cs."id",
 	cs."activity_id",
 	ca."course_id",
-	cs."status",
+	CASE
+		WHEN latest_attempt."job_status" IN ('queued', 'processing') THEN 'PROCESSING'
+		WHEN latest_attempt."job_status" = 'completed' THEN 'ANSWERED'
+		WHEN latest_attempt."job_status" IN ('failed', 'unavailable') THEN 'FAILED'
+		ELSE 'OPEN'
+	END AS "status",
 	cs."is_anonymous",
 	CASE WHEN cs."is_anonymous" THEN cs."anonymous_alias"
 		 ELSE concat_ws(' ', u."name", u."surname") END AS "student_display_name",
@@ -506,7 +544,15 @@ SELECT
 	cs."updated_at"
 FROM "correction_session" cs
 JOIN "course_activity" ca ON ca."id" = cs."activity_id"
-LEFT JOIN "user" u ON u."id" = cs."student_user_id";
+LEFT JOIN "user" u ON u."id" = cs."student_user_id"
+LEFT JOIN LATERAL (
+	SELECT catt."job_status"
+	FROM "correction_attempt" catt
+	WHERE catt."session_id" = cs."id"
+		AND catt."cancelled_at" IS NULL
+	ORDER BY catt."attempt_number" DESC
+	LIMIT 1
+) latest_attempt ON true;
 
 CREATE VIEW "activity_error_statistics"
 WITH (security_barrier = true) AS

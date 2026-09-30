@@ -2,7 +2,7 @@ import { n as __reExport, t as __exportAll } from "./rolldown-runtime.js";
 import "./shared.js";
 import { t as private_env } from "./shared-server.js";
 import "./remote.js";
-import { d as schema_exports, t as db } from "./db.js";
+import { p as schema_exports, t as db } from "./db.js";
 import "./paths.js";
 import { a as isDynamicBaseURLConfig, c as wildcardMatch, i as getProtocol, n as getHost, o as isRequestLike, r as getOrigin, s as resolveBaseURL, t as getBaseURL } from "./url.js";
 import { getRequestEvent } from "@sveltejs/kit/internal/server";

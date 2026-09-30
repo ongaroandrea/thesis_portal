@@ -1,6 +1,7 @@
 <script>
 	let isFullScreenMode = true;
 	import { browser } from '$app/environment';
+	import { _ } from 'svelte-i18n';
 
 	function toggleFullscreen() {
 		if (browser) {
@@ -39,7 +40,7 @@
 		on:click={toggleFullscreen}
 		type="button"
 		class="btn btn-icon btn-topbar btn-ghost-secondary rounded-circle"
-		aria-label={isFullScreenMode ? "Esci dalla modalità schermo intero" : "Attiva la modalità schermo intero"}
+		aria-label={$_(isFullScreenMode ? 'common.exitFullscreen' : 'common.enterFullscreen')}
 	>
 		<i
 			class={isFullScreenMode

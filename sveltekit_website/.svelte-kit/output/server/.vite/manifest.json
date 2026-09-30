@@ -10,19 +10,21 @@
       "_internal2.js"
     ]
   },
-  "_ActivityForm.BJOyawd0.css": {
-    "file": "_app/immutable/assets/ActivityForm.BJOyawd0.css",
-    "src": "_ActivityForm.BJOyawd0.css"
+  "_ActivityForm.BelPIBsv.css": {
+    "file": "_app/immutable/assets/ActivityForm.BelPIBsv.css",
+    "src": "_ActivityForm.BelPIBsv.css"
   },
   "_ActivityForm.js": {
     "file": "chunks/ActivityForm.js",
     "name": "ActivityForm",
     "imports": [
       "_server.js",
+      "_correction-focus.js",
+      "_runtime.js",
       "_api.js"
     ],
     "css": [
-      "_app/immutable/assets/ActivityForm.BJOyawd0.css"
+      "_app/immutable/assets/ActivityForm.BelPIBsv.css"
     ]
   },
   "_BreadCrumb.js": {
@@ -38,29 +40,49 @@
     "name": "CourseForm",
     "imports": [
       "_server.js",
+      "_runtime.js",
       "_api.js"
+    ]
+  },
+  "_LanguageSwitcher.CU0rOTlj.css": {
+    "file": "_app/immutable/assets/LanguageSwitcher.CU0rOTlj.css",
+    "src": "_LanguageSwitcher.CU0rOTlj.css"
+  },
+  "_LanguageSwitcher.js": {
+    "file": "chunks/LanguageSwitcher.js",
+    "name": "LanguageSwitcher",
+    "imports": [
+      "_server.js",
+      "_index-server2.js",
+      "_runtime.js"
+    ],
+    "css": [
+      "_app/immutable/assets/LanguageSwitcher.CU0rOTlj.css"
     ]
   },
   "_PageHeader.js": {
     "file": "chunks/PageHeader.js",
     "name": "PageHeader",
     "imports": [
-      "_server.js"
+      "_server.js",
+      "_runtime.js"
     ]
-  },
-  "_ParticlesAuth.BNoDUCTL.css": {
-    "file": "_app/immutable/assets/ParticlesAuth.BNoDUCTL.css",
-    "src": "_ParticlesAuth.BNoDUCTL.css"
   },
   "_ParticlesAuth.js": {
     "file": "chunks/ParticlesAuth.js",
     "name": "ParticlesAuth",
     "imports": [
-      "_server.js"
+      "_server.js",
+      "_runtime.js",
+      "_LanguageSwitcher.js"
     ],
     "css": [
-      "_app/immutable/assets/ParticlesAuth.BNoDUCTL.css"
+      "_app/immutable/assets/ParticlesAuth.vBtjVclp.css"
     ]
+  },
+  "_ParticlesAuth.vBtjVclp.css": {
+    "file": "_app/immutable/assets/ParticlesAuth.vBtjVclp.css",
+    "src": "_ParticlesAuth.vBtjVclp.css"
   },
   "_activity-reference-image.service.js": {
     "file": "chunks/activity-reference-image.service.js",
@@ -78,12 +100,18 @@
     "imports": [
       "_handler.js",
       "_db.js",
-      "_course.service.js"
+      "_course.service.js",
+      "_correction-focus.js"
     ]
   },
   "_api.js": {
     "file": "chunks/api.js",
-    "name": "api"
+    "name": "api",
+    "imports": [
+      "_server.js",
+      "_index-server.js",
+      "_runtime.js"
+    ]
   },
   "_auth-client.js": {
     "file": "chunks/auth-client.js",
@@ -128,8 +156,13 @@
     "imports": [
       "_handler.js",
       "_db.js",
+      "_correction-focus.js",
       "_correction-session.service.js"
     ]
+  },
+  "_correction-focus.js": {
+    "file": "chunks/correction-focus.js",
+    "name": "correction-focus"
   },
   "_correction-session.service.js": {
     "file": "chunks/correction-session.service.js",
@@ -138,6 +171,7 @@
       "_handler.js",
       "_db.js",
       "_course.service.js",
+      "_correction-focus.js",
       "_activity.service.js"
     ]
   },
@@ -189,6 +223,16 @@
   "_exam-result.service.js": {
     "file": "chunks/exam-result.service.js",
     "name": "exam-result.service",
+    "imports": [
+      "_handler.js",
+      "_db.js",
+      "_course.service.js",
+      "_activity.service.js"
+    ]
+  },
+  "_exam-submission.service.js": {
+    "file": "chunks/exam-submission.service.js",
+    "name": "exam-submission.service",
     "imports": [
       "_handler.js",
       "_db.js",
@@ -267,6 +311,14 @@
   "_routing.js": {
     "file": "chunks/routing.js",
     "name": "routing"
+  },
+  "_runtime.js": {
+    "file": "chunks/runtime.js",
+    "name": "runtime",
+    "imports": [
+      "_server.js",
+      "_index-server.js"
+    ]
   },
   "_server.js": {
     "file": "chunks/server.js",
@@ -418,6 +470,7 @@
     "imports": [
       "_server.js",
       "_index-server2.js",
+      "_runtime.js",
       "_auth-client.js",
       "_api.js",
       "_BreadCrumb.js"
@@ -431,6 +484,7 @@
     "imports": [
       "_server.js",
       "_index-server2.js",
+      "_runtime.js",
       "_stores.js",
       "_BreadCrumb.js"
     ],
@@ -445,6 +499,8 @@
     "isEntry": true,
     "imports": [
       "_server.js",
+      "_runtime.js",
+      "_api.js",
       "_BreadCrumb.js"
     ],
     "css": [
@@ -464,10 +520,11 @@
     "isEntry": true,
     "imports": [
       "_server.js",
-      "_index-server.js",
       "_index-server2.js",
       "_text.js",
+      "_runtime.js",
       "_dist.js",
+      "_LanguageSwitcher.js",
       "_stores.js",
       "_navigation.js",
       "_auth-client.js"
@@ -484,6 +541,7 @@
     "imports": [
       "_server.js",
       "_index-server2.js",
+      "_runtime.js",
       "_auth-client.js",
       "_api.js",
       "_PageHeader.js"
@@ -500,13 +558,14 @@
     "imports": [
       "_server.js",
       "_index-server2.js",
+      "_runtime.js",
       "_stores.js",
       "_navigation.js",
       "_api.js",
       "_ActivityForm.js"
     ],
     "css": [
-      "_app/immutable/assets/_page.UsMhIDKX.css"
+      "_app/immutable/assets/_page.DUyoD_Hq.css"
     ]
   },
   "src/routes/(protected)/corsi/[id]/esercitazioni/+page.svelte": {
@@ -517,6 +576,7 @@
     "imports": [
       "_server.js",
       "_index-server2.js",
+      "_runtime.js",
       "_stores.js",
       "_api.js",
       "_PageHeader.js"
@@ -530,13 +590,15 @@
     "imports": [
       "_server.js",
       "_index-server2.js",
+      "_correction-focus.js",
+      "_runtime.js",
       "_stores.js",
       "_navigation.js",
       "_api.js",
       "_PageHeader.js"
     ],
     "css": [
-      "_app/immutable/assets/_page.Cu_aXvYw.css"
+      "_app/immutable/assets/_page.Du-HKww0.css"
     ]
   },
   "src/routes/(protected)/corsi/[id]/esercitazioni/[activityId]/correzione/+page.svelte": {
@@ -547,12 +609,16 @@
     "imports": [
       "_server.js",
       "_index-server2.js",
+      "_correction-focus.js",
+      "_runtime.js",
+      "_client.js",
       "_stores.js",
+      "_navigation.js",
       "_api.js",
       "_PageHeader.js"
     ],
     "css": [
-      "_app/immutable/assets/_page.7kbkKKXV.css"
+      "_app/immutable/assets/_page.TU-hCV2P.css"
     ]
   },
   "src/routes/(protected)/corsi/[id]/esercitazioni/[activityId]/modifica/+page.svelte": {
@@ -563,6 +629,7 @@
     "imports": [
       "_server.js",
       "_index-server2.js",
+      "_runtime.js",
       "_client.js",
       "_stores.js",
       "_navigation.js",
@@ -578,6 +645,7 @@
     "isEntry": true,
     "imports": [
       "_server.js",
+      "_runtime.js",
       "_client.js",
       "_stores.js",
       "_navigation.js",
@@ -594,6 +662,7 @@
     "imports": [
       "_server.js",
       "_index-server2.js",
+      "_runtime.js",
       "_client.js",
       "_stores.js",
       "_navigation.js",
@@ -610,6 +679,7 @@
     "imports": [
       "_server.js",
       "_index-server2.js",
+      "_runtime.js",
       "_stores.js",
       "_api.js",
       "_PageHeader.js"
@@ -625,6 +695,7 @@
     "isEntry": true,
     "imports": [
       "_server.js",
+      "_runtime.js",
       "_client.js",
       "_navigation.js",
       "_api.js",
@@ -640,6 +711,7 @@
     "imports": [
       "_server.js",
       "_text.js",
+      "_runtime.js",
       "_dist.js",
       "_auth-client.js"
     ]
@@ -672,6 +744,7 @@
     "isEntry": true,
     "imports": [
       "_server.js",
+      "_runtime.js",
       "_dist.js",
       "_ParticlesAuth.js",
       "_navigation.js",
@@ -689,6 +762,7 @@
     "isEntry": true,
     "imports": [
       "_server.js",
+      "_runtime.js",
       "_dist.js",
       "_ParticlesAuth.js",
       "_auth-client.js",
@@ -706,6 +780,7 @@
     "imports": [
       "_server.js",
       "_index-server2.js",
+      "_runtime.js",
       "_client.js",
       "_dist.js",
       "_ParticlesAuth.js"
@@ -717,7 +792,8 @@
     "src": "src/routes/+layout.svelte",
     "isEntry": true,
     "imports": [
-      "_server.js"
+      "_server.js",
+      "_runtime.js"
     ],
     "css": [
       "_app/immutable/assets/_layout.CmsSqnt4.css"
@@ -734,10 +810,32 @@
     "src": "src/routes/+page.svelte",
     "isEntry": true,
     "imports": [
-      "_server.js"
+      "_server.js",
+      "_runtime.js",
+      "_LanguageSwitcher.js"
     ],
     "css": [
-      "_app/immutable/assets/_page.C_R70FaA.css"
+      "_app/immutable/assets/_page.uYvbbFIn.css"
+    ]
+  },
+  "src/routes/api/consegne-esame/+server.js": {
+    "file": "entries/endpoints/api/consegne-esame/_server.js",
+    "name": "entries/endpoints/api/consegne-esame/_server",
+    "src": "src/routes/api/consegne-esame/+server.js",
+    "isEntry": true,
+    "imports": [
+      "_handler.js",
+      "_exam-submission.service.js"
+    ]
+  },
+  "src/routes/api/consegne-esame/[fileId]/+server.js": {
+    "file": "entries/endpoints/api/consegne-esame/_fileId_/_server.js",
+    "name": "entries/endpoints/api/consegne-esame/_fileId_/_server",
+    "src": "src/routes/api/consegne-esame/[fileId]/+server.js",
+    "isEntry": true,
+    "imports": [
+      "_handler.js",
+      "_exam-submission.service.js"
     ]
   },
   "src/routes/api/corsi/+server.js": {
@@ -878,6 +976,8 @@
     "isEntry": true,
     "imports": [
       "_handler.js",
+      "_correction-focus.js",
+      "_activity-reference-image.service.js",
       "_correction-session.service.js"
     ]
   },
@@ -934,6 +1034,7 @@
     "isEntry": true,
     "imports": [
       "_server.js",
+      "_runtime.js",
       "_dist.js",
       "_ParticlesAuth.js",
       "_stores.js",

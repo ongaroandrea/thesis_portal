@@ -1,4 +1,10 @@
+import { N as get } from "./server.js";
+import "./index-server.js";
+import { n as $locale, t as $format } from "./runtime.js";
 //#region src/lib/client/api.js
+function localeCode() {
+	return get($locale) === "en" ? "en-GB" : "it-IT";
+}
 async function apiRequest(url, options = {}) {
 	const response = await fetch(url, {
 		...options,
@@ -9,7 +15,7 @@ async function apiRequest(url, options = {}) {
 	});
 	const payload = await response.json().catch(() => ({}));
 	if (!response.ok) {
-		const error = new Error(payload?.error?.message ?? "La richiesta non è andata a buon fine.");
+		const error = new Error(payload?.error?.message ?? get($format)("api.requestFailed"));
 		error.code = payload?.error?.code;
 		error.status = response.status;
 		throw error;
@@ -30,15 +36,15 @@ async function apiListRequest(url, options = {}) {
 	return result;
 }
 function formatDateTime(value) {
-	if (!value) return "Non definita";
-	return new Intl.DateTimeFormat("it-IT", {
+	if (!value) return get($format)("common.notDefined");
+	return new Intl.DateTimeFormat(localeCode(), {
 		dateStyle: "medium",
 		timeStyle: "short"
 	}).format(new Date(value));
 }
 function formatDate(value) {
-	if (!value) return "Non definita";
-	return new Intl.DateTimeFormat("it-IT", { dateStyle: "medium" }).format(new Date(value));
+	if (!value) return get($format)("common.notDefined");
+	return new Intl.DateTimeFormat(localeCode(), { dateStyle: "medium" }).format(new Date(value));
 }
 function toDateTimeLocal(value) {
 	if (!value) return "";

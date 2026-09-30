@@ -1,6 +1,7 @@
 <script>
     import { browser } from '$app/environment';
     import { onMount } from "svelte";
+    import { _ } from 'svelte-i18n';
 
     let isDark = false;
 
@@ -39,8 +40,8 @@
         type="button"
         class="btn btn-icon btn-topbar btn-ghost-secondary rounded-circle light-dark-mode"
         on:click={toggle}
-        aria-label={isDark ? "Passa alla modalità chiara" : "Passa alla modalità scura"}
-        title={isDark ? "Modalità chiara" : "Modalità scura"}
+        aria-label={$_(isDark ? 'common.switchLight' : 'common.switchDark')}
+        title={$_(isDark ? 'common.lightMode' : 'common.darkMode')}
     >
         <!-- Icon swaps reactively -->
 		<i class="{isDark ? 'bx bx-sun' : 'bx bx-moon'} fs-22"></i>

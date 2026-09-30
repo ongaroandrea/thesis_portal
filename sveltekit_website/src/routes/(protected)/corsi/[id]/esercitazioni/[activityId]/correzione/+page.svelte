@@ -1,19 +1,22 @@
 <script>
     import { onMount, onDestroy } from "svelte";
     import { page } from "$app/stores";
+	import { goto } from "$app/navigation";
     import {
         apiListRequest,
         apiRequest,
         formatDateTime,
     } from "$lib/client/api.js";
+    import { CORRECTION_FOCUS_OPTIONS, allowedCorrectionFocusIds } from "$lib/correction-focus.js";
     import PageHeader from "$lib/components/portal/PageHeader.svelte";
+    import { _ } from 'svelte-i18n';
 
-    const focusOptions = [
-        "Illuminazione",
-        "Camera",
-        "Materiali",
-        "Texture",
-        "Qualità generale",
+    let focusOptions = [...CORRECTION_FOCUS_OPTIONS];
+    const correctionCategories = [
+		{ key: "camera", label: 'correction.camera', icon: "ri-camera-lens-line" },
+		{ key: "material", label: 'correction.material', icon: "ri-shapes-line" },
+		{ key: "texture", label: 'correction.texture', icon: "ri-grid-line" },
+		{ key: "light", label: 'correction.light', icon: "ri-sun-line" },
     ];
     const localRequestImages = new Map();
     let course, activity, activeSession;
@@ -24,7 +27,7 @@
         imageName = "",
         imageFile = null,
         selectedReferenceId = "",
-        correctionFocus = focusOptions[0];
+		correctionFocus = focusOptions[0].id;
     let selectedRequestId = null,
         isAnonymous = false,
         loading = true,
@@ -33,6 +36,7 @@
         successMessage = "";
     let pendingReplacement = null,
         jobStates = {},
+        correctionIndexes = {},
         pollTimer;
 
     $: courseId = $page.params.id;
@@ -52,26 +56,35 @@
             activeSession.analysisFocus ||
             requests.length),
     );
+	$: visibleFocusOptions = conversationLocked && !focusOptions.some((option) => option.id === correctionFocus)
+		? [...focusOptions, ...CORRECTION_FOCUS_OPTIONS.filter((option) => option.id === correctionFocus)]
+		: focusOptions;
+    $: visibleCorrectionCategories = categoriesForFocus(
+        selectedRequest?.focus || correctionFocus,
+    );
 
     async function loadWorkspace() {
         try {
-            [course, activity, referenceImages, sessions] = await Promise.all([
+            [course, activity, referenceImages] = await Promise.all([
                 apiRequest(`/api/corsi/${courseId}`),
                 apiRequest(`/api/esercitazioni/${activityId}`),
-                apiRequest(`/api/esercitazioni/${activityId}/immagini`),
-                apiListRequest(
-                    `/api/sessioni-correzione?activityId=${activityId}`,
-                ),
+                apiRequest(`/api/esercitazioni/${activityId}/immagini`)
             ]);
+			if (activity.kind === 'EXAM') {
+				await goto(`/corsi/${courseId}/esercitazioni/${activityId}`);
+				return;
+			}
+			sessions = await apiListRequest(`/api/sessioni-correzione?activityId=${activityId}`);
+            const allowedFocusIds = allowedCorrectionFocusIds(activity);
+            focusOptions = CORRECTION_FOCUS_OPTIONS.filter((option) => allowedFocusIds.includes(option.id));
+            correctionFocus = focusOptions[0]?.id ?? "CAMERA";
             selectedReferenceId = referenceImages[0]?.id
                 ? String(referenceImages[0].id)
                 : "";
             const requested = Number($page.url.searchParams.get("session"));
             activeSession =
                 sessions.find((item) => item.id === requested) ??
-                sessions.find(
-                    (item) => !["CLOSED", "FAILED"].includes(item.status),
-                ) ??
+				sessions.find((item) => item.status !== "FAILED") ??
                 null;
             if (activeSession) {
                 attempts = await apiListRequest(
@@ -89,7 +102,7 @@
     onMount(async () => {
         await loadWorkspace();
         await refreshJobs();
-        pollTimer = setInterval(refreshJobs, 180000);
+        pollTimer = setInterval(refreshJobs, 5000);
     });
     onDestroy(() => {
         clearInterval(pollTimer);
@@ -98,16 +111,16 @@
     });
 
     function viewLabel(image) {
-        if (!image) return "Vista non disponibile";
+		if (!image) return $_('view.unavailable');
         if (image.viewType === "OTHER")
-            return image.customViewLabel || "Altra vista";
+			return image.customViewLabel || $_('view.other');
         return (
             {
-                FRONT: "Vista frontale",
-                SIDE: "Vista laterale",
-                TOP: "Vista dall’alto",
-                ANGLED: "Vista angolata",
-            }[image.viewType] ?? image.viewType
+				FRONT: $_('view.front'),
+				SIDE: $_('view.side'),
+				TOP: $_('view.top'),
+				ANGLED: $_('view.angled'),
+			}[image.viewType] ?? image.viewType
         );
     }
 
@@ -115,11 +128,11 @@
         const file = event.currentTarget.files?.[0];
         if (!file) return;
         if (!file.type.startsWith("image/")) {
-            errorMessage = "Seleziona un file immagine valido.";
+			errorMessage = $_('correction.invalidImage');
             return;
         }
         if (file.size > 12 * 1024 * 1024) {
-            errorMessage = "L’immagine non può superare 12 MB.";
+			errorMessage = $_('correction.imageTooLarge');
             return;
         }
         if (imageUrl) URL.revokeObjectURL(imageUrl);
@@ -130,11 +143,13 @@
     }
 
     function responseDetails(attempt) {
-        if (!attempt) return { evaluation: "", error: "", score: null };
+        if (!attempt)
+            return { evaluation: "", error: "", score: null, result: null };
         return {
             evaluation: attempt.summary || "",
             error: attempt.detectedError || "",
             score: attempt.score ?? null,
+            result: attempt.rawResponse?.result || attempt.rawResponse || null,
         };
     }
 
@@ -149,7 +164,67 @@
                 "",
             error: job?.error || job?.result?.error || "",
             score: job?.result?.score ?? null,
+            result: job?.result || null,
         };
+    }
+
+    function categoriesForFocus(focus) {
+        if (focus === "GENERAL") return correctionCategories;
+        const key = {
+            CAMERA: "camera",
+            MATERIAL: "material",
+            TEXTURE: "texture",
+            LIGHT: "light",
+        }[focus];
+        return correctionCategories.filter((category) => category.key === key);
+    }
+
+    function focusLabel(focusId) {
+        const option = CORRECTION_FOCUS_OPTIONS.find((item) => item.id === focusId);
+        return option ? $_(option.labelKey) : focusId;
+    }
+
+    function analysisForCategory(details, categoryKey) {
+        const result = details?.result || {};
+        const nested = result.analyses?.[categoryKey] ?? result[categoryKey];
+        if (nested) return nested.analysis || nested;
+        if (result.type === categoryKey) return result.analysis || null;
+        return null;
+    }
+
+    function correctionsForAnalysis(analysis) {
+        if (!analysis) return [];
+        if (Array.isArray(analysis.changed_parameters))
+            return analysis.changed_parameters;
+        if (Array.isArray(analysis.corrections)) return analysis.corrections;
+        return [];
+    }
+
+    function selectedCorrection(categoryKey, corrections) {
+        if (!corrections.length) return null;
+        const index = Math.min(
+            correctionIndexes[categoryKey] || 0,
+            corrections.length - 1,
+        );
+        return corrections[index];
+    }
+
+    function moveCorrection(categoryKey, direction, total) {
+        if (total < 2) return;
+        const current = correctionIndexes[categoryKey] || 0;
+        correctionIndexes = {
+            ...correctionIndexes,
+            [categoryKey]: (current + direction + total) % total,
+        };
+    }
+
+    function correctionScore(correction, analysis, details) {
+        return correction?.score ?? analysis?.score ?? details?.score ?? null;
+    }
+
+    function displayValue(value) {
+        if (value === undefined || value === null || value === "") return "—";
+        return String(value).replaceAll("_", " ");
     }
 
     function buildRequests(allAttempts) {
@@ -168,7 +243,9 @@
             response:
                 attempt.summary ||
                 attempt.detectedError ||
-                attempt.score != null
+                attempt.score != null ||
+                attempt.rawResponse ||
+                attempt.jobStatus === "completed"
                     ? attempt
                     : null,
             imageUrl: localRequestImages.get(attempt.id) || "",
@@ -187,20 +264,20 @@
         ) {
             selectedReferenceId = String(referenceImageId);
         }
-        if (focusOptions.includes(analysisFocus))
+		if (CORRECTION_FOCUS_OPTIONS.some((option) => option.id === analysisFocus))
             correctionFocus = analysisFocus;
     }
 
     function requestStatus(request) {
         if (request.cancelledAt)
             return {
-                label: "Sostituita",
+				label: 'correction.replaced',
                 className: "status-cancelled",
                 icon: "ri-close-circle-line",
             };
         if (request.response)
             return {
-                label: "Valutata",
+				label: 'correction.evaluated',
                 className: "status-completed",
                 icon: "ri-checkbox-circle-line",
             };
@@ -208,30 +285,30 @@
             jobStates[request.jobId]?.status || request.initialJobStatus;
         if (status === "completed")
             return {
-                label: "Valutata",
+				label: 'correction.evaluated',
                 className: "status-completed",
                 icon: "ri-checkbox-circle-line",
             };
         if (status === "failed")
             return {
-                label: "Errore",
+				label: 'status.failed',
                 className: "status-failed",
                 icon: "ri-error-warning-line",
             };
         if (status === "processing")
             return {
-                label: "In valutazione",
+				label: 'correction.evaluating',
                 className: "status-processing",
                 icon: "ri-loader-4-line",
             };
         if (status === "queued")
             return {
-                label: "In coda",
+				label: 'correction.queued',
                 className: "status-queued",
                 icon: "ri-time-line",
             };
         return {
-            label: "In attesa",
+			label: 'correction.waiting',
             className: "status-queued",
             icon: "ri-time-line",
         };
@@ -358,21 +435,19 @@
         selectedReferenceId = referenceImages[0]?.id
             ? String(referenceImages[0].id)
             : "";
-        correctionFocus = focusOptions[0];
+		correctionFocus = focusOptions[0].id;
         errorMessage = "";
-        successMessage =
-            "Nuova conversazione pronta: scegli il punto di vista e il tipo di analisi.";
+		successMessage = $_('correction.newConversationReady');
     }
 
     async function sendCorrection(event) {
         event.preventDefault();
         if (!imageUrl || !imageFile) {
-            errorMessage = "Carica l’immagine che vuoi correggere.";
+			errorMessage = $_('correction.uploadRequired');
             return;
         }
         if (!selectedReference) {
-            errorMessage =
-                "Per questa attività non è disponibile un’immagine di riferimento.";
+			errorMessage = $_('correction.referenceRequired');
             return;
         }
         const duplicate = [...requests]
@@ -399,10 +474,12 @@
         sending = true;
         errorMessage = "";
         successMessage = "";
+        let createdSessionForRequest = false;
+        let startedJob = null;
         try {
             if (
                 !activeSession ||
-                ["CLOSED", "FAILED"].includes(activeSession.status)
+				activeSession.status === "FAILED"
             ) {
                 activeSession = await apiRequest("/api/sessioni-correzione", {
                     method: "POST",
@@ -413,6 +490,7 @@
                         isAnonymous,
                     }),
                 });
+                createdSessionForRequest = true;
                 sessions = [activeSession, ...sessions];
             }
             if (replaced?.jobId) {
@@ -446,6 +524,7 @@
                 `/api/sessioni-correzione/${activeSession.id}/job`,
                 { method: "POST", body: form },
             );
+            startedJob = job;
             const attempt = await apiRequest("/api/tentativi-correzione", {
                 method: "POST",
                 body: JSON.stringify({
@@ -463,13 +542,41 @@
             if (job.id) jobStates = { ...jobStates, [job.id]: job };
             attempts = [...attempts, attempt];
             selectedRequestId = attempt.id;
+            correctionIndexes = {};
             imageUrl = "";
             imageName = "";
             imageFile = null;
-            successMessage = replaced
-                ? "Il processo precedente è stato interrotto e sostituito."
-                : "Richiesta aggiunta alla conversazione. Puoi inviare un’altra immagine mantenendo la stessa vista e lo stesso tipo di analisi.";
+			successMessage = $_(replaced ? 'correction.processReplaced' : 'correction.requestAdded');
+            setTimeout(refreshJobs, 1500);
         } catch (error) {
+            if (startedJob?.id && activeSession) {
+                try {
+                    await apiRequest(
+                        `/api/sessioni-correzione/${activeSession.id}/job`,
+                        {
+                            method: "DELETE",
+                            body: JSON.stringify({ jobId: startedJob.id }),
+                        },
+                    );
+                } catch {
+                    // Preserve the original submission error.
+                }
+            }
+            if (createdSessionForRequest && activeSession) {
+                const failedSessionId = activeSession.id;
+                try {
+                    await apiRequest(
+                        `/api/sessioni-correzione/${failedSessionId}`,
+                        { method: "DELETE" },
+                    );
+                    sessions = sessions.filter(
+                        (session) => session.id !== failedSessionId,
+                    );
+                    activeSession = null;
+                } catch {
+                    // Preserve the original submission error.
+                }
+            }
             errorMessage = error.message;
         } finally {
             sending = false;
@@ -477,14 +584,14 @@
     }
 </script>
 
-<svelte:head><title>Correzione immagine</title></svelte:head>
+<svelte:head><title>{$_('correction.imageCorrection')}</title></svelte:head>
 <div class="page-content">
     <div class="container-fluid py-4">
         <PageHeader
-            title="Nuova richiesta"
-            subtitle="Confronta la stessa vista"
+            title={$_('correction.newRequest')}
+            subtitle={$_('correction.compareSameView')}
             parentHref={`/corsi/${courseId}/esercitazioni/${activityId}`}
-            parentLabel="Attività"
+			parentLabel={$_('activity.activity')}
         />
         {#if errorMessage}<div class="alert alert-danger">
                 <i class="ri-error-warning-line me-2"></i>{errorMessage}
@@ -498,13 +605,13 @@
         {:else}
             <div
                 class="activity-context"
-                aria-label="Contesto della correzione"
+				aria-label={$_('correction.context')}
             >
                 <a class="context-course" href={`/corsi/${courseId}`}>
 
                     <span
-                        ><small>Corso</small><strong
-                            >{course?.name ?? "Corso"}</strong
+						><small>{$_('activity.course')}</small><strong
+                            >{course?.name ?? $_('activity.course')}</strong
                         ></span
                     >
                 </a>
@@ -516,10 +623,10 @@
 
                     <span
                         ><small
-                            >Attività corrente · {activity?.kind === "EXAM"
-                                ? "Esame"
-                                : "Esercitazione"}</small
-                        ><strong>{activity?.title ?? "Attività"}</strong></span
+							>{$_('correction.currentActivity')} · {$_(activity?.kind === "EXAM"
+                                ? 'activity.exam'
+                                : 'activity.exercise')}</small
+                        ><strong>{activity?.title ?? $_('activity.activity')}</strong></span
                     >
                 </a>
             </div>
@@ -529,19 +636,15 @@
                 >
                     <div>
                         <i class="ri-lock-2-line"></i><span
-                            ><strong
-                                >Vista e tipo di analisi sono bloccati per
-                                questa conversazione.</strong
-                            > Per controllare l’immagine da un nuovo punto di vista
-                            o con un altro tipo di analisi, crea una nuova conversazione.</span
+							><strong>{$_('correction.locked')}</strong>
+							 {$_('correction.lockedHelp')}</span
                         >
                     </div>
                     <button
                         class="btn btn-warning btn-sm"
                         type="button"
                         on:click={startNewConversation}
-                        >Nuova
-                        conversazione</button
+						>{$_('correction.newConversation')}</button
                     >
                 </div>{/if}
             <div class="row g-4 align-items-stretch">
@@ -553,9 +656,9 @@
                                     <label
                                         class="form-label fw-semibold"
                                         for="reference-view"
-                                        >Tipo di vista {#if conversationLocked}<i
+										>{$_('activity.viewType')} {#if conversationLocked}<i
                                                 class="ri-lock-2-line text-warning"
-                                                title="Bloccato per questa conversazione"
+												title={$_('correction.lockedTitle')}
                                             ></i>{/if}</label
                                     ><select
                                         id="reference-view"
@@ -573,17 +676,17 @@
                                     <label
                                         class="form-label fw-semibold"
                                         for="focus"
-                                        >Ambito di valutazione {#if conversationLocked}<i
+										>{$_('correction.evaluationScope')} {#if conversationLocked}<i
                                                 class="ri-lock-2-line text-warning"
-                                                title="Bloccato per questa conversazione"
+												title={$_('correction.lockedTitle')}
                                             ></i>{/if}</label
                                     ><select
                                         id="focus"
                                         class="form-select"
                                         bind:value={correctionFocus}
                                         disabled={conversationLocked}
-                                        >{#each focusOptions as option}<option
-                                                >{option}</option
+										>{#each visibleFocusOptions as option}<option value={option.id}
+												>{$_(option.labelKey)}</option
                                             >{/each}</select
                                     >
                                 </div>
@@ -594,11 +697,8 @@
                                     <i class="ri-image-line"></i>
                                     <div>
                                         <strong
-                                            >Nessun riferimento disponibile</strong
-                                        ><span
-                                            >Il docente deve aggiungere almeno
-                                            un’immagine di riferimento
-                                            all’attività.</span
+											>{$_('correction.noReference')}</strong
+										><span>{$_('correction.noReferenceHelp')}</span
                                         >
                                     </div>
                                 </div>
@@ -606,7 +706,7 @@
                                     <div class="image-panel">
                                         <div class="image-panel-title">
                                             <span
-                                                >La tua immagine</span
+											>{$_('correction.yourImage')}</span
                                             >{#if imageName}<small
                                                     >{imageName}</small
                                                 >{/if}
@@ -617,7 +717,7 @@
                                             for="correction-image"
                                             >{#if imageUrl}<img
                                                     src={imageUrl}
-                                                    alt="Immagine selezionata per la correzione"
+											alt={$_('correction.selectedImageAlt')}
                                                 />{:else}<div
                                                     class="upload-placeholder"
                                                 >
@@ -627,14 +727,11 @@
                                                         ></i>
                                                     </div>
                                                     <strong
-                                                        >Carica la vista da
-                                                        valutare</strong
-                                                    ><span
-                                                        >JPG, PNG o WEBP ·
-                                                        massimo 12 MB</span
+												>{$_('correction.uploadView')}</strong
+											><span>{$_('correction.imageFormats')}</span
                                                     ><span
                                                         class="btn btn-primary btn-sm mt-3"
-                                                        >Scegli immagine</span
+												>{$_('correction.chooseImage')}</span
                                                     >
                                                 </div>{/if}</label
                                         ><input
@@ -649,7 +746,7 @@
                                         <div class="image-panel-title">
                                             <span
                                                 >
-                                                Riferimento · {viewLabel(
+												{$_('correction.reference')} · {viewLabel(
                                                     selectedReference,
                                                 )}</span
                                             >
@@ -659,7 +756,7 @@
                                                 src={selectedReference?.storageKey}
                                                 alt={selectedReference?.altText ||
                                                     selectedReference?.originalFilename ||
-                                                    "Immagine di riferimento"}
+													$_('correction.referenceImageAlt')}
                                             />
                                         </div>
                                     </div>
@@ -670,61 +767,125 @@
                 <div class="col-xxl-4">
                     <div class="card border-0 shadow-sm h-100">
                         <div class="card-header bg-transparent p-4">
-                            <span class="eyebrow">Stato corrente</span>
-                            <h5 class="mb-1">Valutazione ed errore</h5>
-                            <p class="text-muted mb-0">
-                                Dettaglio della richiesta selezionata
-                            </p>
+							<span class="eyebrow">{$_('correction.currentAnalysis')}</span>
+							<h5 class="mb-1">{$_('correction.byCategory')}</h5>
+							<p class="text-muted mb-0">{$_('correction.detectedParameters')}</p>
                         </div>
-                        <div class="card-body p-4 pt-0 evaluation-panel">
+                        <div class="card-body p-4 pt-0 correction-panel">
                             {#if selectedRequest}{@const details =
                                     requestDetails(
                                         selectedRequest,
                                     )}{@const state =
                                     requestStatus(selectedRequest)}
-                                <div class="evaluation-box ">
-                                    <div class="metric-icon evaluation">
-                                        <i class="ri-bar-chart-box-line"></i>
-                                    </div>
-                                    <div>
-                                        <small>Valutazione corrente</small
-                                        >{#if details.score !== null}<strong
-                                                class="score"
-                                                >{details.score}/30</strong
-                                            >{/if}
-                                        <p>
-                                            {details.evaluation ||
-                                                "La richiesta è stata registrata. La valutazione comparirà qui appena disponibile."}
-                                        </p>
-                                    </div>
+								<div class="category-strip" aria-label={$_('correction.categories')}>
+                                    {#each correctionCategories as category}
+                                        {@const enabled = visibleCorrectionCategories.some((item) => item.key === category.key)}
+                                        <span class:active={enabled} aria-current={enabled ? "true" : undefined}>
+											<i class={category.icon}></i>{$_(category.label)}
+                                        </span>
+                                    {/each}
                                 </div>
-                                <div class="evaluation-box error-box">
-                                    <div class="metric-icon error">
+
+                                {#if ["status-queued", "status-processing"].includes(state.className)}
+                                    <div class="analysis-state">
+                                        <i class="ri-loader-4-line"></i>
+										<strong>{$_(state.label)}</strong>
+										<p>{$_('correction.analysisPending')}</p>
+                                    </div>
+                                {:else if details.error}
+                                    <div class="analysis-state error-state">
                                         <i class="ri-error-warning-line"></i>
+										<strong>{$_('correction.analysisUnavailable')}</strong>
+                                        <p>{details.error}</p>
                                     </div>
-                                    <div>
-                                        <small>Errore corrente rilevato</small>
-                                        <p>
-                                            {details.error ||
-                                                (selectedRequest.response
-                                                    ? "Nessun errore specifico segnalato."
-                                                    : "Nessun errore ancora rilevato.")}
-                                        </p>
+                                {:else}
+                                    <div class="category-results">
+                                        {#each visibleCorrectionCategories as category}
+                                            {@const analysis = analysisForCategory(details, category.key)}
+                                            {@const corrections = correctionsForAnalysis(analysis)}
+                                            {@const correction = selectedCorrection(category.key, corrections)}
+                                            {@const correctionIndex = Math.min(correctionIndexes[category.key] || 0, Math.max(corrections.length - 1, 0))}
+                                            <section class="category-result" aria-labelledby={`category-${category.key}`}>
+                                                <div class="category-heading">
+                                                    <span class="category-icon"><i class={category.icon}></i></span>
+                                                    <div>
+												<small>{$_('correction.category')}</small>
+												<h6 id={`category-${category.key}`}>{$_(category.label)}</h6>
+                                                    </div>
+                                                    {#if analysis?.summary?.overall_confidence}
+                                                        <span class="confidence-badge">{displayValue(analysis.summary.overall_confidence)}</span>
+                                                    {/if}
+                                                </div>
+
+                                                {#if analysis}
+                                                    {#if analysis.general_description}
+                                                        <p class="general-description">{analysis.general_description}</p>
+                                                    {/if}
+
+                                                    {#if correction}
+                                                        {@const score = correctionScore(correction, analysis, details)}
+                                                        <div class="correction-navigation">
+													<button type="button" on:click={() => moveCorrection(category.key, -1, corrections.length)} disabled={corrections.length < 2} aria-label={$_('correction.previous')}>
+                                                                <i class="ri-arrow-left-s-line"></i>
+                                                            </button>
+													<span>{$_('correction.position', { values: { current: correctionIndex + 1, total: corrections.length } })}</span>
+													<button type="button" on:click={() => moveCorrection(category.key, 1, corrections.length)} disabled={corrections.length < 2} aria-label={$_('correction.next')}>
+                                                                <i class="ri-arrow-right-s-line"></i>
+                                                            </button>
+                                                        </div>
+                                                        <article class="parameter-card">
+                                                            <div class="parameter-title">
+                                                                <div>
+															<small>{$_('correction.parameter')}</small>
+                                                                    <strong>{displayValue(correction.parameter || correction.name)}</strong>
+                                                                </div>
+                                                                <span class={`confidence confidence-${String(correction.confidence || "").toLowerCase()}`}>
+                                                                    {displayValue(correction.confidence)}
+                                                                </span>
+                                                            </div>
+                                                            <dl class="parameter-facts">
+														<div><dt>{$_('correction.operation')}</dt><dd>{displayValue(correction.operation)}</dd></div>
+														<div><dt>{$_('correction.intensity')}</dt><dd>{displayValue(correction.magnitude)}</dd></div>
+														<div class="wide"><dt>{$_('correction.detectedRegion')}</dt><dd>{displayValue(correction.detected_region)}</dd></div>
+														<div class="wide"><dt>{$_('correction.observableEvidence')}</dt><dd>{displayValue(correction.observable_evidence)}</dd></div>
+                                                            </dl>
+                                                            {#if score !== null}
+														<div class="correction-score"><span>{$_('correction.score')}</span><strong>{score}/30</strong></div>
+                                                            {/if}
+                                                        </article>
+                                                    {:else}
+													<div class="category-empty">{$_('correction.noParametric')}</div>
+                                                    {/if}
+
+                                                    {#if analysis.summary}
+                                                        <div class="analysis-summary">
+													<strong>{$_('correction.summary')}</strong>
+                                                            {#each Object.entries(analysis.summary) as [key, value]}
+                                                                {#if key !== "overall_confidence"}
+                                                                    <div><span>{displayValue(key)}</span><p>{displayValue(value)}</p></div>
+                                                                {/if}
+                                                            {/each}
+                                                        </div>
+                                                    {/if}
+                                                {:else}
+                                                    <div class="category-empty">
+                                                        <i class="ri-tools-line"></i>
+												<span>{$_('correction.futureAnalysis', { values: { category: $_(category.label).toLowerCase() } })}</span>
+                                                    </div>
+                                                {/if}
+                                            </section>
+                                        {/each}
                                     </div>
-                                </div>
-                                {#if selectedRequest.response}<small
-                                        class="response-time"
-                                        ><i class="ri-time-line"></i> Aggiornata {formatDateTime(
-                                            selectedRequest.response.createdAt,
-                                        )}</small
-                                    >{/if}
+                                {/if}
+                                {#if selectedRequest.response}<small class="response-time">
+									<i class="ri-time-line"></i> {$_('correction.updatedAt', { values: { date: formatDateTime(selectedRequest.response.completedAt || selectedRequest.response.updatedAt || selectedRequest.response.createdAt) } })}
+                                </small>{/if}
                             {:else}<div class="empty-evaluation">
                                     <i class="ri-radar-line"></i><strong
-                                        >Nessuna valutazione attiva</strong
+										>{$_('correction.noActiveEvaluation')}</strong
                                     >
                                     <p>
-                                        Invia la prima immagine per iniziare a
-                                        seguirne l’analisi.
+										{$_('correction.noActiveEvaluationHelp')}
                                     </p>
                                 </div>{/if}
                         </div>
@@ -733,9 +894,8 @@
             </div>
             <div class="submit-card">
                 <div>
-                    <strong>Pronto per la valutazione?</strong><span
-                        >Non serve scrivere un prompt: vista e ambito forniscono
-                        già il contesto necessario.</span
+					<strong>{$_('correction.ready')}</strong><span
+						>{$_('correction.readyHelp')}</span
                     >
                 </div>
                 <form on:submit={sendCorrection} class="submit-actions">
@@ -746,7 +906,7 @@
                                 type="checkbox"
                                 bind:checked={isAnonymous}
                             /><label class="form-check-label" for="anonymous"
-                                >Anonima</label
+								>{$_('correction.anonymous')}</label
                             >
                         </div>{/if}<button
                         class="btn btn-success btn-lg"
@@ -755,8 +915,8 @@
                         >{#if sending}<span
                                 class="spinner-border spinner-border-sm me-2"
                             ></span>{:else}{/if}{activeSession
-                            ? "Aggiungi richiesta"
-                            : "Avvia correzione"}</button
+							? $_('correction.addRequest')
+							: $_('correction.start')}</button
                     >
                 </form>
             </div>
@@ -765,12 +925,9 @@
                         class="card-header bg-transparent p-4 d-flex flex-wrap justify-content-between align-items-center gap-2"
                     >
                         <div>
-                            <span class="eyebrow">Avanzamento</span>
-                            <h5 class="mb-1">Richieste in questa correzione</h5>
-                            <p class="text-muted mb-0">
-                                Tutti i tentativi con la stessa vista e lo
-                                stesso tipo di analisi restano raccolti qui.
-                            </p>
+							<span class="eyebrow">{$_('correction.progress')}</span>
+							<h5 class="mb-1">{$_('correction.requestsHere')}</h5>
+							<p class="text-muted mb-0">{$_('correction.requestsHelp')}</p>
                         </div>
                         <span class="request-count">{requests.length}</span>
                     </div>
@@ -795,7 +952,7 @@
                                     ><span class="request-copy"
                                         ><strong>{request.viewLabel}</strong
                                         ><small
-                                            >{request.imageName} · {request.focus}</small
+                                            >{request.imageName} · {focusLabel(request.focus)}</small
                                         ><small
                                             >{formatDateTime(
                                                 request.createdAt,
@@ -804,7 +961,7 @@
                                     ><span
                                         class={`request-status ${state.className}`}
                                         ><i class={state.icon}
-                                        ></i>{state.label}</span
+										></i>{$_(state.label)}</span
                                     ><i
                                         class="ri-arrow-right-s-line request-arrow"
                                     ></i></button
@@ -827,15 +984,10 @@
             <div class="replace-dialog-icon">
                 <i class="ri-error-warning-line"></i>
             </div>
-            <h3 id="replace-dialog-title">Sostituire il processo in corso?</h3>
-            <p>
-                Esiste già una richiesta per <strong
-                    >{pendingReplacement.viewLabel}</strong
-                > ancora in elaborazione. Continuando, il processo precedente verrà
-                interrotto sul server Python e sostituito con quello nuovo.
-            </p>
+			<h3 id="replace-dialog-title">{$_('correction.replaceProcess')}</h3>
+			<p>{$_('correction.replaceProcessBody', { values: { view: pendingReplacement.viewLabel } })}</p>
             <div class="replacement-job">
-                <span>Processo selezionato</span><code
+				<span>{$_('correction.selectedProcess')}</span><code
                     >{pendingReplacement.jobId}</code
                 >
             </div>
@@ -844,7 +996,7 @@
                     class="btn btn-light"
                     type="button"
                     on:click={() => (pendingReplacement = null)}
-                    disabled={sending}>Annulla</button
+					disabled={sending}>{$_('common.cancel')}</button
                 ><button
                     class="btn btn-danger"
                     type="button"
@@ -852,7 +1004,7 @@
                     disabled={sending}
                     >{#if sending}<span
                             class="spinner-border spinner-border-sm me-2"
-                        ></span>{/if}Interrompi e sostituisci</button
+						></span>{/if}{$_('correction.interruptReplace')}</button
                 >
             </div>
         </dialog>
@@ -1098,81 +1250,272 @@
     .empty-reference strong {
         color: var(--bs-body-color);
     }
-    .evaluation-panel {
+    .correction-panel {
         display: grid;
         align-content: start;
         gap: 1rem;
     }
-    .current-request {
+    .category-strip {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 0.45rem;
+    }
+    .category-strip span {
+        min-width: 0;
+        display: grid;
+        justify-items: center;
+        gap: 0.25rem;
+        padding: 0.65rem 0.25rem;
+        color: var(--bs-secondary-color);
+        border: 1px solid var(--bs-border-color);
+        border-radius: 11px;
+        background: var(--bs-tertiary-bg);
+        font-size: 0.68rem;
+        font-weight: 700;
+        opacity: 0.45;
+    }
+    .category-strip span.active {
+        color: #405189;
+        border-color: rgba(64, 81, 137, 0.28);
+        background: rgba(64, 81, 137, 0.09);
+        opacity: 1;
+    }
+    .category-strip i {
+        font-size: 1.05rem;
+    }
+    .category-results {
+        display: grid;
+        gap: 1rem;
+    }
+    .category-result {
+        overflow: hidden;
+        border: 1px solid var(--bs-border-color);
+        border-radius: 15px;
+        background: var(--bs-body-bg);
+    }
+    .category-heading {
+        display: flex;
+        align-items: center;
+        gap: 0.7rem;
+        padding: 0.85rem 1rem;
+        border-bottom: 1px solid var(--bs-border-color);
+        background: var(--bs-tertiary-bg);
+    }
+    .category-heading > div {
+        min-width: 0;
+        display: grid;
+    }
+    .category-heading small,
+    .parameter-title small {
+        color: var(--bs-secondary-color);
+        font-size: 0.64rem;
+        font-weight: 800;
+        letter-spacing: 0.07em;
+        text-transform: uppercase;
+    }
+    .category-heading h6 {
+        margin: 0;
+    }
+    .category-icon {
+        width: 36px;
+        height: 36px;
+        display: grid;
+        place-items: center;
+        flex: 0 0 auto;
+        color: #405189;
+        border-radius: 10px;
+        background: rgba(64, 81, 137, 0.11);
+        font-size: 1rem;
+    }
+    .confidence-badge {
+        margin-left: auto;
+        padding: 0.3rem 0.48rem;
+        color: #087b6b;
+        border-radius: 999px;
+        background: rgba(10, 179, 156, 0.12);
+        font-size: 0.65rem;
+        font-weight: 800;
+        text-transform: uppercase;
+    }
+    .general-description {
+        margin: 0;
+        padding: 1rem;
+        color: var(--bs-secondary-color);
+        font-size: 0.82rem;
+        line-height: 1.55;
+    }
+    .correction-navigation {
+        display: grid;
+        grid-template-columns: 34px 1fr 34px;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0 1rem 0.7rem;
+    }
+    .correction-navigation span {
+        text-align: center;
+        color: var(--bs-secondary-color);
+        font-size: 0.72rem;
+        font-weight: 700;
+    }
+    .correction-navigation button {
+        width: 34px;
+        height: 34px;
+        display: grid;
+        place-items: center;
+        padding: 0;
+        color: #405189;
+        border: 1px solid rgba(64, 81, 137, 0.2);
+        border-radius: 10px;
+        background: rgba(64, 81, 137, 0.07);
+        font-size: 1.1rem;
+    }
+    .correction-navigation button:disabled {
+        cursor: default;
+        opacity: 0.35;
+    }
+    .parameter-card {
+        margin: 0 1rem 1rem;
+        padding: 1rem;
+        border: 1px solid rgba(64, 81, 137, 0.16);
+        border-radius: 13px;
+        background: color-mix(in srgb, #405189 4%, var(--bs-body-bg));
+    }
+    .parameter-title {
         display: flex;
         justify-content: space-between;
         align-items: start;
-        gap: 1rem;
-        padding: 1rem;
-        border-radius: 14px;
+        gap: 0.75rem;
+        margin-bottom: 0.85rem;
+    }
+    .parameter-title > div {
+        display: grid;
+    }
+    .parameter-title strong {
+        color: #405189;
+        font-size: 1.08rem;
+        text-transform: capitalize;
+    }
+    .confidence {
+        padding: 0.25rem 0.45rem;
+        border-radius: 999px;
         background: var(--bs-tertiary-bg);
-    }
-    .current-request > div {
-        display: grid;
-    }
-    .current-request small,
-    .evaluation-box small {
-        color: var(--bs-secondary-color);
-        font-size: 0.7rem;
-        font-weight: 700;
-        letter-spacing: 0.05em;
+        font-size: 0.64rem;
+        font-weight: 800;
         text-transform: uppercase;
-
     }
-    .current-request strong {
-        margin: 0.15rem 0;
+    .confidence-high {
+        color: #087b6b;
+        background: rgba(10, 179, 156, 0.12);
     }
-    .current-request div span {
+    .confidence-medium {
+        color: #9a6500;
+        background: rgba(247, 184, 75, 0.16);
+    }
+    .parameter-facts {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.7rem;
+        margin: 0;
+    }
+    .parameter-facts > div {
+        min-width: 0;
+        padding: 0.65rem;
+        border-radius: 9px;
+        background: var(--bs-body-bg);
+    }
+    .parameter-facts .wide {
+        grid-column: 1 / -1;
+    }
+    .parameter-facts dt {
+        margin-bottom: 0.2rem;
         color: var(--bs-secondary-color);
-        font-size: 0.82rem;
+        font-size: 0.62rem;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
     }
-    .evaluation-box {
-        display: grid;
-        grid-template-columns: auto 1fr;
-        gap: 0.8rem;
-        padding: 1rem;
-        margin-top: 2rem;
-        border: 1px solid rgba(64, 81, 137, 0.16);
-        border-radius: 14px;
-        background: rgba(64, 81, 137, 0.05);
+    .parameter-facts dd {
+        margin: 0;
+        font-size: 0.78rem;
+        line-height: 1.45;
     }
-    .evaluation-box p {
-        margin: 0.35rem 0 0;
-        line-height: 1.55;
+    .parameter-facts > div:not(.wide) dd {
+        font-weight: 700;
+        text-transform: capitalize;
     }
-    .evaluation-box.error-box {
-        border-color: rgba(240, 101, 72, 0.18);
-        background: rgba(240, 101, 72, 0.05);
+    .correction-score {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 0.75rem;
+        padding-top: 0.75rem;
+        color: var(--bs-secondary-color);
+        border-top: 1px solid var(--bs-border-color);
+        font-size: 0.75rem;
     }
-    .metric-icon {
-        width: 38px;
-        height: 38px;
-        display: grid;
-        place-items: center;
-        border-radius: 11px;
-        font-size: 1.1rem;
-    }
-    .metric-icon.evaluation {
+    .correction-score strong {
         color: #405189;
-        background: rgba(64, 81, 137, 0.12);
+        font-size: 1rem;
     }
-    .metric-icon.error {
-        color: #d65339;
-        background: rgba(240, 101, 72, 0.12);
+    .analysis-summary {
+        display: grid;
+        gap: 0.7rem;
+        margin: 0 1rem 1rem;
+        padding-top: 0.85rem;
+        border-top: 1px solid var(--bs-border-color);
     }
-    .score {
+    .analysis-summary > strong {
+        font-size: 0.78rem;
+    }
+    .analysis-summary div span {
         display: block;
-        margin-top: 0.2rem;
+        margin-bottom: 0.15rem;
+        color: var(--bs-secondary-color);
+        font-size: 0.62rem;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        text-transform: capitalize;
+    }
+    .analysis-summary p {
+        margin: 0;
+        font-size: 0.75rem;
+        line-height: 1.45;
+    }
+    .category-empty,
+    .analysis-state {
+        display: grid;
+        justify-items: center;
+        gap: 0.35rem;
+        padding: 1.25rem 1rem;
+        color: var(--bs-secondary-color);
+        text-align: center;
+        font-size: 0.78rem;
+    }
+    .category-empty i,
+    .analysis-state > i {
         color: #405189;
-        font-size: 1.3rem;
+        font-size: 1.35rem;
+    }
+    .analysis-state {
+        padding: 2.25rem 1rem;
+        border: 1px dashed var(--bs-border-color);
+        border-radius: 14px;
+    }
+    .analysis-state p {
+        margin: 0;
+    }
+    .analysis-state > i {
+        animation: spin 1.1s linear infinite;
+    }
+    .analysis-state.error-state > i {
+        color: #d65339;
+        animation: none;
     }
     .response-time {
         color: var(--bs-secondary-color);
+        font-size: 0.72rem;
+    }
+    @keyframes spin {
+        to { transform: rotate(360deg); }
     }
     .empty-evaluation {
         display: grid;

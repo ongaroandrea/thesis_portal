@@ -10,6 +10,12 @@
 		"src/routes/(protected)/+layout.server.js"
 	],
 	"/": [],
+	"/api/consegne-esame": [
+		"src/routes/api/consegne-esame/+server.js"
+	],
+	"/api/consegne-esame/[fileId]": [
+		"src/routes/api/consegne-esame/[fileId]/+server.js"
+	],
 	"/api/corsi": [
 		"src/routes/api/corsi/+server.js"
 	],

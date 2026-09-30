@@ -1,5 +1,6 @@
-import { g as unsubscribe_stores, m as store_get, s as head } from "../../../../../../chunks/server.js";
+import { A as escape_html, g as unsubscribe_stores, m as store_get, s as head } from "../../../../../../chunks/server.js";
 import "../../../../../../chunks/index-server2.js";
+import { t as $format } from "../../../../../../chunks/runtime.js";
 import "../../../../../../chunks/client.js";
 import { n as page } from "../../../../../../chunks/stores.js";
 import "../../../../../../chunks/navigation.js";
@@ -14,13 +15,13 @@ function _page($$renderer, $$props) {
 		$: courseId = store_get($$store_subs ??= {}, "$page", page).params.id;
 		head("6156l4", $$renderer, ($$renderer) => {
 			$$renderer.title(($$renderer) => {
-				$$renderer.push(`<title>Modifica corso</title>`);
+				$$renderer.push(`<title>${escape_html(store_get($$store_subs ??= {}, "$_", $format)("course.edit"))}</title>`);
 			});
 		});
 		$$renderer.push(`<div class="page-content"><div class="container-fluid py-4">`);
 		PageHeader($$renderer, {
-			title: "Modifica corso",
-			subtitle: "Aggiorna informazioni e disponibilità",
+			title: store_get($$store_subs ??= {}, "$_", $format)("course.edit"),
+			subtitle: store_get($$store_subs ??= {}, "$_", $format)("course.editSubtitle"),
 			parentHref: `/corsi/${courseId}`
 		});
 		$$renderer.push(`<!----> `);

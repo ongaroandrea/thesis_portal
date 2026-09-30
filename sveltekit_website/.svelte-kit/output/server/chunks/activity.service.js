@@ -1,6 +1,7 @@
 import { a as numericId, c as paginationParams, i as dateValue, l as requireUser, o as optionalText, r as ApiError, s as paginated, u as requiredText } from "./handler.js";
 import { n as activity, t as db } from "./db.js";
 import { t as courseService } from "./course.service.js";
+import { r as DEFAULT_CORRECTION_FOCUS_IDS, t as CORRECTION_FOCUS_IDS } from "./correction-focus.js";
 import { and, asc, count, eq, gte, isNull, lte, or } from "drizzle-orm";
 //#region src/lib/server/services/activity.service.js
 async function findActivity(id) {
@@ -8,7 +9,7 @@ async function findActivity(id) {
 	if (!record) throw new ApiError(404, "Activity not found.", "ACTIVITY_NOT_FOUND");
 	return record;
 }
-var isAvailable = (record, now = /* @__PURE__ */ new Date()) => record.status === "PUBLISHED" && (!record.availableFrom || record.availableFrom <= now) && (!record.availableUntil || record.availableUntil >= now);
+var isAvailable = (record, now = /* @__PURE__ */ new Date()) => record.status === "PUBLISHED" && (!record.availableFrom || record.availableFrom <= now) && (record.kind === "EXAM" || !record.availableUntil || record.availableUntil >= now);
 function nullableDate(input, field) {
 	if (input[field] === void 0) return void 0;
 	return input[field] === null || input[field] === "" ? null : dateValue(input[field], field);
@@ -50,6 +51,11 @@ function activityValues(input, partial = false) {
 		const value = optionalPositiveInteger(input[field], field);
 		if (value !== void 0) values[field] = value;
 	}
+	if (!partial || input.allowedCorrectionFocuses !== void 0) {
+		const focuses = input.allowedCorrectionFocuses ?? DEFAULT_CORRECTION_FOCUS_IDS;
+		if (!Array.isArray(focuses) || focuses.length === 0 || focuses.some((focus) => !CORRECTION_FOCUS_IDS.has(focus))) throw new ApiError(400, "Select at least one valid correction topic.", "VALIDATION_ERROR");
+		values.allowedCorrectionFocuses = [...new Set(focuses)];
+	}
 	if (input.displayOrder !== void 0) {
 		const displayOrder = Number(input.displayOrder);
 		if (!Number.isInteger(displayOrder)) throw new ApiError(400, "displayOrder must be an integer.", "VALIDATION_ERROR");
@@ -64,6 +70,7 @@ function validateActivity(values, existing = null) {
 	const kind = values.kind ?? existing?.kind;
 	const resultsReleasedAt = values.resultsReleasedAt === void 0 ? existing?.resultsReleasedAt : values.resultsReleasedAt;
 	if (from && until && from >= until) throw new ApiError(400, "availableUntil must be later than availableFrom.", "INVALID_AVAILABILITY");
+	if (kind === "EXAM" && !until) throw new ApiError(400, "An exam submission deadline is required.", "EXAM_DEADLINE_REQUIRED");
 	if (resultsReleasedAt && kind !== "EXAM") throw new ApiError(400, "resultsReleasedAt is only valid for exams.", "VALIDATION_ERROR");
 }
 async function requireActivityAccess(id, currentUser) {
@@ -96,7 +103,7 @@ var activityService = {
 		}
 		await courseService.requireCourseAccess(id, currentUser);
 		const now = /* @__PURE__ */ new Date();
-		const condition = and(eq(activity.courseId, id), eq(activity.status, "PUBLISHED"), or(isNull(activity.availableFrom), lte(activity.availableFrom, now)), or(isNull(activity.availableUntil), gte(activity.availableUntil, now)));
+		const condition = and(eq(activity.courseId, id), eq(activity.status, "PUBLISHED"), or(isNull(activity.availableFrom), lte(activity.availableFrom, now)), or(eq(activity.kind, "EXAM"), isNull(activity.availableUntil), gte(activity.availableUntil, now)));
 		const [items, [{ total }]] = await Promise.all([db.select().from(activity).where(condition).orderBy(asc(activity.displayOrder), asc(activity.id)).limit(pagination.pageSize).offset(pagination.offset), db.select({ total: count() }).from(activity).where(condition)]);
 		return paginated(items, total, pagination);
 	},

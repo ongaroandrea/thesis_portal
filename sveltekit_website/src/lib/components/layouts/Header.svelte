@@ -5,6 +5,8 @@
 	import FullScreenDropdown from '$lib/components/common/FullScreenDropdown.svelte';
 	import ProfileDropdown from '$lib/components/common/ProfileDropdown.svelte';
 	import LightDark from '$lib/components/common/LightDark.svelte';
+	import LanguageSwitcher from '$lib/components/common/LanguageSwitcher.svelte';
+	import { _ } from 'svelte-i18n';
 
 	export let headerClass;
 	function toogleMenuBtn() {
@@ -32,7 +34,7 @@
 						<span class="logo-sm">
 							<img
 								src="/images/favicon.ico"
-								alt="Portale correzione automatica"
+								alt={$_('home.eyebrow')}
 								height="22"
 							/>
 						</span>
@@ -49,7 +51,7 @@
 						<span class="logo-sm">
 							<img
 								src="/images/favicon.ico"
-								alt="Portale correzione automatica"
+								alt={$_('home.eyebrow')}
 								height="22"
 							/>
 						</span>
@@ -68,7 +70,7 @@
 					class="btn btn-sm px-3 fs-16 header-item vertical-menu-btn topnav-hamburger"
 					id="topnav-hamburger-icon"
 					on:click={toogleMenuBtn}
-					aria-label="Apri o chiudi il menu"
+					aria-label={$_('header.menu')}
 				>
 					<span class="hamburger-icon">
 						<span></span>
@@ -80,12 +82,13 @@
 			</div>
 
 			<div class="d-flex align-items-center">
+				<LanguageSwitcher />
 				<Dropdown class="d-md-none topbar-head-dropdown header-item">
 					<button
 						type="button"
 						class="btn btn-icon btn-topbar btn-ghost-secondary rounded-circle"
 						id="page-header-search-dropdown"
-						aria-label="Cerca">
+						aria-label={$_('common.search')}>
 						<i class="bx bx-search fs-22"></i>
 					</button>
 					<DropdownMenu
@@ -96,7 +99,7 @@
 									<Input
 										type="text"
 										class="form-control"
-										placeholder="Search ..."
+										placeholder={$_('common.searchPlaceholder')}
 									/>
 									<Button color="primary" type="submit"
 									><i class="mdi mdi-magnify"></i></Button

@@ -5,6 +5,7 @@
 	import { apiRequest } from '$lib/client/api.js';
 	import CourseForm from '$lib/components/portal/CourseForm.svelte';
 	import PageHeader from '$lib/components/portal/PageHeader.svelte';
+	import { _ } from 'svelte-i18n';
 
 	let course;
 	let loading = true;
@@ -28,12 +29,12 @@
 	}
 </script>
 
-<svelte:head><title>Modifica corso</title></svelte:head>
+<svelte:head><title>{$_('course.edit')}</title></svelte:head>
 <div class="page-content"><div class="container-fluid py-4">
-	<PageHeader title="Modifica corso" subtitle="Aggiorna informazioni e disponibilità" parentHref={`/corsi/${courseId}`} />
+	<PageHeader title={$_('course.edit')} subtitle={$_('course.editSubtitle')} parentHref={`/corsi/${courseId}`} />
 	{#if errorMessage}<div class="alert alert-danger">{errorMessage}</div>{/if}
 	{#if loading}<div class="text-center py-5"><div class="spinner-border text-primary"></div></div>
 	{:else if course}<div class="row justify-content-center"><div class="col-xl-9"><div class="card border-0 shadow-sm"><div class="card-body p-4">
-		<CourseForm initial={course} onSubmit={updateCourse} {busy} submitLabel="Salva modifiche" />
+		<CourseForm initial={course} onSubmit={updateCourse} {busy} submitLabel={$_('common.saveChanges')} />
 	</div></div></div></div>{/if}
 </div></div>

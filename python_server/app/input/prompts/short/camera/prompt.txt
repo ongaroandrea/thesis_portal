@@ -1,0 +1,18 @@
+## CAMERA CHECK
+
+Evaluate only camera differences. Ignore lighting, shadows, materials, textures, render quality, geometry realism, and artistic quality.
+
+Perspective changes are not geometry deformation.
+
+Silently compare Image A and Image B for:
+- truck: lateral parallax, side exposure, margin shifts
+- dolly: depth scaling, occlusion shifts, perspective compression or expansion
+- pedestal: horizon height, top/underside visibility, floor coverage
+- yaw: horizontal vanishing-point drift and side-plane width changes
+- pitch: horizon and vertical perspective changes
+- roll: horizon or vertical-axis tilt
+- FOV: uniform scale or depth-compression changes without parallax
+
+Disambiguate translation from FOV using parallax, occlusion, foreground/background scale, convergence angles, and crop boundaries.
+
+Before answering, check for subtle 1-3 degree or small-position differences. Output only in the required schema.

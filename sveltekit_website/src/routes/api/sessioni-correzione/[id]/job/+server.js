@@ -3,6 +3,7 @@ import { ApiError, requiredText } from '$lib/server/services/api.service.js';
 import { activityReferenceImageService } from '$lib/server/services/activity-reference-image.service.js';
 import { conversationService } from '$lib/server/services/conversation.service.js';
 import { correctionSessionService } from '$lib/server/services/correction-session.service.js';
+import { correctionFocusOption } from '$lib/correction-focus.js';
 
 const TYPES = new Set(['camera', 'texture', 'light', 'material']);
 const IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
@@ -10,8 +11,7 @@ const MAX_IMAGE_BYTES = 12 * 1024 * 1024;
 const DATA_URL_PATTERN = /^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/]+={0,2})$/;
 
 function analysisType(focus) {
-	if (focus.startsWith('Camera')) return 'camera';
-	return { Illuminazione: 'light', Materiali: 'material', Texture: 'texture', 'Qualità generale': 'texture' }[focus];
+	return correctionFocusOption(focus)?.analysisType;
 }
 
 function jobId(input) {
@@ -64,7 +64,6 @@ export const POST = ({ params, request, locals }) => apiResponse(async () => {
 		},
 		type
 	});
-	await correctionSessionService.update(params.id, { status: 'PROCESSING' }, locals.user);
 	return result;
 }, 202);
 
