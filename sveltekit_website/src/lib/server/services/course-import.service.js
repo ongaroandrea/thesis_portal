@@ -15,10 +15,17 @@ function normalizeEmails(emails) {
 }
 
 export const courseImportService = {
+	/**
+	 * Bulk-authorize emails for a course. Only @polito.it addresses (including
+	 * subdomains such as studenti.polito.it) are accepted. Each new address
+	 * gets a course_invitation; if a verified user with that email already
+	 * exists they are also made an ACTIVE STUDENT member immediately.
+	 * The result row records counts and per-row errors.
+	 */
 	async importMembers(input, currentUser) {
 		requireUser(currentUser);
-		if (!['professor', 'developer'].includes(currentUser.role)) {
-			throw new ApiError(403, 'Only a professor or developer can import course members.', 'COURSE_IMPORT_DENIED');
+		if (!['professor', 'admin'].includes(currentUser.role)) {
+			throw new ApiError(403, 'Only a professor or admin can import course members.', 'COURSE_IMPORT_DENIED');
 		}
 		const courseId = numericId(input.courseId, 'courseId');
 		await courseService.requireCourseManager(courseId, currentUser);

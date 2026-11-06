@@ -1,15 +1,23 @@
-import { n as readJson, r as ApiError, t as apiResponse, u as requiredText } from "../../../../../../chunks/handler.js";
-import { a as correctionFocusOption } from "../../../../../../chunks/correction-focus.js";
+import { n as readJson, t as apiResponse } from "../../../../../../chunks/handler.js";
+import { c as requiredText, t as ApiError } from "../../../../../../chunks/api.service.js";
 import { t as activityReferenceImageService } from "../../../../../../chunks/activity-reference-image.service.js";
 import { t as correctionSessionService } from "../../../../../../chunks/correction-session.service.js";
+import { t as correctionAttemptService } from "../../../../../../chunks/correction-attempt.service.js";
+import { i as analysisJob, n as activity, t as db } from "../../../../../../chunks/db.js";
+import { t as activityService } from "../../../../../../chunks/activity.service.js";
+import { t as promptTemplateService } from "../../../../../../chunks/prompt-template.service.js";
+import { t as localStorageService } from "../../../../../../chunks/local-storage.service.js";
+import { a as correctionFocusOption } from "../../../../../../chunks/correction-focus.js";
+import { eq } from "drizzle-orm";
 import { createHash, createHmac, randomUUID } from "node:crypto";
-//#region src/lib/server/services/conversation.service.js
+// src/lib/server/services/conversation.service.js
 var JOBS_PATH = "/v1/jobs";
 var ALLOWED_TYPES = /* @__PURE__ */ new Set([
 	"camera",
 	"texture",
 	"light",
-	"material"
+	"material",
+	"general"
 ]);
 function configuration() {
 	const baseUrl = process.env.PYTHON_SERVER_URL;
@@ -48,11 +56,21 @@ function filePart(boundary, fieldName, image, filename, mimeType) {
 		Buffer.from("\r\n")
 	];
 }
-function multipartImages(image, referenceImage, type) {
+function textPart(boundary, fieldName, value) {
+	return Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="${fieldName}"\r\n\r\n${String(value)}\r\n`);
+}
+function multipartImages(image, referenceImage, prompt) {
+	const { type } = prompt;
 	if (!ALLOWED_TYPES.has(type)) throw new ApiError(400, "Invalid correction type.", "VALIDATION_ERROR");
 	const boundary = `----correction-${randomUUID()}`;
 	const chunks = [
-		Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="type"\r\n\r\n${type}\r\n`),
+		textPart(boundary, "type", type),
+		textPart(boundary, "model", prompt.model),
+		textPart(boundary, "system_prompt", prompt.systemPrompt),
+		textPart(boundary, "user_prompt", prompt.userPrompt),
+		textPart(boundary, "output_schema", JSON.stringify(prompt.outputSchema)),
+		textPart(boundary, "prompt_version", prompt.promptVersion),
+		textPart(boundary, "prompt_hash", prompt.promptHash),
 		...filePart(boundary, "image", image.data, image.filename, image.mimeType),
 		...filePart(boundary, "reference_image", referenceImage.data, referenceImage.filename, referenceImage.mimeType),
 		Buffer.from(`--${boundary}--\r\n`)
@@ -87,8 +105,8 @@ async function request(path, method, body = Buffer.alloc(0), contentType) {
 }
 var conversationService = {
 	isConfigured,
-	async start({ image, referenceImage, type }) {
-		const payload = multipartImages(image, referenceImage, type);
+	async start({ image, referenceImage, prompt }) {
+		const payload = multipartImages(image, referenceImage, prompt);
 		return request(JOBS_PATH, "POST", payload.body, payload.contentType);
 	},
 	async get(jobId) {
@@ -98,13 +116,146 @@ var conversationService = {
 		return request(`${JOBS_PATH}/${encodeURIComponent(jobId)}`, "DELETE");
 	}
 };
-//#endregion
-//#region src/routes/api/sessioni-correzione/[id]/job/+server.js
+// src/lib/server/services/analysis-job.service.js
+function statusForProvider(status) {
+	if (status === "completed") return "completed";
+	if (status === "failed") return "failed";
+	return "pending";
+}
+function validateSchema(value, schema, path = "$") {
+	if (!schema || typeof schema !== "object") return [];
+	const errors = [];
+	const type = schema.type;
+	if (!(type === "object" ? value !== null && typeof value === "object" && !Array.isArray(value) : type === "array" ? Array.isArray(value) : type === "string" ? typeof value === "string" : type === "number" || type === "integer" ? typeof value === "number" && Number.isFinite(value) && (type !== "integer" || Number.isInteger(value)) : type === "boolean" ? typeof value === "boolean" : true)) return [`${path} must be ${type}.`];
+	if (type === "object") {
+		for (const key of schema.required ?? []) if (!(key in value)) errors.push(`${path}.${key} is required.`);
+		for (const [key, childSchema] of Object.entries(schema.properties ?? {})) if (key in value) errors.push(...validateSchema(value[key], childSchema, `${path}.${key}`));
+	}
+	if (type === "array" && schema.items) value.forEach((item, index) => errors.push(...validateSchema(item, schema.items, `${path}[${index}]`)));
+	return errors;
+}
+var analysisJobService = {
+	async registerCorrection(attemptId, providerJob, prompt) {
+		const [created] = await db.insert(analysisJob).values({
+			correctionAttemptId: attemptId,
+			providerJobId: providerJob.id,
+			promptTemplateRevisionId: prompt.promptTemplateRevisionId,
+			activityPromptRevision: prompt.activityPromptRevision,
+			promptSnapshot: {
+				analysisType: prompt.analysisType,
+				templateId: prompt.templateId,
+				templateScope: prompt.templateScope,
+				templateVersion: prompt.templateVersion,
+				systemPrompt: prompt.systemPrompt,
+				userPrompt: prompt.userPrompt,
+				outputSchema: prompt.outputSchema
+			},
+			promptHash: prompt.promptHash,
+			model: prompt.model,
+			status: statusForProvider(providerJob.status)
+		}).returning();
+		return created;
+	},
+	async syncProvider(providerJobId, job) {
+		const [record] = await db.select().from(analysisJob).where(eq(analysisJob.providerJobId, providerJobId)).limit(1);
+		if (!record) return null;
+		const validationErrors = job.status === "completed" ? validateSchema(job.result, record.promptSnapshot?.outputSchema) : [];
+		const valid = validationErrors.length === 0;
+		const values = {
+			status: valid ? statusForProvider(job.status) : "failed",
+			rawResult: job,
+			error: valid ? job.error ?? null : `Invalid model output: ${validationErrors.join(" ")}`,
+			startedAt: job.startedAt ? new Date(job.startedAt) : void 0,
+			completedAt: job.completedAt ? new Date(job.completedAt) : void 0,
+			updatedAt: /* @__PURE__ */ new Date()
+		};
+		if (job.status === "completed" && valid) values.validatedResult = job.result ?? null;
+		const [updated] = await db.update(analysisJob).set(values).where(eq(analysisJob.providerJobId, providerJobId)).returning();
+		return updated ? {
+			record: updated,
+			valid,
+			validationErrors
+		} : null;
+	}
+};
+// src/lib/server/services/prompt-builder.service.js
+function professorSection(addendum) {
+	if (!addendum) return "";
+	return `\n\nACTIVITY-SPECIFIC INSTRUCTIONS\nThe professor supplied the following evaluation criteria. Apply them without changing the output schema or the selected analysis scope.\n<professor-instructions>\n${addendum}\n</professor-instructions>`;
+}
+var promptBuilderService = { async build(activityId, typeValue) {
+	const type = requiredText(typeValue, "analysisType", 20).toLowerCase();
+	let activity$1 = await activityService.findActivity(activityId);
+	if (activity$1.kind === "EXAM" && !activity$1.promptFrozenAt) {
+		const now = /* @__PURE__ */ new Date();
+		const freezeAt = activity$1.availableFrom && activity$1.availableFrom <= now ? activity$1.availableFrom : now;
+		const entries = await Promise.all([
+			"camera",
+			"light",
+			"material",
+			"texture",
+			"general"
+		].map(async (entryType) => {
+			const entry = await promptTemplateService.resolve(activity$1.courseId, entryType, freezeAt);
+			return [entryType, {
+				templateId: entry.id,
+				templateScope: entry.scope,
+				templateVersion: entry.revision.version,
+				promptTemplateRevisionId: entry.revision.id,
+				model: entry.revision.model,
+				systemPrompt: entry.revision.systemPrompt,
+				userPrompt: `${entry.revision.userPrompt}${professorSection(activity$1.promptAddendum?.trim())}`,
+				outputSchema: entry.revision.outputSchema
+			}];
+		}));
+		const frozenPromptConfig = Object.fromEntries(entries);
+		const [frozen] = await db.update(activity).set({
+			promptFrozenAt: freezeAt,
+			frozenPromptConfig,
+			updatedAt: /* @__PURE__ */ new Date()
+		}).where(eq(activity.id, activity$1.id)).returning();
+		activity$1 = frozen;
+	}
+	const frozen = activity$1.kind === "EXAM" ? activity$1.frozenPromptConfig?.[type] : null;
+	const template = frozen ? null : await promptTemplateService.resolve(activity$1.courseId, type);
+	const revision = frozen ?? {
+		templateId: template.id,
+		templateScope: template.scope,
+		templateVersion: template.revision.version,
+		promptTemplateRevisionId: template.revision.id,
+		model: template.revision.model,
+		systemPrompt: template.revision.systemPrompt,
+		userPrompt: `${template.revision.userPrompt}${professorSection(activity$1.promptAddendum?.trim())}`,
+		outputSchema: template.revision.outputSchema
+	};
+	const systemPrompt = revision.systemPrompt;
+	const userPrompt = revision.userPrompt;
+	const snapshot = {
+		analysisType: type,
+		templateId: revision.templateId,
+		templateScope: revision.templateScope,
+		templateVersion: revision.templateVersion,
+		activityPromptRevision: activity$1.promptRevision,
+		model: revision.model,
+		systemPrompt,
+		userPrompt,
+		outputSchema: revision.outputSchema
+	};
+	const promptHash = createHash("sha256").update(JSON.stringify(snapshot)).digest("hex");
+	return {
+		...snapshot,
+		promptHash,
+		promptVersion: `${type}-t${revision.templateId}-v${revision.templateVersion}-a${activity$1.promptRevision}`,
+		promptTemplateRevisionId: revision.promptTemplateRevisionId
+	};
+} };
+// src/routes/api/sessioni-correzione/[id]/job/+server.js
 var TYPES = /* @__PURE__ */ new Set([
 	"camera",
 	"texture",
 	"light",
-	"material"
+	"material",
+	"general"
 ]);
 var IMAGE_TYPES = /* @__PURE__ */ new Set([
 	"image/jpeg",
@@ -137,31 +288,79 @@ var POST = ({ params, request, locals }) => apiResponse(async () => {
 		status: "unavailable",
 		position: null
 	};
+	const prompt = await promptBuilderService.build(session.activityId, type);
 	const referenceImage = await activityReferenceImageService.get(session.activityId, session.referenceImageId, locals.user);
+	const localKey = localStorageService.keyFromUrl(referenceImage.storageKey);
 	const referenceMatch = referenceImage.storageKey.match(DATA_URL_PATTERN);
-	if (!referenceMatch) throw new ApiError(415, "The selected reference image must be JPEG, PNG or WEBP for analysis.", "INVALID_REFERENCE_IMAGE");
-	return await conversationService.start({
+	if (!localKey && !referenceMatch) throw new ApiError(415, "The selected reference image must be JPEG, PNG or WEBP for analysis.", "INVALID_REFERENCE_IMAGE");
+	let referenceData;
+	try {
+		referenceData = localKey ? await localStorageService.read(localKey) : Buffer.from(referenceMatch[2], "base64");
+	} catch (error) {
+		if (error?.code === "ENOENT") throw new ApiError(404, "The selected reference image file was not found.", "REFERENCE_IMAGE_NOT_FOUND");
+		throw error;
+	}
+	const result = await conversationService.start({
 		image: {
 			data: Buffer.from(await image.arrayBuffer()),
 			filename: image.name,
 			mimeType: image.type
 		},
 		referenceImage: {
-			data: Buffer.from(referenceMatch[2], "base64"),
+			data: referenceData,
 			filename: referenceImage.originalFilename,
-			mimeType: referenceMatch[1]
+			mimeType: referenceImage.mimeType
 		},
-		type
+		prompt: {
+			...prompt,
+			type
+		}
 	});
+	if (result.id) {
+		let attempt = null;
+		try {
+			attempt = await correctionAttemptService.createFromTrustedJob({
+				sessionId: session.id,
+				imageName: image.name,
+				focus: session.analysisFocus,
+				viewType: referenceImage.viewType,
+				viewLabel: referenceImage.viewType === "OTHER" ? referenceImage.customViewLabel || "Altra vista" : {
+					FRONT: "Vista frontale",
+					SIDE: "Vista laterale",
+					TOP: "Vista dall’alto",
+					ANGLED: "Vista angolata"
+				}[referenceImage.viewType] || referenceImage.viewType,
+				referenceImageId: referenceImage.id
+			}, locals.user, result);
+			await analysisJobService.registerCorrection(attempt.id, result, prompt);
+		} catch (error) {
+			await conversationService.destroy(result.id).catch(() => {});
+			if (attempt?.id) await correctionAttemptService.remove(attempt.id, locals.user).catch(() => {});
+			throw error;
+		}
+	}
+	return result;
 }, 202);
 var GET = ({ params, url, locals }) => apiResponse(async () => {
 	await correctionSessionService.requireSessionAccess(params.id, locals.user);
-	return conversationService.get(jobId(url.searchParams.get("jobId")));
+	const id = jobId(url.searchParams.get("jobId"));
+	await correctionAttemptService.requireTrustedJob(params.id, id, locals.user);
+	const job = await conversationService.get(id);
+	const validation = await analysisJobService.syncProvider(id, job);
+	const trustedJob = validation && !validation.valid ? {
+		...job,
+		status: "failed",
+		error: `Invalid model output: ${validation.validationErrors.join(" ")}`
+	} : job;
+	await correctionAttemptService.syncTrustedJob(params.id, id, trustedJob, locals.user);
+	return trustedJob;
 });
 var DELETE = ({ params, request, locals }) => apiResponse(async () => {
 	await correctionSessionService.requireSessionAccess(params.id, locals.user);
-	const input = await readJson(request);
-	return conversationService.destroy(jobId(input.jobId));
+	const id = jobId((await readJson(request)).jobId);
+	await correctionAttemptService.requireTrustedJob(params.id, id, locals.user);
+	const result = await conversationService.destroy(id);
+	await correctionAttemptService.cancelTrustedJob(params.id, id, locals.user);
+	return result;
 });
-//#endregion
 export { DELETE, GET, POST };

@@ -1,7 +1,7 @@
 import { t as __exportAll } from "./rolldown-runtime.js";
 import { Bt as run, C as getAllContexts, D as ssr_context, E as setContext, S as createContext, T as hasContext, b as hydratable_serialization_failed, v as get_render_context, vt as async_mode_flag, w as getContext, x as lifecycle_function_unavailable, xt as experimental_async_required, zt as noop } from "./server.js";
 import * as devalue from "devalue";
-//#region node_modules/svelte/src/internal/server/abort-signal.js
+// node_modules/svelte/src/internal/server/abort-signal.js
 function getAbortSignal() {
 	let context = ssr_context;
 	while (context !== null) {
@@ -10,8 +10,7 @@ function getAbortSignal() {
 	}
 	return new AbortController().signal;
 }
-//#endregion
-//#region node_modules/svelte/src/internal/server/hydratable.js
+// node_modules/svelte/src/internal/server/hydratable.js
 /** @import { HydratableLookupEntry } from '#server' */
 /**
 * @template T
@@ -72,8 +71,7 @@ function serialization_stack(root_stack, uneval_stack) {
 	if (uneval_stack) out += "Caused by:\n" + uneval_stack + "\n";
 	return out || "<missing stack trace>";
 }
-//#endregion
-//#region node_modules/svelte/src/internal/server/blocks/snippet.js
+// node_modules/svelte/src/internal/server/blocks/snippet.js
 /** @import { Snippet } from 'svelte' */
 /** @import { Renderer } from '../renderer' */
 /** @import { Getters } from '#shared' */
@@ -92,8 +90,7 @@ function createRawSnippet(fn) {
 		renderer.push(fn(...getters).render().trim());
 	};
 }
-//#endregion
-//#region node_modules/svelte/src/index-server.js
+// node_modules/svelte/src/index-server.js
 /** @import { SSRContext } from '#server' */
 /** @import { Renderer } from './internal/server/renderer.js' */
 var index_server_exports = /* @__PURE__ */ __exportAll({
@@ -140,5 +137,4 @@ function fork() {
 }
 async function tick() {}
 async function settled() {}
-//#endregion
 export { tick as a, settled as i, index_server_exports as n, onDestroy as r, createEventDispatcher as t };

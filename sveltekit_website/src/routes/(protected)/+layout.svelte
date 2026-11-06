@@ -1,12 +1,9 @@
 <script>
-	import { page, navigating } from "$app/stores"; // 👈 import from $app/stores
+	import { navigating } from '$app/stores';
 	export let data;
 
 	import { browser } from "$app/environment";
-	// import fakeBackend from '../helpers/AuthType/fakeBackend';
 	import { onMount } from "svelte";
-
-	let user = browser && localStorage.authUser;
 
 	import Sidebar from '$lib/components/layouts/Sidebar.svelte';
 	import Header from '$lib/components/layouts/Header.svelte';
@@ -14,8 +11,6 @@
 	import Rightbar from '$lib/components/common/RightSidebar.svelte';
 	import { _ } from 'svelte-i18n';
 
-	let open = false;
-	$: isPublic = false;
 	let headerClass = "";
 	let layoutType = "horizontal";
 	let preloaderTimeout;
@@ -40,12 +35,12 @@
 	}
 
 	onMount(() => {
-		window.addEventListener("scroll", scrollNavigation, true);
+		window.addEventListener('scroll', scrollNavigation, { passive: true });
 		showPreloader(null);
 
 		return () => {
 			clearTimeout(preloaderTimeout);
-			window.removeEventListener("scroll", scrollNavigation, true);
+			window.removeEventListener('scroll', scrollNavigation);
 		};
 	});
 
@@ -70,9 +65,9 @@
 <div id="layout-wrapper">
 	<Header {headerClass} />
 	<Sidebar {layoutType} user={data.user} />
-	<div class="main-content" id="maincontent">
+	<div class="main-content" id="main-content" tabindex="-1">
 		<slot />
 		<Footer />
 	</div>
-	<Rightbar bind:open {layoutType} />
+	<Rightbar {layoutType} />
 </div>

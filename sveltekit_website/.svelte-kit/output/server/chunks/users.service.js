@@ -1,9 +1,9 @@
-import { a as numericId, c as paginationParams, i as dateValue, l as requireUser, o as optionalText, r as ApiError, s as paginated, u as requiredText } from "./handler.js";
-import { h as user, l as courseMember, m as session, t as db } from "./db.js";
+import { b as user, d as courseMember, t as db, v as session } from "./db.js";
+import { a as paginated, c as requiredText, i as optionalText, n as dateValue, o as paginationParams, r as numericId, s as requireUser, t as ApiError } from "./api.service.js";
 import { n as normalizeNameForStorage } from "./text.js";
 import { and, asc, count, countDistinct, eq, inArray } from "drizzle-orm";
 import { randomBytes } from "node:crypto";
-//#region src/lib/server/services/users.service.js
+// src/lib/server/services/users.service.js
 var PUBLIC_USER_FIELDS = {
 	id: user.id,
 	name: user.name,
@@ -29,7 +29,7 @@ async function managedCourseIds(currentUser) {
 	return (await db.select({ courseId: courseMember.courseId }).from(courseMember).where(and(eq(courseMember.userId, numericId(currentUser.id, "userId")), eq(courseMember.role, "PROFESSOR"), eq(courseMember.status, "ACTIVE")))).map((membership) => membership.courseId);
 }
 async function canReadUser(targetId, currentUser) {
-	if (currentUser.role === "developer" || numericId(currentUser.id, "userId") === targetId) return true;
+	if (currentUser.role === "admin" || numericId(currentUser.id, "userId") === targetId) return true;
 	const courseIds = await managedCourseIds(currentUser);
 	if (courseIds.length === 0) return false;
 	const [membership] = await db.select({ id: courseMember.id }).from(courseMember).where(and(inArray(courseMember.courseId, courseIds), eq(courseMember.userId, targetId))).limit(1);
@@ -53,19 +53,19 @@ function nullableText(value, field, maxLength) {
 	if (value === null || value === "") return null;
 	return optionalText(value, field, maxLength);
 }
-function updateValues(input, developer) {
+function updateValues(input, admin) {
 	const values = {};
 	if (input.name !== void 0) values.name = normalizeNameForStorage(requiredText(input.name, "name", 100));
 	if (input.surname !== void 0) values.surname = normalizeNameForStorage(String(input.surname ?? "").trim());
 	const image = nullableText(input.image, "image", 2e3);
 	if (image !== void 0) values.image = image;
-	if (developer) {
+	if (admin) {
 		if (input.role !== void 0) {
 			if (![
-				"developer",
+				"admin",
 				"professor",
 				"student"
-			].includes(input.role)) throw new ApiError(400, "role must be developer, professor, or student.", "VALIDATION_ERROR");
+			].includes(input.role)) throw new ApiError(400, "role must be admin, professor, or student.", "VALIDATION_ERROR");
 			values.role = input.role;
 		}
 		for (const field of [
@@ -88,12 +88,12 @@ var userService = {
 	async list(currentUser, searchParams) {
 		requireUser(currentUser);
 		const pagination = paginationParams(searchParams);
-		if (currentUser.role === "developer") {
+		if (currentUser.role === "admin") {
 			const [items, [{ total }]] = await Promise.all([db.select(PUBLIC_USER_FIELDS).from(user).orderBy(asc(user.surname), asc(user.name), asc(user.id)).limit(pagination.pageSize).offset(pagination.offset), db.select({ total: count() }).from(user)]);
 			return paginated(items, total, pagination);
 		}
 		const courseIds = await managedCourseIds(currentUser);
-		if (courseIds.length === 0) throw new ApiError(403, "Only developers or authorized course professors can list users.", "USER_LIST_DENIED");
+		if (courseIds.length === 0) throw new ApiError(403, "Only admins or authorized course professors can list users.", "USER_LIST_DENIED");
 		const condition = inArray(courseMember.courseId, courseIds);
 		const [items, [{ total }]] = await Promise.all([db.selectDistinct(PUBLIC_USER_FIELDS).from(user).innerJoin(courseMember, eq(courseMember.userId, user.id)).where(condition).orderBy(asc(user.surname), asc(user.name), asc(user.id)).limit(pagination.pageSize).offset(pagination.offset), db.select({ total: countDistinct(user.id) }).from(user).innerJoin(courseMember, eq(courseMember.userId, user.id)).where(condition)]);
 		return paginated(items, total, pagination);
@@ -106,16 +106,16 @@ var userService = {
 	},
 	async create(input, currentUser, headers) {
 		requireUser(currentUser);
-		if (currentUser.role !== "developer") throw new ApiError(403, "Only a developer can create user accounts.", "USER_CREATE_DENIED");
+		if (currentUser.role !== "admin") throw new ApiError(403, "Only an admin can create user accounts.", "USER_CREATE_DENIED");
 		const email = requiredText(input.email, "email", 320).toLowerCase();
 		if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new ApiError(400, "email must be valid.", "VALIDATION_ERROR");
 		const temporaryPassword = generateTemporaryPassword();
 		const role = input.role ?? "student";
 		if (![
-			"developer",
+			"admin",
 			"professor",
 			"student"
-		].includes(role)) throw new ApiError(400, "role must be developer, professor, or student.", "VALIDATION_ERROR");
+		].includes(role)) throw new ApiError(400, "role must be admin, professor, or student.", "VALIDATION_ERROR");
 		try {
 			return {
 				user: (await (await authApi()).createUser({
@@ -137,10 +137,10 @@ var userService = {
 	async update(id, input, currentUser) {
 		requireUser(currentUser);
 		const targetId = numericId(id, "userId");
-		const developer = currentUser.role === "developer";
-		if (!developer && targetId !== numericId(currentUser.id, "userId")) throw new ApiError(403, "You can only update your own profile.", "USER_UPDATE_DENIED");
+		const admin = currentUser.role === "admin";
+		if (!admin && targetId !== numericId(currentUser.id, "userId")) throw new ApiError(403, "You can only update your own profile.", "USER_UPDATE_DENIED");
 		await findUser(targetId);
-		const values = updateValues(input, developer);
+		const values = updateValues(input, admin);
 		const [updated] = await db.transaction(async (tx) => {
 			const records = await tx.update(user).set({
 				...values,
@@ -153,7 +153,7 @@ var userService = {
 	},
 	async remove(id, currentUser, headers) {
 		requireUser(currentUser);
-		if (currentUser.role !== "developer") throw new ApiError(403, "Only a developer can delete user accounts.", "USER_DELETE_DENIED");
+		if (currentUser.role !== "admin") throw new ApiError(403, "Only an admin can delete user accounts.", "USER_DELETE_DENIED");
 		const targetId = numericId(id, "userId");
 		if (targetId === numericId(currentUser.id, "userId")) throw new ApiError(400, "You cannot delete your own account from this endpoint.", "SELF_DELETE_DENIED");
 		await findUser(targetId);
@@ -169,5 +169,4 @@ var userService = {
 		}
 	}
 };
-//#endregion
 export { userService as t };

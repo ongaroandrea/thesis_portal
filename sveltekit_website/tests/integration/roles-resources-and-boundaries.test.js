@@ -29,13 +29,15 @@ async function expectDenied(operation, code) {
 }
 
 beforeAll(async () => {
+	vi.useFakeTimers({ toFake: ['Date'] });
+	vi.setSystemTime(fixedNow);
 	await setupSql.unsafe('DROP SCHEMA public CASCADE; CREATE SCHEMA public;');
 	const baseline = await fs.readFile(new URL('../../drizzle/0000_initial_schema.sql', import.meta.url), 'utf8');
 	await setupSql.unsafe(baseline);
 
 	const users = await setupSql`
 		insert into "user" (name, surname, email, role, "emailVerified") values
-		('Dev', 'Admin', 'dev@test.polito.it', 'developer', true),
+		('Initial', 'Admin', 'admin@test.polito.it', 'admin', true),
 		('Paola', 'Owner', 'prof-owner@test.polito.it', 'professor', true),
 		('Piero', 'Other', 'prof-other@test.polito.it', 'professor', true),
 		('Sara', 'Owner', 'student-owner@test.polito.it', 'student', true),
@@ -64,7 +66,7 @@ beforeAll(async () => {
 		insert into course_activity
 			(course_id, created_by_user_id, kind, status, title, objective, available_from, available_until, display_order)
 		values
-			(${course.id}, ${userId['prof-owner@test.polito.it']}, 'LESSON', 'PUBLISHED', 'Available', 'Test', ${new Date('2030-01-01T00:00:00Z')}, ${new Date('2030-12-31T00:00:00Z')}, 1),
+			(${course.id}, ${userId['prof-owner@test.polito.it']}, 'LESSON', 'PUBLISHED', 'Available', 'Test', ${new Date('2020-01-01T00:00:00Z')}, ${new Date('2040-12-31T00:00:00Z')}, 1),
 			(${course.id}, ${userId['prof-owner@test.polito.it']}, 'LESSON', 'DRAFT', 'Draft', 'Test', null, null, 2),
 			(${course.id}, ${userId['prof-owner@test.polito.it']}, 'LESSON', 'PUBLISHED', 'Future', 'Test', ${new Date(fixedNow.getTime() + 1)}, null, 3),
 			(${course.id}, ${userId['prof-owner@test.polito.it']}, 'LESSON', 'PUBLISHED', 'Expired', 'Test', null, ${new Date(fixedNow.getTime() - 1)}, 4),
@@ -142,6 +144,8 @@ beforeAll(async () => {
 		import('../../src/lib/server/services/activity-reference-image.service.js'),
 		import('../../src/lib/server/services/correction-session.service.js'),
 		import('../../src/lib/server/services/correction-attempt.service.js'),
+		import('../../src/lib/server/services/correction-feedback.service.js'),
+		import('../../src/lib/server/services/prompt-template.service.js'),
 		import('../../src/lib/server/services/exam-result.service.js'),
 		import('../../src/lib/server/api/handler.js'),
 		import('../../src/lib/server/db/index.js')
@@ -154,10 +158,12 @@ beforeAll(async () => {
 		image: modules[4].activityReferenceImageService,
 		session: modules[5].correctionSessionService,
 		attempt: modules[6].correctionAttemptService,
-		result: modules[7].examResultService,
-		apiResponse: modules[8].apiResponse
+		feedback: modules[7].correctionFeedbackService,
+		prompt: modules[8].promptTemplateService,
+		result: modules[9].examResultService,
+		apiResponse: modules[10].apiResponse
 	};
-	databaseClient = modules[9].databaseClient;
+	databaseClient = modules[11].databaseClient;
 }, 30_000);
 
 afterAll(async () => {
@@ -166,8 +172,8 @@ afterAll(async () => {
 });
 
 describe('role/resource authorization matrix', () => {
-	it('covers developer, managing professor, owner/member student, peer student, and outsiders', async () => {
-		const dev = actor(ids.userId['dev@test.polito.it'], 'developer');
+	it('covers admin, managing professor, owner/member student, peer student, and outsiders', async () => {
+		const adminUser = actor(ids.userId['admin@test.polito.it'], 'admin');
 		const professor = actor(ids.userId['prof-owner@test.polito.it'], 'professor');
 		const otherProfessor = actor(ids.userId['prof-other@test.polito.it'], 'professor');
 		const owner = actor(ids.userId['student-owner@test.polito.it'], 'student');
@@ -175,18 +181,18 @@ describe('role/resource authorization matrix', () => {
 		const outsider = actor(ids.userId['student-outside@test.polito.it'], 'student');
 		const page = new URLSearchParams('page=1&pageSize=10');
 		const resources = [
-			['users', () => services.user.get(owner.id, dev), () => services.user.get(owner.id, professor), () => services.user.get(owner.id, owner), () => services.user.get(owner.id, peer), () => services.user.get(owner.id, otherProfessor)],
-			['courses', () => services.course.get(ids.course, dev), () => services.course.get(ids.course, professor), () => services.course.get(ids.course, owner), () => services.course.get(ids.course, peer), () => services.course.get(ids.course, outsider)],
-			['members', () => services.member.get(ids.memberId[owner.id], dev), () => services.member.get(ids.memberId[owner.id], professor), () => services.member.get(ids.memberId[owner.id], owner), () => services.member.get(ids.memberId[owner.id], peer), () => services.member.get(ids.memberId[owner.id], outsider)],
-			['activities', () => services.activity.get(ids.activityId.Available, dev), () => services.activity.get(ids.activityId.Available, professor), () => services.activity.get(ids.activityId.Available, owner), () => services.activity.get(ids.activityId.Available, peer), () => services.activity.get(ids.activityId.Available, outsider)],
-			['reference images', () => services.image.list(ids.activityId.Available, dev), () => services.image.list(ids.activityId.Available, professor), () => services.image.list(ids.activityId.Available, owner), () => services.image.list(ids.activityId.Available, peer), () => services.image.list(ids.activityId.Available, outsider)],
-			['correction sessions', () => services.session.get(ids.session, dev), () => services.session.get(ids.session, professor), () => services.session.get(ids.session, owner), () => services.session.get(ids.session, peer), () => services.session.get(ids.session, outsider)],
-			['correction attempts', () => services.attempt.get(ids.attempt, dev), () => services.attempt.get(ids.attempt, professor), () => services.attempt.get(ids.attempt, owner), () => services.attempt.get(ids.attempt, peer), () => services.attempt.get(ids.attempt, outsider)],
-			['exam results', () => services.result.get(ids.resultId[`${ids.activityId['Released exam']}:${owner.id}`], dev), () => services.result.get(ids.resultId[`${ids.activityId['Released exam']}:${owner.id}`], professor), () => services.result.get(ids.resultId[`${ids.activityId['Released exam']}:${owner.id}`], owner), () => services.result.get(ids.resultId[`${ids.activityId['Released exam']}:${owner.id}`], peer), () => services.result.get(ids.resultId[`${ids.activityId['Released exam']}:${owner.id}`], outsider)]
+			['users', () => services.user.get(owner.id, adminUser), () => services.user.get(owner.id, professor), () => services.user.get(owner.id, owner), () => services.user.get(owner.id, peer), () => services.user.get(owner.id, otherProfessor)],
+			['courses', () => services.course.get(ids.course, adminUser), () => services.course.get(ids.course, professor), () => services.course.get(ids.course, owner), () => services.course.get(ids.course, peer), () => services.course.get(ids.course, outsider)],
+			['members', () => services.member.get(ids.memberId[owner.id], adminUser), () => services.member.get(ids.memberId[owner.id], professor), () => services.member.get(ids.memberId[owner.id], owner), () => services.member.get(ids.memberId[owner.id], peer), () => services.member.get(ids.memberId[owner.id], outsider)],
+			['activities', () => services.activity.get(ids.activityId.Available, adminUser), () => services.activity.get(ids.activityId.Available, professor), () => services.activity.get(ids.activityId.Available, owner), () => services.activity.get(ids.activityId.Available, peer), () => services.activity.get(ids.activityId.Available, outsider)],
+			['reference images', () => services.image.list(ids.activityId.Available, adminUser), () => services.image.list(ids.activityId.Available, professor), () => services.image.list(ids.activityId.Available, owner), () => services.image.list(ids.activityId.Available, peer), () => services.image.list(ids.activityId.Available, outsider)],
+			['correction sessions', () => services.session.get(ids.session, adminUser), () => services.session.get(ids.session, professor), () => services.session.get(ids.session, owner), () => services.session.get(ids.session, peer), () => services.session.get(ids.session, outsider)],
+			['correction attempts', () => services.attempt.get(ids.attempt, adminUser), () => services.attempt.get(ids.attempt, professor), () => services.attempt.get(ids.attempt, owner), () => services.attempt.get(ids.attempt, peer), () => services.attempt.get(ids.attempt, outsider)],
+			['exam results', () => services.result.get(ids.resultId[`${ids.activityId['Released exam']}:${owner.id}`], adminUser), () => services.result.get(ids.resultId[`${ids.activityId['Released exam']}:${owner.id}`], professor), () => services.result.get(ids.resultId[`${ids.activityId['Released exam']}:${owner.id}`], owner), () => services.result.get(ids.resultId[`${ids.activityId['Released exam']}:${owner.id}`], peer), () => services.result.get(ids.resultId[`${ids.activityId['Released exam']}:${owner.id}`], outsider)]
 		];
 
-		for (const [resource, asDeveloper, asManager, asOwner, asPeer, asOutsider] of resources) {
-			await expect(asDeveloper(), `${resource}: developer`).resolves.toBeTruthy();
+		for (const [resource, asAdmin, asManager, asOwner, asPeer, asOutsider] of resources) {
+			await expect(asAdmin(), `${resource}: admin`).resolves.toBeTruthy();
 			await expect(asManager(), `${resource}: managing professor`).resolves.toBeTruthy();
 			await expect(asOwner(), `${resource}: owning/member student`).resolves.toBeTruthy();
 			if (['courses', 'activities', 'reference images'].includes(resource)) {
@@ -197,17 +203,17 @@ describe('role/resource authorization matrix', () => {
 			await expect(asOutsider(), `${resource}: outsider`).rejects.toMatchObject({ status: 403 });
 		}
 
-		await expect(services.user.list(dev, page)).resolves.toMatchObject({ items: expect.any(Array) });
+		await expect(services.user.list(adminUser, page)).resolves.toMatchObject({ items: expect.any(Array) });
 		await expect(services.user.list(professor, page)).resolves.toMatchObject({ items: expect.any(Array) });
 		await expectDenied(() => services.user.list(owner, page), 'USER_LIST_DENIED');
-		await expect(services.member.list(ids.course, dev, page)).resolves.toMatchObject({ items: expect.any(Array) });
+		await expect(services.member.list(ids.course, adminUser, page)).resolves.toMatchObject({ items: expect.any(Array) });
 		await expect(services.member.list(ids.course, professor, page)).resolves.toMatchObject({ items: expect.any(Array) });
 		await expectDenied(() => services.member.list(ids.course, owner, page), 'COURSE_MANAGEMENT_DENIED');
 	});
 
 	it('requires authentication for every top-level resource', async () => {
 		const page = new URLSearchParams();
-		await expectDenied(() => services.user.get(ids.userId['dev@test.polito.it'], null), 'UNAUTHORIZED');
+		await expectDenied(() => services.user.get(ids.userId['admin@test.polito.it'], null), 'UNAUTHORIZED');
 		await expectDenied(() => services.course.get(ids.course, null), 'UNAUTHORIZED');
 		await expectDenied(() => services.member.get(ids.memberId[ids.userId['student-owner@test.polito.it']], null), 'UNAUTHORIZED');
 		await expectDenied(() => services.activity.get(ids.activityId.Available, null), 'UNAUTHORIZED');
@@ -218,39 +224,53 @@ describe('role/resource authorization matrix', () => {
 	});
 
 	it('covers mutation authority for every implemented resource', async () => {
-		const dev = actor(ids.userId['dev@test.polito.it'], 'developer');
+		const adminUser = actor(ids.userId['admin@test.polito.it'], 'admin');
 		const professor = actor(ids.userId['prof-owner@test.polito.it'], 'professor');
 		const owner = actor(ids.userId['student-owner@test.polito.it'], 'student');
 		const peer = actor(ids.userId['student-peer@test.polito.it'], 'student');
 
-		await expect(services.user.update(owner.id, { image: null }, dev)).resolves.toMatchObject({ id: owner.id });
+		await expect(services.user.update(owner.id, { image: null }, adminUser)).resolves.toMatchObject({ id: owner.id });
 		await expect(services.user.update(owner.id, { image: null }, owner)).resolves.toMatchObject({ id: owner.id });
 		await expectDenied(() => services.user.update(owner.id, { image: null }, professor), 'USER_UPDATE_DENIED');
 
-		await expect(services.course.update(ids.course, { description: 'Developer update' }, dev)).resolves.toBeTruthy();
+		await expect(services.course.update(ids.course, { description: 'Admin update' }, adminUser)).resolves.toBeTruthy();
 		await expect(services.course.update(ids.course, { description: 'Professor update' }, professor)).resolves.toBeTruthy();
 		await expectDenied(() => services.course.update(ids.course, { description: 'Denied' }, owner), 'COURSE_MANAGEMENT_DENIED');
 
-		await expect(services.member.update(ids.memberId[owner.id], { status: 'ACTIVE' }, dev)).resolves.toBeTruthy();
+		await expect(services.member.update(ids.memberId[owner.id], { status: 'ACTIVE' }, adminUser)).resolves.toBeTruthy();
 		await expect(services.member.update(ids.memberId[owner.id], { status: 'ACTIVE' }, professor)).resolves.toBeTruthy();
 		await expectDenied(() => services.member.update(ids.memberId[owner.id], { status: 'ACTIVE' }, owner), 'COURSE_MANAGEMENT_DENIED');
 
-		await expect(services.activity.update(ids.activityId.Available, { description: 'Developer update' }, dev)).resolves.toBeTruthy();
+		await expect(services.activity.update(ids.activityId.Available, { description: 'Admin update' }, adminUser)).resolves.toBeTruthy();
 		await expect(services.activity.update(ids.activityId.Available, { description: 'Professor update' }, professor)).resolves.toBeTruthy();
 		await expectDenied(() => services.activity.update(ids.activityId.Available, { description: 'Denied' }, owner), 'COURSE_MANAGEMENT_DENIED');
 
 		const imageValues = { viewType: 'FRONT', customViewLabel: '', altText: '', displayOrder: 0 };
-		await expect(services.image.update(ids.activityId.Available, ids.image, imageValues, dev)).resolves.toBeTruthy();
+		await expect(services.image.update(ids.activityId.Available, ids.image, imageValues, adminUser)).resolves.toBeTruthy();
 		await expect(services.image.update(ids.activityId.Available, ids.image, imageValues, professor)).resolves.toBeTruthy();
 		await expectDenied(() => services.image.update(ids.activityId.Available, ids.image, imageValues, owner), 'COURSE_MANAGEMENT_DENIED');
 
-		await expect(services.attempt.update(ids.attempt, { jobStatus: 'queued' }, dev)).resolves.toBeTruthy();
+		await expect(services.attempt.update(ids.attempt, { jobStatus: 'queued' }, adminUser)).resolves.toBeTruthy();
 		await expect(services.attempt.update(ids.attempt, { jobStatus: 'queued' }, professor)).resolves.toBeTruthy();
 		await expect(services.attempt.update(ids.attempt, { jobStatus: 'queued' }, owner)).resolves.toBeTruthy();
 		await expectDenied(() => services.attempt.update(ids.attempt, { jobStatus: 'queued' }, peer), 'CORRECTION_SESSION_ACCESS_DENIED');
+		const unchangedAttempt = await services.attempt.update(ids.attempt, {
+			jobStatus: 'completed',
+			score: 30,
+			summary: 'Forged client result',
+			rawResponse: { result: { score: 30 } },
+			completedAt: fixedNow
+		}, owner);
+		expect(unchangedAttempt).toMatchObject({
+			jobStatus: 'queued',
+			score: null,
+			summary: null,
+			rawResponse: null,
+			completedAt: null
+		});
 
 		const resultId = ids.resultId[`${ids.activityId['Released exam']}:${owner.id}`];
-		await expect(services.result.update(resultId, { feedback: 'Developer grade' }, dev)).resolves.toBeTruthy();
+		await expect(services.result.update(resultId, { feedback: 'Admin grade' }, adminUser)).resolves.toBeTruthy();
 		await expect(services.result.update(resultId, { feedback: 'Professor grade' }, professor)).resolves.toBeTruthy();
 		await expectDenied(() => services.result.update(resultId, { feedback: 'Denied' }, owner), 'COURSE_MANAGEMENT_DENIED');
 	});
@@ -281,9 +301,25 @@ describe('student correction privacy', () => {
 	});
 });
 
+describe('course creator management', () => {
+	it('lets a professor manage legacy courses they created and enrolls them in new courses', async () => {
+		const professor = actor(ids.userId['prof-owner@test.polito.it'], 'professor');
+		const page = new URLSearchParams('page=1&pageSize=100');
+		await expect(services.course.get(ids.course, professor)).resolves.toMatchObject({ canManage: true });
+		const listed = await services.course.list(professor, page);
+		expect(listed.items.some((item) => item.id === ids.course && item.canManage)).toBe(true);
+
+		const created = await services.course.create({ name: 'Professor-created course' }, professor);
+		await expect(setupSql`
+			select role, status from course_member
+			where course_id = ${created.id} and user_id = ${professor.id}
+		`).resolves.toMatchObject([{ role: 'PROFESSOR', status: 'ACTIVE' }]);
+	});
+});
+
 describe('exam-result restrictions', () => {
 	it('shows students only their own published results after release', async () => {
-		vi.useFakeTimers();
+		vi.useFakeTimers({ toFake: ['Date'] });
 		vi.setSystemTime(fixedNow);
 		const owner = actor(ids.userId['student-owner@test.polito.it'], 'student');
 		const peer = actor(ids.userId['student-peer@test.polito.it'], 'student');
@@ -340,7 +376,7 @@ describe('exam-result restrictions', () => {
 
 describe('activity availability boundaries', () => {
 	it('uses inclusive start and end boundaries and rejects adjacent instants', async () => {
-		vi.useFakeTimers();
+		vi.useFakeTimers({ toFake: ['Date'] });
 		vi.setSystemTime(fixedNow);
 		const student = actor(ids.userId['student-owner@test.polito.it'], 'student');
 		await expect(services.activity.get(ids.activityId['Starts now'], student)).resolves.toBeTruthy();
@@ -352,7 +388,7 @@ describe('activity availability boundaries', () => {
 	});
 
 	it('lets course managers access activities outside publication windows', async () => {
-		vi.useFakeTimers();
+		vi.useFakeTimers({ toFake: ['Date'] });
 		vi.setSystemTime(fixedNow);
 		const professor = actor(ids.userId['prof-owner@test.polito.it'], 'professor');
 		for (const title of ['Draft', 'Future', 'Expired']) {
@@ -373,6 +409,78 @@ describe('correction-session derived status', () => {
 	});
 });
 
+describe('correction feedback authorization and statistics', () => {
+	it('keeps student usefulness and professor review independent and rejects peer access', async () => {
+		const owner = actor(ids.userId['student-owner@test.polito.it'], 'student');
+		const peer = actor(ids.userId['student-peer@test.polito.it'], 'student');
+		const professor = actor(ids.userId['prof-owner@test.polito.it'], 'professor');
+		await setupSql`update correction_attempt set job_status = 'completed' where id = ${ids.attempt}`;
+
+		await expect(services.feedback.save(ids.attempt, {
+			isUseful: true,
+			studentComment: 'Utile'
+		}, owner)).resolves.toMatchObject({ isUseful: true, verdict: null });
+		await expectDenied(() => services.feedback.get(ids.attempt, peer), 'CORRECTION_SESSION_ACCESS_DENIED');
+		await expect(services.feedback.save(ids.attempt, {
+			verdict: 'CORRECT',
+			professorComment: 'Valutazione confermata'
+		}, professor)).resolves.toMatchObject({
+			isUseful: true,
+			studentComment: 'Utile',
+			verdict: 'CORRECT'
+		});
+
+		await expect(services.feedback.statistics(ids.activityId.Available, professor)).resolves.toMatchObject({
+			completedAttempts: 1,
+			studentResponses: 1,
+			usefulResponses: 1,
+			reviewedResponses: 1,
+			correct: 1
+		});
+	});
+});
+
+describe('prompt ownership and privacy', () => {
+	it('keeps activity prompt data private and limits template scopes', async () => {
+		const adminUser = actor(ids.userId['admin@test.polito.it'], 'admin');
+		const professor = actor(ids.userId['prof-owner@test.polito.it'], 'professor');
+		const otherProfessor = actor(ids.userId['prof-other@test.polito.it'], 'professor');
+		const student = actor(ids.userId['student-owner@test.polito.it'], 'student');
+
+		await expect(services.activity.update(ids.activityId.Available, {
+			promptAddendum: 'Concentrati sul soggetto principale.'
+		}, professor)).resolves.toMatchObject({ promptRevision: 2 });
+		await expect(services.activity.get(ids.activityId.Available, professor))
+			.resolves.toMatchObject({ promptAddendum: 'Concentrati sul soggetto principale.' });
+		const visible = await services.activity.get(ids.activityId.Available, student);
+		expect(visible).not.toHaveProperty('promptAddendum');
+		expect(visible).not.toHaveProperty('frozenPromptConfig');
+
+		await expect(services.prompt.list(ids.course, professor)).resolves.toHaveLength(5);
+		await expectDenied(() => services.prompt.list(ids.course, otherProfessor), 'COURSE_MANAGEMENT_DENIED');
+		await expectDenied(() => services.prompt.createRevision({
+			analysisType: 'camera', model: 'qwen3.8:27b', systemPrompt: 'System',
+			userPrompt: 'User', outputSchema: { type: 'object' }
+		}, professor), 'PROMPT_GLOBAL_ACCESS_DENIED');
+		await expect(services.prompt.createRevision({
+			courseId: ids.course, analysisType: 'camera', model: 'qwen3.8:27b',
+			systemPrompt: 'Course camera system', userPrompt: 'Course camera evaluation',
+			outputSchema: { type: 'object' }
+		}, professor)).resolves.toMatchObject({ scope: 'COURSE', inherited: false });
+		const { promptBuilderService } = await import('../../src/lib/server/services/prompt-builder.service.js');
+		await expect(promptBuilderService.build(ids.activityId.Available, 'camera')).resolves.toMatchObject({
+			analysisType: 'camera',
+			templateScope: 'COURSE',
+			activityPromptRevision: 2,
+			model: 'qwen3.8:27b',
+			systemPrompt: 'Course camera system',
+			userPrompt: expect.stringContaining('Concentrati sul soggetto principale.'),
+			promptHash: expect.stringMatching(/^[0-9a-f]{64}$/)
+		});
+		await expect(services.prompt.list(null, adminUser)).resolves.toHaveLength(5);
+	});
+});
+
 describe('database conflict integration', () => {
 	it('turns a real unique-constraint race into the shared 409 contract', async () => {
 		const ownerId = ids.userId['student-owner@test.polito.it'];
@@ -382,5 +490,72 @@ describe('database conflict integration', () => {
 		`);
 		expect(response.status).toBe(409);
 		expect(await response.json()).toMatchObject({ error: { code: 'RESOURCE_ALREADY_EXISTS' } });
+	});
+});
+
+describe('membership-dependent access', () => {
+	async function setMemberStatus(userId, status) {
+		await setupSql`
+			update course_member set status = ${status}
+			where course_id = ${ids.course} and user_id = ${userId}
+		`;
+	}
+
+	it('refuses old sessions and attempts to a suspended owner', async () => {
+		const owner = actor(ids.userId['student-owner@test.polito.it'], 'student');
+		await setMemberStatus(owner.id, 'SUSPENDED');
+		try {
+			await expectDenied(() => services.session.get(ids.session, owner), 'CORRECTION_SESSION_ACCESS_DENIED');
+			await expectDenied(() => services.attempt.get(ids.attempt, owner), 'CORRECTION_SESSION_ACCESS_DENIED');
+			await expectDenied(() => services.session.remove(ids.session, owner), 'CORRECTION_SESSION_ACCESS_DENIED');
+		} finally {
+			await setMemberStatus(owner.id, 'ACTIVE');
+		}
+		await expect(services.session.get(ids.session, owner)).resolves.toMatchObject({ id: ids.session });
+	});
+
+	it('lets owners delete only empty sessions and keeps counted attempts', async () => {
+		const owner = actor(ids.userId['student-owner@test.polito.it'], 'student');
+		await expectDenied(() => services.session.remove(ids.session, owner), 'CORRECTION_SESSION_EDIT_DENIED');
+		await expectDenied(() => services.attempt.remove(ids.attempt, owner), 'COURSE_MANAGEMENT_DENIED');
+		const [empty] = await setupSql`
+			insert into correction_session (activity_id, reference_image_id, analysis_focus, student_user_id)
+			values (${ids.activityId.Available}, ${ids.image}, 'LIGHT', ${owner.id})
+			returning id
+		`;
+		await expect(services.session.remove(Number(empty.id), owner)).resolves.toEqual({ id: Number(empty.id) });
+	});
+
+	it('takes manager rights from a creator whose membership is suspended', async () => {
+		const professor = actor(ids.userId['prof-owner@test.polito.it'], 'professor');
+		const page = new URLSearchParams('page=1&pageSize=100');
+		await setMemberStatus(professor.id, 'SUSPENDED');
+		try {
+			await expectDenied(() => services.course.update(ids.course, { description: 'Denied' }, professor), 'COURSE_MANAGEMENT_DENIED');
+			// Same rule in the user endpoints: the course's students are no longer visible.
+			await expectDenied(() => services.user.get(ids.userId['student-owner@test.polito.it'], professor), 'USER_ACCESS_DENIED');
+			const listed = await services.course.list(professor, page);
+			expect(listed.items.some((item) => item.id === ids.course)).toBe(false);
+		} finally {
+			await setMemberStatus(professor.id, 'ACTIVE');
+		}
+		await expect(services.course.get(ids.course, professor)).resolves.toMatchObject({ canManage: true });
+	});
+
+	it('lists only active course members to professors', async () => {
+		const professor = actor(ids.userId['prof-owner@test.polito.it'], 'professor');
+		const peerId = ids.userId['student-peer@test.polito.it'];
+		const page = new URLSearchParams('page=1&pageSize=100');
+		await setMemberStatus(peerId, 'REMOVED');
+		try {
+			const listed = await services.user.list(professor, page);
+			expect(listed.items.map(({ id }) => id)).not.toContain(peerId);
+			await expectDenied(() => services.user.get(peerId, professor), 'USER_ACCESS_DENIED');
+			await expect(services.member.list(ids.course, professor, page)).resolves.toMatchObject({
+				items: expect.arrayContaining([expect.objectContaining({ userId: peerId, status: 'REMOVED' })])
+			});
+		} finally {
+			await setMemberStatus(peerId, 'ACTIVE');
+		}
 	});
 });

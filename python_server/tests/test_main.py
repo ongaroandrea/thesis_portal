@@ -2,6 +2,7 @@ import time
 from io import BytesIO
 
 import httpx
+import pytest
 from fastapi.testclient import TestClient
 from fastapi.routing import APIRoute
 from PIL import Image
@@ -16,6 +17,11 @@ def test_development_mode_parses_boolean_environment_values() -> None:
 
     assert Settings(**common, development_mode="true").development_mode is True
     assert Settings(**common, development_mode="False").development_mode is False
+
+
+def test_hmac_secret_rejects_surrounding_whitespace() -> None:
+    with pytest.raises(ValueError, match="surrounded by whitespace"):
+        Settings(hmac_secret=f" {'x' * 32}")
 
 
 def test_delete_job_declares_an_empty_204_response() -> None:
@@ -39,7 +45,15 @@ def test_signed_multipart_upload_can_read_body_after_form_parsing() -> None:
     unsigned_request = httpx.Request(
         "POST",
         "http://testserver/v1/jobs",
-        data={"type": "camera"},
+        data={
+            "type": "camera",
+            "model": "qwen3.8:27b",
+            "system_prompt": "system rules",
+            "user_prompt": "evaluation instruction",
+            "output_schema": '{"type":"object"}',
+            "prompt_version": "camera-v1",
+            "prompt_hash": "a" * 64,
+        },
         files={
             "image": ("test.png", image_buffer.getvalue(), "image/png"),
             "reference_image": ("reference.png", image_buffer.getvalue(), "image/png"),

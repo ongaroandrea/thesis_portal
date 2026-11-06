@@ -1,6 +1,6 @@
 import { HttpError, SvelteKitError } from "@sveltejs/kit/internal";
 import * as devalue from "devalue";
-//#region node_modules/@sveltejs/kit/src/utils/functions.js
+// node_modules/@sveltejs/kit/src/utils/functions.js
 function noop() {}
 /**
 * @template T
@@ -16,8 +16,7 @@ function once(fn) {
 		return result = fn();
 	};
 }
-//#endregion
-//#region node_modules/@sveltejs/kit/src/runtime/utils.js
+// node_modules/@sveltejs/kit/src/runtime/utils.js
 var text_encoder = new TextEncoder();
 /**
 * Like node's path.relative, but without using node
@@ -60,8 +59,7 @@ function base64_decode(encoded) {
 	for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
 	return bytes;
 }
-//#endregion
-//#region node_modules/@sveltejs/kit/src/utils/error.js
+// node_modules/@sveltejs/kit/src/utils/error.js
 /**
 * @param {unknown} err
 * @return {Error}
@@ -90,8 +88,7 @@ function get_status(error) {
 function get_message(error) {
 	return error instanceof SvelteKitError ? error.text : "Internal Error";
 }
-//#endregion
-//#region node_modules/@sveltejs/kit/src/runtime/shared.js
+// node_modules/@sveltejs/kit/src/runtime/shared.js
 /** @import { Transport } from '@sveltejs/kit' */
 /**
 * @param {string} route_id
@@ -294,5 +291,4 @@ function split_remote_key(key) {
 		payload: key.slice(i + 1)
 	};
 }
-//#endregion
 export { text_encoder as _, split_remote_key as a, validate_depends as c, get_message as d, get_status as f, get_relative_path as g, base64_encode as h, parse_remote_arg as i, validate_load_response as l, base64_decode as m, TRAILING_SLASH_PARAM as n, stringify as o, normalize_error as p, create_remote_key as r, stringify_remote_arg as s, INVALIDATED_PARAM as t, coalesce_to_error as u, noop as v, once as y };

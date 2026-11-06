@@ -1,14 +1,13 @@
-import "./internal.js";
 import { $ as get_first_child, B as set_active_reaction, Ct as hydrate_node, Dt as set_hydrating, E as setContext, Et as set_hydrate_node, Ft as LEGACY_PROPS, G as destroy_effect, H as block, I as active_effect, It as array_from, J as pause_effect, K as effect_tracking, L as active_reaction, Lt as define_property, Mt as HYDRATION_ERROR, Nt as EFFECT_PRESERVED, Ot as skip_nodes, Pt as EFFECT_TRANSPARENT, Q as create_text, R as get, St as hydrate_next, Tt as next, U as branch, V as untrack, W as component_root, X as invoke_error_boundary, Y as render_effect, Z as clear_text_content, a as derived, at as set, bt as svelte_boundary_reset_onerror, c as render, ct as current_batch, dt as queue_micro_task, et as get_next_sibling, ft as component_context, gt as set_component_context, ht as push, it as mutable_source, j as is_passive_event, jt as svelte_boundary_reset_noop, kt as hydration_mismatch, lt as flushSync, mt as pop, nt as increment, ot as source, pt as mark_as_component, q as move_effect, rt as internal_set, st as Batch, tt as init_operations, ut as defer_effect, vt as async_mode_flag, wt as hydrating, yt as hydration_failed, z as set_active_effect } from "./server.js";
 import "./index-server2.js";
-//#region \0virtual:__sveltekit/server
+import "./internal.js";
+// \0virtual:__sveltekit/server
 var read_implementation = null;
 function set_read_implementation(fn) {
 	read_implementation = fn;
 }
 function set_manifest(_) {}
-//#endregion
-//#region node_modules/svelte/src/internal/client/dom/elements/events.js
+// node_modules/svelte/src/internal/client/dom/elements/events.js
 /**
 * Used on elements, as a map of event type -> event handler,
 * and on events themselves to track which element handled an event
@@ -99,8 +98,7 @@ function handle_event_propagation(event) {
 	}
 }
 globalThis?.window?.trustedTypes;
-//#endregion
-//#region node_modules/svelte/src/internal/client/dom/template.js
+// node_modules/svelte/src/internal/client/dom/template.js
 /**
 * @param {TemplateNode} start
 * @param {TemplateNode | null} end
@@ -114,8 +112,7 @@ function assign_nodes(start, end) {
 		t: null
 	};
 }
-//#endregion
-//#region node_modules/svelte/src/reactivity/create-subscriber.js
+// node_modules/svelte/src/reactivity/create-subscriber.js
 /**
 * Returns a `subscribe` function that integrates external event-based systems with Svelte's reactivity.
 * It's particularly useful for integrating with web APIs like `MediaQuery`, `IntersectionObserver`, or `WebSocket`.
@@ -187,8 +184,7 @@ function createSubscriber(start) {
 		}
 	};
 }
-//#endregion
-//#region node_modules/svelte/src/internal/client/dom/blocks/boundary.js
+// node_modules/svelte/src/internal/client/dom/blocks/boundary.js
 /** @import { Effect, Source, TemplateNode, } from '#client' */
 /**
 * @typedef {{
@@ -734,8 +730,7 @@ function unmount(component, options) {
 	}
 	return Promise.resolve();
 }
-//#endregion
-//#region node_modules/svelte/src/legacy/legacy-client.js
+// node_modules/svelte/src/legacy/legacy-client.js
 /** @import { ComponentConstructorOptions, ComponentType, SvelteComponent, Component } from 'svelte' */
 /**
 * Takes the component function and returns a Svelte 4 compatible component constructor.
@@ -859,8 +854,7 @@ var Svelte4Component = class {
 		this.#instance.$destroy();
 	}
 };
-//#endregion
-//#region node_modules/svelte/src/legacy/legacy-server.js
+// node_modules/svelte/src/legacy/legacy-server.js
 /** @import { SvelteComponent } from '../index.js' */
 /** @import { Csp } from '../server/public.js' */
 /** @typedef {{ head: string, html: string, css: { code: string, map: null }; hashes?: { script: `sha256-${string}`[] } }} LegacyRenderResult */
@@ -927,8 +921,7 @@ value: (onfulfilled, onrejected) => {
 	component_constructor.render = _render;
 	return component_constructor;
 }
-//#endregion
-//#region .svelte-kit/generated/root.svelte
+// .svelte-kit/generated/root.svelte
 function Root($$renderer, $$props) {
 	$$renderer.component(($$renderer) => {
 		let { stores, page, constructors, components = [], form, data_0 = null, data_1 = null, data_2 = null, data_3 = null } = $$props;
@@ -1056,14 +1049,11 @@ function Root($$renderer, $$props) {
 		$$renderer.push(`<!--]-->`);
 	});
 }
-//#endregion
-//#region .svelte-kit/generated/root.js
+// .svelte-kit/generated/root.js
 var root_default = asClassComponent(Root);
-//#endregion
-//#region .svelte-kit/generated/shared/error-template.js
+// .svelte-kit/generated/shared/error-template.js
 var error_template_default = ({ status, message }) => "<!doctype html>\n<html lang=\"en\">\n	<head>\n		<meta charset=\"utf-8\" />\n		<title>" + message + "</title>\n\n		<style>\n			body {\n				--bg: white;\n				--fg: #222;\n				--divider: #ccc;\n				background: var(--bg);\n				color: var(--fg);\n				font-family:\n					system-ui,\n					-apple-system,\n					BlinkMacSystemFont,\n					'Segoe UI',\n					Roboto,\n					Oxygen,\n					Ubuntu,\n					Cantarell,\n					'Open Sans',\n					'Helvetica Neue',\n					sans-serif;\n				display: flex;\n				align-items: center;\n				justify-content: center;\n				height: 100vh;\n				margin: 0;\n			}\n\n			.error {\n				display: flex;\n				align-items: center;\n				max-width: 32rem;\n				margin: 0 1rem;\n			}\n\n			.status {\n				font-weight: 200;\n				font-size: 3rem;\n				line-height: 1;\n				position: relative;\n				top: -0.05rem;\n			}\n\n			.message {\n				border-left: 1px solid var(--divider);\n				padding: 0 0 0 1rem;\n				margin: 0 0 0 1rem;\n				min-height: 2.5rem;\n				display: flex;\n				align-items: center;\n			}\n\n			.message h1 {\n				font-weight: 400;\n				font-size: 1em;\n				margin: 0;\n			}\n\n			@media (prefers-color-scheme: dark) {\n				body {\n					--bg: #222;\n					--fg: #ddd;\n					--divider: #666;\n				}\n			}\n		</style>\n	</head>\n	<body>\n		<div class=\"error\">\n			<span class=\"status\">" + status + "</span>\n			<div class=\"message\">\n				<h1>" + message + "</h1>\n			</div>\n		</div>\n	</body>\n</html>\n";
-//#endregion
-//#region .svelte-kit/generated/server/internal.js
+// .svelte-kit/generated/server/internal.js
 var options = {
 	app_template_contains_nonce: false,
 	async: false,
@@ -1094,7 +1084,7 @@ var options = {
 		app: ({ head, body, assets, nonce, env }) => "<!doctype html>\n<html lang=\"it\">\n	<head>\n		<meta charset=\"utf-8\" />\n		<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />\n		<meta name=\"text-scale\" content=\"scale\" />\n		<link rel=\"icon\" href=\"/images/favicon.ico\" />\n		" + head + "\n	</head>\n	<body data-sveltekit-preload-data=\"hover\">\n		<div style=\"display: contents\">" + body + "</div>\n	</body>\n</html>\n",
 		error: error_template_default
 	},
-	version_hash: "10gemf3"
+	version_hash: "1tqcufy"
 };
 async function get_hooks() {
 	let handle;
@@ -1115,5 +1105,4 @@ async function get_hooks() {
 		transport
 	};
 }
-//#endregion
 export { set_read_implementation as a, set_manifest as i, options as n, read_implementation as r, get_hooks as t };

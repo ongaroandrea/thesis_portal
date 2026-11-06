@@ -6,7 +6,7 @@
     <Container fluid>
         <Row>
             <Col sm={6}>
-                {new Date().getFullYear()} © Federico Manuri - Andrea Sanna Politecnico di Torino
+                {new Date().getFullYear()} © Federico Manuri - Andrea Sanna, Politecnico di Torino
             </Col>
         </Row>
     </Container>

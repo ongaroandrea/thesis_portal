@@ -2,7 +2,7 @@ import { createHash, createHmac, randomUUID } from 'node:crypto';
 import { ApiError } from './api.service.js';
 
 const JOBS_PATH = '/v1/jobs';
-const ALLOWED_TYPES = new Set(['camera', 'texture', 'light', 'material']);
+const ALLOWED_TYPES = new Set(['camera', 'texture', 'light', 'material', 'general']);
 
 function configuration() {
 	const baseUrl = process.env.PYTHON_SERVER_URL;
@@ -17,6 +17,13 @@ function isConfigured() {
 	return Boolean(process.env.PYTHON_SERVER_URL && process.env.PYTHON_SERVER_HMAC_SECRET);
 }
 
+/**
+ * Build the HMAC headers expected by the Python server (see
+ * python_server/app/security.py). The signed string is
+ * METHOD\nPATH\nTIMESTAMP\nNONCE\nSHA256(body); any difference in path,
+ * query or body bytes makes Python reject the request with 401.
+ * A fresh random nonce is used per request to defeat replays.
+ */
 function signedHeaders(secret, method, path, body, contentType = 'application/json') {
 	const timestamp = Math.floor(Date.now() / 1000).toString();
 	const nonce = randomUUID();
@@ -40,11 +47,28 @@ function filePart(boundary, fieldName, image, filename, mimeType) {
 	];
 }
 
-function multipartImages(image, referenceImage, type) {
+function textPart(boundary, fieldName, value) {
+	return Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="${fieldName}"\r\n\r\n${String(value)}\r\n`);
+}
+
+/**
+ * Encode a job as multipart/form-data by hand instead of using FormData,
+ * because the exact body bytes must be known up front to sign them.
+ * Field names must match the Form/File parameters of Python's POST /v1/jobs.
+ * @returns {{ body: Buffer, contentType: string }}
+ */
+function multipartImages(image, referenceImage, prompt) {
+	const { type } = prompt;
 	if (!ALLOWED_TYPES.has(type)) throw new ApiError(400, 'Invalid correction type.', 'VALIDATION_ERROR');
 	const boundary = `----correction-${randomUUID()}`;
 	const chunks = [
-		Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="type"\r\n\r\n${type}\r\n`),
+		textPart(boundary, 'type', type),
+		textPart(boundary, 'model', prompt.model),
+		textPart(boundary, 'system_prompt', prompt.systemPrompt),
+		textPart(boundary, 'user_prompt', prompt.userPrompt),
+		textPart(boundary, 'output_schema', JSON.stringify(prompt.outputSchema)),
+		textPart(boundary, 'prompt_version', prompt.promptVersion),
+		textPart(boundary, 'prompt_hash', prompt.promptHash),
 		...filePart(boundary, 'image', image.data, image.filename, image.mimeType),
 		...filePart(boundary, 'reference_image', referenceImage.data, referenceImage.filename, referenceImage.mimeType),
 		Buffer.from(`--${boundary}--\r\n`)
@@ -52,6 +76,11 @@ function multipartImages(image, referenceImage, type) {
 	return { body: Buffer.concat(chunks), contentType: `multipart/form-data; boundary=${boundary}` };
 }
 
+/**
+ * Send one signed request to the Python worker (10 s timeout) and map its
+ * HTTP errors onto ApiError: network failure or queue full -> 503, unknown
+ * job -> 404, any other rejection -> 502. A 204 becomes `{ destroyed: true }`.
+ */
 async function request(path, method, body = Buffer.alloc(0), contentType) {
 	const { baseUrl, secret } = configuration();
 	let response;
@@ -78,8 +107,8 @@ async function request(path, method, body = Buffer.alloc(0), contentType) {
 
 export const conversationService = {
 	isConfigured,
-	async start({ image, referenceImage, type }) {
-		const payload = multipartImages(image, referenceImage, type);
+	async start({ image, referenceImage, prompt }) {
+		const payload = multipartImages(image, referenceImage, prompt);
 		return request(JOBS_PATH, 'POST', payload.body, payload.contentType);
 	},
 	async get(jobId) {

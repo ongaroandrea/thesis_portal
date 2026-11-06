@@ -13,6 +13,7 @@
 		studenti: 'nav.students',
 		'lista-studenti': 'nav.studentList',
 		'aggiungi-studente': 'nav.addStudent',
+		prompt: 'nav.prompts',
 		support: 'nav.support',
 		'apri-ticket-supporto': 'nav.openTicket',
 		'gestione-ticket-supporto': 'nav.manageTickets'
@@ -42,7 +43,7 @@
 
 	function canShow(item) {
 		if (item.roles && !item.roles.includes(user?.role)) return false;
-		return !item.adminOnly || user?.role === 'developer';
+		return !item.adminOnly || user?.role === 'admin';
 	}
 
 	function toggleMenu(event, id) {

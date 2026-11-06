@@ -6,7 +6,6 @@
         Card,
         CardBody,
         CardHeader,
-        CardTitle,
         Button,
         Input,
         Label,
@@ -19,6 +18,7 @@
         Spinner,
     } from "@sveltestrap/sveltestrap";
     import { authClient } from "$lib/client/auth/auth-client";
+	import PageHeader from '$lib/components/portal/PageHeader.svelte';
     import { formatNameForDisplay } from "$lib/utils/text.js";
     import { _ } from 'svelte-i18n';
 
@@ -30,7 +30,7 @@
     let isLoading = false;
     let message = { text: "", type: "success" }; // For success/error alerts
     const roleNames = {
-        developer: 'role.developer',
+        admin: 'role.admin',
         professor: 'role.professor',
         student: 'role.student',
     };
@@ -100,15 +100,15 @@
         if (/[0-9]/.test(pwData.new)) score++;
         if (/[^A-Za-z0-9]/.test(pwData.new)) score++;
         if (score <= 2)
-			return { score, label: 'password.weak', color: "danger", hex: "#dc3545" };
+			return { score, label: 'password.weak', color: "danger", hex: "var(--portal-danger)" };
         if (score <= 4)
             return {
                 score,
 				label: 'password.fair',
                 color: "warning",
-                hex: "#ffc107",
+                hex: "var(--portal-warning)",
             };
-		return { score, label: 'password.strong', color: "success", hex: "#198754" };
+		return { score, label: 'password.strong', color: "success", hex: "var(--portal-positive)" };
     })();
 
     // --- Actions ---
@@ -141,23 +141,6 @@
 
             if (error) throw error;
 
-            const completeProfileResponse = await fetch(
-                "/api/account/complete-profile",
-                {
-                    method: "POST",
-                }
-            );
-
-            if (!completeProfileResponse.ok) {
-                const payload = await completeProfileResponse
-                    .json()
-                    .catch(() => ({}));
-                throw new Error(
-                    payload.message ||
-						$_('profile.passwordProfileError')
-                );
-            }
-
             message = {
 				text: $_('profile.passwordSuccess'),
                 type: "success",
@@ -179,26 +162,22 @@
 </script>
 
 <svelte:head>
-	<title>{$_('profile.title')} | {$_('home.eyebrow')}</title>
+	<title>{$_('profile.title')} | {$_('site.name')}</title>
 </svelte:head>
 
-<Container class="py-5">
+<div class="page-content">
+<Container class="py-4">
+	<PageHeader title={$_('profile.title')} subtitle={$_('profile.subtitle')} parentLabel={$_('common.portal')} parentHref="/corsi" />
     {#if $session.isPending}
         <div class="text-center">
             <Spinner color="primary" />
         </div>
     {:else if $session.data}
-        <Row>
-            <Col xs="12" class="mb-4">
-				<h2>{$_('profile.title')}</h2>
-				<p class="text-muted">{$_('profile.subtitle')}</p>
-            </Col>
-
+		<Row>
             <Col lg="8" class="mb-4">
                 <Card class="h-100 shadow-sm">
                     <CardHeader>
-						<CardTitle class="m-0">{$_('profile.personalInfo')}</CardTitle
-                        >
+						<h2 class="card-title h5 m-0">{$_('profile.personalInfo')}</h2>
                     </CardHeader>
                     <CardBody>
                         <Alert color="info">
@@ -210,7 +189,7 @@
                             <Col md="6">
                                 <FormGroup>
                                     <Label
-                                        class="text-muted mb-1 small text-uppercase fw-bold"
+                                        class="text-muted mb-1 small fw-semibold"
 										>{$_('common.name')}</Label
                                     >
                                     <div class="fs-6 fw-medium">
@@ -223,7 +202,7 @@
                             <Col md="6">
                                 <FormGroup>
                                     <Label
-                                        class="text-muted mb-1 small text-uppercase fw-bold"
+                                        class="text-muted mb-1 small fw-semibold"
 										>{$_('common.surname')}</Label
                                     >
                                     <div class="fs-6 fw-medium">
@@ -238,7 +217,7 @@
                             <Col md="12">
                                 <FormGroup>
                                     <Label
-                                        class="text-muted mb-1 small text-uppercase fw-bold"
+                                        class="text-muted mb-1 small fw-semibold"
 										>{$_('profile.emailAddress')}</Label
                                     >
                                     <div class="fs-6 fw-medium">
@@ -251,7 +230,7 @@
                             <Col md="6">
                                 <FormGroup>
                                     <Label
-                                        class="text-muted mb-1 small text-uppercase fw-bold"
+                                        class="text-muted mb-1 small fw-semibold"
 										>{$_('common.role')}</Label
                                     >
                                     <div class="fs-6 fw-medium">{role}</div>
@@ -262,14 +241,14 @@
                 </Card>
             </Col>
 
-            <Col lg="4" class="mb-4">
-                <Card class="h-100 shadow-sm border-warning">
-                    <CardHeader class="bg-warning  bg-opacity-10">
-						<CardTitle class="m-0">{$_('profile.security')}</CardTitle>
+			<Col lg="4" class="mb-4">
+				<Card class="h-100 shadow-sm">
+					<CardHeader>
+						<h2 class="card-title h5 m-0">{$_('profile.security')}</h2>
                     </CardHeader>
                     <CardBody class="d-flex flex-column gap-3">
                         <div>
-                            <h6>Password</h6>
+                            <h3 class="h6">Password</h3>
 							<p class="text-muted small">{$_('profile.lastChangedNever')}</p>
                             <Button
                                 outline
@@ -290,6 +269,7 @@
         >
     {/if}
 </Container>
+</div>
 
 <Modal isOpen={pwModalOpen} toggle={togglePwModal}>
 	<ModalHeader toggle={togglePwModal}>{$_('password.change')}</ModalHeader>
@@ -299,10 +279,12 @@
         {/if}
 
         <FormGroup>
-			<Label>{$_('password.current')}</Label>
+		<Label for="current-password">{$_('password.current')}</Label>
             <div class="input-group">
                 <Input
+					id="current-password"
                     type={showCurrent ? "text" : "password"}
+					autocomplete="current-password"
                     bind:value={pwData.current}
                 />
                 <button
@@ -310,6 +292,7 @@
                     class="btn btn-outline-secondary"
                     on:click={() => (showCurrent = !showCurrent)}
 					title={$_(showCurrent ? 'common.hide' : 'common.show')}
+					aria-label={$_(showCurrent ? 'common.hide' : 'common.show')}
                 >
                     <i
                         class={showCurrent ? "ri-eye-off-line" : "ri-eye-line"}
@@ -319,9 +302,10 @@
         </FormGroup>
 
         <FormGroup>
-			<Label>{$_('password.new')}</Label>
+		<Label for="new-password">{$_('password.new')}</Label>
             <div class="input-group">
                 <Input
+					id="new-password"
                     type={showNew ? "text" : "password"}
                     bind:value={pwData.new}
                     autocomplete="new-password"
@@ -331,6 +315,7 @@
                     class="btn btn-outline-secondary"
                     on:click={() => (showNew = !showNew)}
 					title={$_(showNew ? 'common.hide' : 'common.show')}
+					aria-label={$_(showNew ? 'common.hide' : 'common.show')}
                 >
                     <i class={showNew ? "ri-eye-off-line" : "ri-eye-line"}></i>
                 </button>
@@ -340,6 +325,7 @@
                     on:click={copyNewPassword}
                     disabled={!pwData.new}
 					title={$_('password.copy')}
+					aria-label={$_('password.copy')}
                 >
                     <i
                         class={passwordCopied
@@ -352,6 +338,7 @@
                     class="btn btn-primary"
                     on:click={generateStrongPassword}
 					title={$_('password.generateSecure')}
+					aria-label={$_('password.generateSecure')}
                 >
 					<i class="ri-shield-keyhole-line me-1"></i> {$_('common.generate')}
                 </button>
@@ -381,9 +368,10 @@
         </FormGroup>
 
         <FormGroup>
-			<Label>{$_('password.confirmNew')}</Label>
+		<Label for="confirm-password">{$_('password.confirmNew')}</Label>
             <div class="input-group">
                 <Input
+					id="confirm-password"
                     type={showConfirm ? "text" : "password"}
                     bind:value={pwData.confirm}
                     invalid={pwData.new !== "" &&
@@ -395,6 +383,7 @@
                     class="btn btn-outline-secondary"
                     on:click={() => (showConfirm = !showConfirm)}
 					title={$_(showConfirm ? 'common.hide' : 'common.show')}
+					aria-label={$_(showConfirm ? 'common.hide' : 'common.show')}
                 >
                     <i
                         class={showConfirm ? "ri-eye-off-line" : "ri-eye-line"}

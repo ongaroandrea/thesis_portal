@@ -1,16 +1,14 @@
 import { A as escape_html, O as attr, a as derived, g as unsubscribe_stores, m as store_get, s as head, w as getContext } from "../../chunks/server.js";
-import "../../chunks/index-server2.js";
-import { t as $format } from "../../chunks/runtime.js";
 import "../../chunks/client.js";
-import { h as Col, m as Container, n as Row, v as CardBody, y as Card } from "../../chunks/dist.js";
+import "../../chunks/index-server2.js";
+import { _ as Card, g as CardBody, m as Col, n as Row, p as Container } from "../../chunks/dist.js";
 import { t as ParticlesAuth } from "../../chunks/ParticlesAuth.js";
-//#endregion
-//#region node_modules/@sveltejs/kit/src/runtime/app/state/server.js
+import { t as $format } from "../../chunks/runtime.js";
+// node_modules/@sveltejs/kit/src/runtime/app/state/server.js
 function context() {
 	return getContext("__request__");
 }
-//#endregion
-//#region node_modules/@sveltejs/kit/src/runtime/app/state/index.js
+// node_modules/@sveltejs/kit/src/runtime/app/state/index.js
 /**
 * A read-only reactive object with information about the current page, serving several use cases:
 * - retrieving the combined `data` of all pages/layouts anywhere in your component tree (also see [loading data](https://svelte.dev/docs/kit/load))
@@ -74,8 +72,7 @@ var page = {
 		return context().page.url;
 	}
 };
-//#endregion
-//#region src/routes/+error.svelte
+// src/routes/+error.svelte
 function _error($$renderer, $$props) {
 	$$renderer.component(($$renderer) => {
 		var $$store_subs;
@@ -123,7 +120,7 @@ function _error($$renderer, $$props) {
 												CardBody($$renderer, {
 													class: "p-4 p-sm-5 text-center",
 													children: ($$renderer) => {
-														$$renderer.push(`<p class="display-1 fw-semibold text-primary mb-2">${escape_html(page.status)}</p> <h1 class="h3 mb-3">${escape_html(store_get($$store_subs ??= {}, "$_", $format)(content()[0]))}</h1> <p class="text-muted mb-4">${escape_html(store_get($$store_subs ??= {}, "$_", $format)(content()[1]))}</p> <a href="/" class="btn btn-primary"><i class="mdi mdi-home me-1" aria-hidden="true"></i>${escape_html(store_get($$store_subs ??= {}, "$_", $format)("common.backHome"))}</a>`);
+														$$renderer.push(`<p class="display-1 fw-semibold text-primary mb-2">${escape_html(page.status)}</p> <h1 class="h3 mb-3">${escape_html(store_get($$store_subs ??= {}, "$_", $format)(content()[0]))}</h1> <p class="text-muted mb-4">${escape_html(store_get($$store_subs ??= {}, "$_", $format)(content()[1]))}</p> <a href="/" class="btn btn-primary"><i class="ri-home-line me-1" aria-hidden="true"></i>${escape_html(store_get($$store_subs ??= {}, "$_", $format)("common.backHome"))}</a>`);
 													},
 													$$slots: { default: true }
 												});
@@ -147,5 +144,4 @@ function _error($$renderer, $$props) {
 		if ($$store_subs) unsubscribe_stores($$store_subs);
 	});
 }
-//#endregion
 export { _error as default };

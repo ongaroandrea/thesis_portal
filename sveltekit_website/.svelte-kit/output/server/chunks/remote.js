@@ -1,11 +1,11 @@
+import { C as set_nested_value, E as MUTATIVE_METHODS, S as normalize_issue, s as handle_error_and_jsonify, v as create_field_proxy, x as flatten_issues, y as deep_set } from "./utils.js";
 import { i as parse_remote_arg, o as stringify, r as create_remote_key, s as stringify_remote_arg, v as noop } from "./shared.js";
 import { a as app_dir, s as base, t as prerendering } from "./internal.js";
-import { C as set_nested_value, E as MUTATIVE_METHODS, S as normalize_issue, s as handle_error_and_jsonify, v as create_field_proxy, x as flatten_issues, y as deep_set } from "./utils.js";
 import { error, json } from "@sveltejs/kit";
 import { HttpError, SvelteKitError, ValidationError } from "@sveltejs/kit/internal";
 import { get_request_store, with_request_store } from "@sveltejs/kit/internal/server";
 import { parse } from "devalue";
-//#region node_modules/@sveltejs/kit/src/runtime/app/server/remote/shared.js
+// node_modules/@sveltejs/kit/src/runtime/app/server/remote/shared.js
 /** @import { RequestEvent } from '@sveltejs/kit' */
 /** @import { ServerHooks, MaybePromise, RequestState, RemoteInternals, RequestStore, RemoteLiveQueryUserFunctionReturnType } from 'types' */
 /**
@@ -175,8 +175,7 @@ function get_implicit_lookup(internals, state) {
 	}
 	return cache;
 }
-//#endregion
-//#region node_modules/@sveltejs/kit/src/runtime/app/server/remote/command.js
+// node_modules/@sveltejs/kit/src/runtime/app/server/remote/command.js
 /** @import { RemoteCommand } from '@sveltejs/kit' */
 /** @import { MaybePromise, RemoteCommandInternals } from 'types' */
 /** @import { StandardSchemaV1 } from '@standard-schema/spec' */
@@ -252,8 +251,7 @@ function command(validate_or_fn, maybe_fn) {
 	Object.defineProperty(wrapper, "pending", { get: () => 0 });
 	return wrapper;
 }
-//#endregion
-//#region node_modules/@sveltejs/kit/src/runtime/app/server/remote/form.js
+// node_modules/@sveltejs/kit/src/runtime/app/server/remote/form.js
 /** @import { RemoteFormInput, RemoteForm, InvalidField } from '@sveltejs/kit' */
 /** @import { InternalRemoteFormIssue, MaybePromise, HasNonOptionalBoolean, RemoteFormInternals } from 'types' */
 /** @import { StandardSchemaV1 } from '@standard-schema/spec' */
@@ -471,8 +469,7 @@ function create_issues() {
 		} });
 	}
 }
-//#endregion
-//#region node_modules/@sveltejs/kit/src/runtime/app/server/remote/prerender.js
+// node_modules/@sveltejs/kit/src/runtime/app/server/remote/prerender.js
 /** @import { RemoteResource, RemotePrerenderFunction } from '@sveltejs/kit' */
 /** @import { RemotePrerenderInputsGenerator, RemotePrerenderInternals, MaybePromise } from 'types' */
 /** @import { StandardSchemaV1 } from '@standard-schema/spec' */
@@ -580,8 +577,7 @@ function prerender(validate_or_fn, fn_or_options, maybe_options) {
 	Object.defineProperty(wrapper, "__", { value: __ });
 	return wrapper;
 }
-//#endregion
-//#region node_modules/@sveltejs/kit/src/utils/shared-iterator.js
+// node_modules/@sveltejs/kit/src/utils/shared-iterator.js
 /**
 * A pull-style async iterator that fans out a single stream of values to
 * multiple `for await (...)` consumers. Each subscriber gets its own
@@ -782,8 +778,7 @@ var SharedIterator = class {
 		return iterator;
 	}
 };
-//#endregion
-//#region node_modules/@sveltejs/kit/src/runtime/app/server/remote/query.js
+// node_modules/@sveltejs/kit/src/runtime/app/server/remote/query.js
 /** @import { RemoteLiveQuery, RemoteLiveQueryFunction, RemoteQuery, RemoteQueryFunction, RequestEvent } from '@sveltejs/kit' */
 /** @import { RemoteInternals, MaybePromise, RequestState, RemoteQueryLiveInternals, RemoteQueryBatchInternals, RemoteQueryInternals, RemoteLiveQueryUserFunctionReturnType } from 'types' */
 /** @import { StandardSchemaV1 } from '@standard-schema/spec' */
@@ -1296,8 +1291,7 @@ Object.defineProperty(query, "live", {
 	value: live,
 	enumerable: true
 });
-//#endregion
-//#region node_modules/@sveltejs/kit/src/runtime/app/server/remote/requested.js
+// node_modules/@sveltejs/kit/src/runtime/app/server/remote/requested.js
 /** @import { RemoteLiveQuery, RemoteLiveQueryFunction, RemoteQuery, RemoteQueryFunction, RequestedResult, QueryRequestedResult, LiveQueryRequestedResult } from '@sveltejs/kit' */
 /** @import { MaybePromise, RemoteAnyQueryInternals } from 'types' */
 /**
@@ -1503,5 +1497,4 @@ async function* race_all(array, fn) {
 		yield value;
 	} catch {}
 }
-//#endregion
 export { command as a, form as i, query as n, prerender as r, requested as t };

@@ -4,13 +4,19 @@ import { bigint, boolean, index, integer, jsonb, numeric, pgEnum, pgTable, text,
 const identity = (name) => bigint(name, { mode: 'number' }).primaryKey().generatedAlwaysAsIdentity();
 const dateTime = (name) => timestamp(name, { withTimezone: true });
 
-export const appUserRoleEnum = pgEnum('app_user_role', ['developer', 'professor', 'student']);
+export const appUserRoleEnum = pgEnum('app_user_role', ['admin', 'professor', 'student']);
 export const courseMemberRoleEnum = pgEnum('course_member_role', ['PROFESSOR', 'STUDENT']);
 export const courseMemberStatusEnum = pgEnum('course_member_status', ['ACTIVE', 'SUSPENDED', 'REMOVED']);
 export const activityKindEnum = pgEnum('activity_kind', ['LESSON', 'EXAM']);
 export const activityStatusEnum = pgEnum('activity_status', ['DRAFT', 'PUBLISHED', 'ARCHIVED']);
 export const imageViewTypeEnum = pgEnum('image_view_type', ['FRONT', 'SIDE', 'TOP', 'ANGLED', 'OTHER']);
 export const resultStatusEnum = pgEnum('result_status', ['DRAFT', 'READY', 'PUBLISHED']);
+export const correctionReviewVerdictEnum = pgEnum('correction_review_verdict', ['CORRECT', 'PARTIAL', 'INCORRECT']);
+export const promptAnalysisTypeEnum = pgEnum('prompt_analysis_type', ['camera', 'light', 'material', 'texture', 'general']);
+export const promptScopeEnum = pgEnum('prompt_scope', ['GLOBAL', 'COURSE']);
+export const analysisJobStatusEnum = pgEnum('analysis_job_status', ['pending', 'leased', 'completed', 'failed', 'cancelled']);
+export const supportTicketCategoryEnum = pgEnum('support_ticket_category', ['EXAM_DELIVERY', 'CORRECTION', 'ACCOUNT', 'WEBSITE']);
+export const supportTicketStatusEnum = pgEnum('support_ticket_status', ['OPEN', 'IN_PROGRESS', 'RESOLVED']);
 
 export const user = pgTable('user', {
 	id: identity('id'),
@@ -117,6 +123,35 @@ export const courseInvitation = pgTable('course_invitation', {
 	createdAt: dateTime('created_at').notNull().defaultNow()
 });
 
+export const promptTemplate = pgTable('prompt_template', {
+	id: identity('id'),
+	analysisType: promptAnalysisTypeEnum('analysis_type').notNull(),
+	scope: promptScopeEnum('scope').notNull().default('GLOBAL'),
+	courseId: bigint('course_id', { mode: 'number' }).references(() => course.id, { onDelete: 'cascade' }),
+	activeRevision: integer('active_revision').notNull().default(1),
+	createdAt: dateTime('created_at').notNull().defaultNow(),
+	updatedAt: dateTime('updated_at').notNull().defaultNow()
+}, (table) => [
+	uniqueIndex('prompt_template_global_type_uidx').on(table.analysisType).where(sql`${table.scope} = 'GLOBAL'`),
+	uniqueIndex('prompt_template_course_type_uidx').on(table.courseId, table.analysisType).where(sql`${table.scope} = 'COURSE'`),
+	index('prompt_template_course_idx').on(table.courseId)
+]);
+
+export const promptTemplateRevision = pgTable('prompt_template_revision', {
+	id: identity('id'),
+	templateId: bigint('template_id', { mode: 'number' }).notNull().references(() => promptTemplate.id, { onDelete: 'cascade' }),
+	version: integer('version').notNull(),
+	model: text('model').notNull().default('qwen3.8:27b'),
+	systemPrompt: text('system_prompt').notNull(),
+	userPrompt: text('user_prompt').notNull(),
+	outputSchema: jsonb('output_schema').notNull().default({ type: 'object' }),
+	createdByUserId: bigint('created_by_user_id', { mode: 'number' }).references(() => user.id, { onDelete: 'set null' }),
+	createdAt: dateTime('created_at').notNull().defaultNow()
+}, (table) => [
+	uniqueIndex('prompt_template_revision_version_uidx').on(table.templateId, table.version),
+	index('prompt_template_revision_template_idx').on(table.templateId, table.version)
+]);
+
 export const activity = pgTable('course_activity', {
 	id: identity('id'),
 	courseId: bigint('course_id', { mode: 'number' }).notNull().references(() => course.id, { onDelete: 'cascade' }),
@@ -129,6 +164,10 @@ export const activity = pgTable('course_activity', {
 	durationMinutes: integer('duration_minutes'),
 	maxCorrectionsPerStudent: integer('max_corrections_per_student'),
 	allowedCorrectionFocuses: jsonb('allowed_correction_focuses').notNull().default(['LIGHT', 'CAMERA', 'MATERIAL', 'TEXTURE', 'GENERAL']),
+	promptAddendum: text('prompt_addendum').notNull().default(''),
+	promptRevision: integer('prompt_revision').notNull().default(1),
+	promptFrozenAt: dateTime('prompt_frozen_at'),
+	frozenPromptConfig: jsonb('frozen_prompt_config'),
 	availableFrom: dateTime('available_from'),
 	availableUntil: dateTime('available_until'),
 	resultsReleasedAt: dateTime('results_released_at'),
@@ -196,6 +235,51 @@ export const correctionAttempt = pgTable('correction_attempt', {
 	index('correction_attempt_status_idx').on(table.jobStatus)
 ]);
 
+export const analysisJob = pgTable('analysis_job', {
+	id: identity('id'),
+	correctionAttemptId: bigint('correction_attempt_id', { mode: 'number' }).references(() => correctionAttempt.id, { onDelete: 'cascade' }),
+	examSubmissionId: bigint('exam_submission_id', { mode: 'number' }).references(() => examSubmission.id, { onDelete: 'cascade' }),
+	providerJobId: text('provider_job_id').unique(),
+	promptTemplateRevisionId: bigint('prompt_template_revision_id', { mode: 'number' }).notNull().references(() => promptTemplateRevision.id, { onDelete: 'restrict' }),
+	activityPromptRevision: integer('activity_prompt_revision').notNull(),
+	promptSnapshot: jsonb('prompt_snapshot').notNull(),
+	promptHash: text('prompt_hash').notNull(),
+	model: text('model').notNull(),
+	status: analysisJobStatusEnum('status').notNull().default('pending'),
+	leaseToken: text('lease_token'),
+	leaseExpiresAt: dateTime('lease_expires_at'),
+	attemptCount: integer('attempt_count').notNull().default(0),
+	rawResult: jsonb('raw_result'),
+	validatedResult: jsonb('validated_result'),
+	error: text('error'),
+	createdAt: dateTime('created_at').notNull().defaultNow(),
+	startedAt: dateTime('started_at'),
+	completedAt: dateTime('completed_at'),
+	updatedAt: dateTime('updated_at').notNull().defaultNow()
+}, (table) => [
+	index('analysis_job_status_idx').on(table.status, table.createdAt),
+	index('analysis_job_attempt_idx').on(table.correctionAttemptId)
+]);
+
+export const correctionFeedback = pgTable('correction_feedback', {
+	id: identity('id'),
+	attemptId: bigint('attempt_id', { mode: 'number' }).notNull().references(() => correctionAttempt.id, { onDelete: 'cascade' }),
+	studentUserId: bigint('student_user_id', { mode: 'number' }).references(() => user.id, { onDelete: 'set null' }),
+	isUseful: boolean('is_useful'),
+	studentComment: text('student_comment'),
+	studentSubmittedAt: dateTime('student_submitted_at'),
+	reviewedByUserId: bigint('reviewed_by_user_id', { mode: 'number' }).references(() => user.id, { onDelete: 'set null' }),
+	verdict: correctionReviewVerdictEnum('verdict'),
+	professorComment: text('professor_comment'),
+	reviewedAt: dateTime('reviewed_at'),
+	createdAt: dateTime('created_at').notNull().defaultNow(),
+	updatedAt: dateTime('updated_at').notNull().defaultNow()
+}, (table) => [
+	uniqueIndex('correction_feedback_attempt_uidx').on(table.attemptId),
+	index('correction_feedback_student_idx').on(table.studentUserId),
+	index('correction_feedback_verdict_idx').on(table.verdict)
+]);
+
 export const examSubmission = pgTable('exam_submission', {
 	id: identity('id'),
 	activityId: bigint('activity_id', { mode: 'number' }).notNull().references(() => activity.id, { onDelete: 'cascade' }),
@@ -239,4 +323,22 @@ export const examResult = pgTable('exam_result', {
 }, (table) => [
 	uniqueIndex('exam_result_activity_student_uidx').on(table.activityId, table.studentUserId),
 	index('exam_result_student_idx').on(table.studentUserId, table.status)
+]);
+
+export const supportTicket = pgTable('support_ticket', {
+	id: identity('id'),
+	reporterUserId: bigint('reporter_user_id', { mode: 'number' }).notNull().references(() => user.id, { onDelete: 'cascade' }),
+	category: supportTicketCategoryEnum('category').notNull(),
+	status: supportTicketStatusEnum('status').notNull().default('OPEN'),
+	subject: text('subject').notNull(),
+	description: text('description').notNull(),
+	pageUrl: text('page_url'),
+	adminNote: text('admin_note'),
+	resolvedByUserId: bigint('resolved_by_user_id', { mode: 'number' }).references(() => user.id, { onDelete: 'set null' }),
+	resolvedAt: dateTime('resolved_at'),
+	createdAt: dateTime('created_at').notNull().defaultNow(),
+	updatedAt: dateTime('updated_at').notNull().defaultNow()
+}, (table) => [
+	index('support_ticket_reporter_idx').on(table.reporterUserId, table.createdAt),
+	index('support_ticket_status_idx').on(table.status, table.createdAt)
 ]);

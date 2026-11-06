@@ -21,6 +21,7 @@ const Navdata = [
         label: "Aggiungi corso",
         link: "/corsi/aggiungi",
         parentId: "corsi",
+        roles: ["admin", "professor"],
       },
     ],
   },
@@ -29,7 +30,7 @@ const Navdata = [
     label: "Studenti",
     icon: "ri-user-2-line",
     link: "/studenti",
-    roles: ["developer", "professor"],
+    roles: ["admin", "professor"],
     stateVariables: "isStudenti",
     subItems: [
       {
@@ -43,9 +44,16 @@ const Navdata = [
         label: "Aggiungi studente",
         link: "/studenti/aggiungi",
         parentId: "studenti",
-        roles: ["developer"],
+        roles: ["admin"],
       },
     ],
+  },
+  {
+    id: "prompt",
+    label: "Prompt globali",
+    icon: "ri-terminal-box-line",
+    link: "/prompt",
+    roles: ["admin"],
   },
   {
     id: "support",

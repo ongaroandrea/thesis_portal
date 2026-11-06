@@ -1,12 +1,13 @@
 import { A as escape_html, O as attr, g as unsubscribe_stores, k as clsx, m as store_get, s as head, t as attr_class } from "../../../../chunks/server.js";
-import { t as $format } from "../../../../chunks/runtime.js";
-import { S as Alert, h as Col, m as Container, n as Row, s as Label, v as CardBody, x as Button, y as Card } from "../../../../chunks/dist.js";
-import { t as ParticlesAuth } from "../../../../chunks/ParticlesAuth.js";
 import { n as page } from "../../../../chunks/stores.js";
 import "../../../../chunks/navigation.js";
-import "../../../../chunks/auth-client.js";
+import { r as onDestroy } from "../../../../chunks/index-server2.js";
 import { t as Link } from "../../../../chunks/svelte-link.js";
-//#region src/routes/auth/verifica-password/+page.svelte
+import { _ as Card, b as Alert, g as CardBody, m as Col, n as Row, p as Container, s as Label, y as Button } from "../../../../chunks/dist.js";
+import { t as ParticlesAuth } from "../../../../chunks/ParticlesAuth.js";
+import "../../../../chunks/auth-client.js";
+import { t as $format } from "../../../../chunks/runtime.js";
+// src/routes/auth/verifica-password/+page.svelte
 function _page($$renderer, $$props) {
 	$$renderer.component(($$renderer) => {
 		var $$store_subs;
@@ -14,6 +15,8 @@ function _page($$renderer, $$props) {
 		let password = "";
 		let confirmPassword = "";
 		let loading = false;
+		let redirectTimer;
+		onDestroy(() => clearTimeout(redirectTimer));
 		$: store_get($$store_subs ??= {}, "$page", page).url.searchParams.get("token");
 		$: errorParam = store_get($$store_subs ??= {}, "$page", page).url.searchParams.get("error");
 		$: hasMinLength = false;
@@ -25,7 +28,7 @@ function _page($$renderer, $$props) {
 				score: 0,
 				label: "",
 				color: "",
-				hex: "#dee2e6"
+				hex: "var(--portal-border)"
 			};
 		})();
 		head("19d1qel", $$renderer, ($$renderer) => {
@@ -52,7 +55,7 @@ function _page($$renderer, $$props) {
 											},
 											$$slots: { default: true }
 										});
-										$$renderer.push(`<!----></div> <p class="mt-3 fs-15 fw-medium svelte-19d1qel">${escape_html(store_get($$store_subs ??= {}, "$_", $format)("home.eyebrow"))} <span class="alpha-label svelte-19d1qel">Alpha</span></p></div>`);
+										$$renderer.push(`<!----></div> <p class="mt-3 fs-15 fw-medium svelte-19d1qel">${escape_html(store_get($$store_subs ??= {}, "$_", $format)("home.eyebrow"))}</p></div>`);
 									},
 									$$slots: { default: true }
 								});
@@ -172,5 +175,4 @@ function _page($$renderer, $$props) {
 		if ($$store_subs) unsubscribe_stores($$store_subs);
 	});
 }
-//#endregion
 export { _page as default };

@@ -1,7 +1,419 @@
-/*
-Template Name: Velzon - Admin & Dashboard Template
-Author: Themesbrand
-Website: https://themesbrand.com/
-Contact: support@themesbrand.com
-File: Custom Css File
-*/
+// Portal design tokens. One palette: Politecnico di Torino ink and blue.
+// --portal-brand-primary is kept as an alias of the PoliTo blue so component
+// styles that reference it follow the institutional palette.
+// [data-bs-theme='light'] repeats the light values so public pages can pin
+// themselves to the light surface even when the app shell is in dark mode.
+
+:root,
+[data-bs-theme='light'] {
+    --portal-brand-primary: #007ba1;
+    --portal-brand-primary-rgb: 0, 123, 161;
+    --portal-positive: #1f9d55;
+    --portal-positive-rgb: 31, 157, 85;
+    --portal-warning: #f7b84b;
+    --portal-warning-rgb: 247, 184, 75;
+    --portal-danger: #f06548;
+    --portal-danger-rgb: 240, 101, 72;
+    // Text-safe status shades: >=4.5:1 on white and on their own 15% tint.
+    // The base status colours above are for fills, borders and icons only.
+    --portal-positive-text: #136c3b;
+    --portal-warning-text: #8b5e00;
+    --portal-danger-text: #b83b25;
+    --portal-info-text: #00607e;
+    --portal-solid-positive: #0a7a42; // white text 5.4:1
+    --portal-solid-positive-hover: #086636;
+    --portal-solid-danger: #b83b25;
+    --portal-polito-ink: #00284b;
+    --portal-polito-ink-rgb: 0, 40, 75;
+    --portal-polito-blue: #007ba1;
+    --portal-polito-blue-rgb: 0, 123, 161;
+    --portal-public-surface: #fff;
+    --portal-public-copy: #40566a;
+    --portal-public-action-muted: #617181;
+    --portal-public-muted: #5d6f7f;
+    --portal-public-subtle: #6d7d8b;
+    --portal-surface: #ffffff;
+    --portal-surface-muted: #f5f7fa;
+    --portal-canvas: #eef2f6;
+    --portal-ink: #17243b;
+    --portal-muted: #5b6b80; // >=4.5:1 on white, the muted surface and light tints
+    --portal-border: #dfe5ec;
+    --portal-focus: #0b82aa;
+    --portal-radius: 8px;
+    --portal-radius-sm: 6px;
+    --portal-shadow-sm: 0 1px 2px rgba(23, 36, 59, 0.06);
+    --portal-shadow-md: 0 6px 16px rgba(23, 36, 59, 0.1);
+}
+
+[data-bs-theme='dark'] {
+    // Text-safe brand blue on the dark surfaces (>=4.5:1 on #111b2b).
+    --portal-brand-primary: #3fa9cf;
+    --portal-brand-primary-rgb: 63, 169, 207;
+    --portal-positive-text: #6fd59a;
+    --portal-warning-text: #f7c56b;
+    --portal-danger-text: #ff8a70;
+    --portal-info-text: #4cc3e6;
+    --portal-surface: #111b2b;
+    --portal-surface-muted: #172235;
+    --portal-canvas: #0b1320;
+    --portal-ink: #e8eef7;
+    --portal-muted: #a9b5c7;
+    --portal-border: #29364a;
+    --portal-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --portal-shadow-md: 0 6px 16px rgba(0, 0, 0, 0.36);
+    color-scheme: dark;
+}
+
+html {
+    scroll-behavior: smooth;
+    scrollbar-color: rgba(var(--portal-polito-blue-rgb), 0.55) var(--portal-surface-muted);
+    scrollbar-width: thin;
+}
+
+body {
+    background: var(--portal-canvas);
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+    background: rgba(var(--portal-polito-blue-rgb), 0.22);
+    color: var(--portal-polito-ink);
+}
+
+[data-bs-theme='dark'] ::selection {
+    color: #fff;
+}
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--portal-surface-muted); }
+::-webkit-scrollbar-thumb {
+    border: 2px solid var(--portal-surface-muted);
+    border-radius: 999px;
+    background: rgba(var(--portal-polito-blue-rgb), 0.55);
+}
+
+a {
+    text-underline-offset: 0.18em;
+    text-decoration-thickness: 0.08em;
+}
+
+.skip-link {
+    position: fixed;
+    z-index: 10050;
+    top: 0.75rem;
+    left: 0.75rem;
+    padding: 0.7rem 1rem;
+    border-radius: var(--portal-radius-sm);
+    background: var(--portal-polito-ink);
+    color: #fff;
+    font-weight: 700;
+    text-decoration: none;
+    transform: translateY(calc(-100% - 1rem));
+    transition: transform 160ms ease-out;
+}
+
+.skip-link:focus { color: #fff; transform: translateY(0); }
+
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+    outline: 3px solid rgba(var(--portal-polito-blue-rgb), 0.38) !important;
+    outline-offset: 3px !important;
+    box-shadow: none;
+}
+
+#main-content:focus { outline: none !important; }
+
+/* Shared application shell */
+#layout-wrapper .main-content {
+    min-height: 100vh;
+    background: var(--portal-canvas);
+}
+
+#layout-wrapper .page-content { padding-bottom: 2rem; }
+
+#layout-wrapper .page-content > .container-fluid {
+    width: min(100%, 1480px);
+    margin-inline: auto;
+    padding-inline: clamp(1rem, 2.3vw, 2rem);
+}
+
+.page-title-box {
+    align-items: end !important;
+    margin-bottom: 1.5rem !important;
+    padding-block: 0.25rem 0.9rem !important;
+}
+
+.page-title-box .page-title {
+    /* Wide enough for typical activity names on one line; still stops very
+       long titles from running across the whole page. */
+    max-width: 48ch;
+    margin: 0;
+    color: var(--portal-ink);
+    font-family: var(--vz-font-sans-serif);
+    font-size: clamp(1.35rem, 1.8vw, 1.65rem);
+    font-weight: 600;
+    line-height: 1.25;
+    letter-spacing: -0.01em;
+    text-transform: none;
+}
+
+.page-title-box p { max-width: 70ch; color: var(--portal-muted) !important; }
+.page-title-box .breadcrumb { font-size: 0.82rem; }
+.page-title-box .breadcrumb-item a { color: var(--portal-muted); }
+.page-title-box .breadcrumb-item.active { color: var(--portal-ink); font-weight: 600; }
+
+/* Surfaces */
+// Cards are delimited by a hairline border, not by soft drop shadows.
+.card {
+    border: 1px solid var(--portal-border);
+    border-radius: var(--portal-radius);
+    background: var(--portal-surface);
+    box-shadow: none;
+}
+
+.card.border-0,
+.card.shadow-sm {
+    border: 1px solid var(--portal-border) !important;
+    box-shadow: none !important;
+}
+
+.card:not(.border-0) { border-color: var(--portal-border); }
+
+.card-header,
+.card-footer {
+    border-color: var(--portal-border);
+    background: transparent;
+}
+
+.card-header:first-child { border-radius: var(--portal-radius) var(--portal-radius) 0 0; }
+.card-footer:last-child { border-radius: 0 0 var(--portal-radius) var(--portal-radius); }
+
+.card :is(h2, h3, h4, h5, h6) {
+    color: var(--portal-ink);
+    font-weight: 600;
+}
+
+.text-muted { color: var(--portal-muted) !important; }
+
+/* Controls */
+.btn {
+    min-height: 42px;
+    border-radius: var(--portal-radius-sm);
+    box-shadow: none;
+    font-weight: 600;
+    transition: color 160ms ease-out, background-color 160ms ease-out, border-color 160ms ease-out;
+}
+
+.btn-sm { min-height: 34px; border-radius: var(--portal-radius-sm); }
+.btn-lg { min-height: 48px; }
+.btn:disabled, .btn.disabled { cursor: not-allowed; opacity: 0.58; box-shadow: none; }
+
+.form-label {
+    margin-bottom: 0.45rem;
+    color: var(--portal-ink);
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+:is(.form-control, .form-select) {
+    min-height: 44px;
+    border-color: var(--portal-border);
+    border-radius: var(--portal-radius-sm);
+    background-color: var(--portal-surface);
+    color: var(--portal-ink);
+    transition: border-color 160ms ease-out, box-shadow 160ms ease-out, background-color 160ms ease-out;
+}
+
+textarea.form-control { min-height: 112px; resize: vertical; }
+
+:is(.form-control, .form-select):hover:not(:disabled) { border-color: #aab8c8; }
+
+:is(.form-control, .form-select):focus {
+    border-color: var(--portal-focus);
+    box-shadow: 0 0 0 0.24rem rgba(var(--portal-polito-blue-rgb), 0.14);
+}
+
+.form-control::placeholder { color: #7f8da0; opacity: 1; }
+.form-text { color: var(--portal-muted); }
+.form-check-input { border-color: #9cabbc; }
+.form-check-input:focus { border-color: var(--portal-focus); box-shadow: 0 0 0 0.24rem rgba(var(--portal-polito-blue-rgb), 0.14); }
+
+/* Data-dense surfaces */
+.table { --vz-table-bg: transparent; margin-bottom: 0; }
+
+.table > :not(caption) > * > * {
+    padding: 0.9rem 1rem;
+    border-bottom-color: var(--portal-border);
+    vertical-align: middle;
+}
+
+.table thead th {
+    color: var(--portal-muted);
+    font-size: 0.8rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.table tbody tr { transition: background-color 140ms ease-out; }
+.table tbody tr:hover { background: rgba(var(--portal-polito-blue-rgb), 0.045); }
+.table :is(td, th) { font-variant-numeric: tabular-nums; }
+
+.table-responsive {
+    border-radius: 0 0 var(--portal-radius) var(--portal-radius);
+    scrollbar-gutter: stable;
+}
+
+.progress { overflow: hidden; border-radius: 999px; background: var(--portal-surface-muted); }
+.progress-bar { min-width: 2px; }
+
+.badge { padding: 0.4em 0.6em; border-radius: var(--portal-radius-sm); font-weight: 600; }
+
+/* Feedback and overlays */
+.alert {
+    border: 0;
+    border-radius: var(--portal-radius-sm);
+    line-height: 1.55;
+}
+
+.modal-content {
+    overflow: hidden;
+    border: 1px solid var(--portal-border);
+    border-radius: var(--portal-radius);
+    background: var(--portal-surface);
+    box-shadow: var(--portal-shadow-md);
+}
+
+.modal-header, .modal-footer { border-color: var(--portal-border); }
+
+.dropdown-menu {
+    border-color: var(--portal-border);
+    border-radius: var(--portal-radius);
+    background: var(--portal-surface);
+    box-shadow: var(--portal-shadow-md);
+}
+
+.dropdown-item { border-radius: var(--portal-radius-sm); }
+.nav-tabs { border-color: var(--portal-border); }
+.nav-tabs .nav-link { min-height: 42px; color: var(--portal-muted); font-weight: 600; }
+.nav-tabs .nav-link { border-radius: var(--portal-radius-sm) var(--portal-radius-sm) 0 0; }
+.nav-tabs .nav-link:hover { color: var(--portal-ink); }
+.nav-tabs .nav-link.active { color: var(--portal-ink); border-color: var(--portal-border) var(--portal-border) var(--portal-surface); background: var(--portal-surface); box-shadow: inset 0 2px 0 var(--portal-polito-blue); }
+
+#preloader {
+    background: rgba(255, 255, 255, 0.92);
+    transition: opacity 180ms ease-out, visibility 180ms ease-out;
+}
+
+[data-bs-theme='dark'] #preloader { background: rgba(11, 19, 32, 0.92); }
+
+
+@media (max-width: 767.98px) {
+    #layout-wrapper .page-content > .container-fluid { padding-inline: 0.85rem; }
+
+    .page-title-box {
+        align-items: start !important;
+        margin-bottom: 1rem !important;
+        padding-top: 0 !important;
+    }
+
+    .page-title-box nav { width: 100%; overflow: hidden; }
+    .page-title-box .breadcrumb { flex-wrap: nowrap; overflow: hidden; }
+    .page-title-box .breadcrumb-item { max-width: 48%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    .card-body.p-4,
+    .card-header.p-4,
+    .card-footer.p-4 { padding: 1.15rem !important; }
+
+    .table > :not(caption) > * > * { padding: 0.8rem 0.85rem; }
+    .modal-dialog { margin: 0.75rem; }
+
+}
+
+// Subtle badges: Bootstrap pairs a 10-15% tint with the full-strength status colour,
+// which lands near 2:1. Swap the text for the text-safe shades in both themes.
+.badge {
+    &.bg-success-subtle.text-success { color: var(--portal-positive-text) !important; }
+    &.bg-warning-subtle.text-warning { color: var(--portal-warning-text) !important; }
+    &.bg-danger-subtle.text-danger { color: var(--portal-danger-text) !important; }
+    &.bg-info-subtle.text-info,
+    &.bg-primary-subtle.text-primary { color: var(--portal-info-text) !important; }
+    // Solid fills carrying white text: the theme greens/reds are under 3.5:1 with white.
+    &.bg-success { background-color: var(--portal-solid-positive) !important; }
+    &.bg-danger { background-color: var(--portal-solid-danger) !important; }
+}
+
+// Same fix for solid and outline buttons.
+.btn-success {
+    --#{$prefix}btn-bg: var(--portal-solid-positive);
+    --#{$prefix}btn-border-color: var(--portal-solid-positive);
+    --#{$prefix}btn-hover-bg: var(--portal-solid-positive-hover);
+    --#{$prefix}btn-hover-border-color: var(--portal-solid-positive-hover);
+    --#{$prefix}btn-active-bg: var(--portal-solid-positive-hover);
+    --#{$prefix}btn-active-border-color: var(--portal-solid-positive-hover);
+    --#{$prefix}btn-disabled-bg: var(--portal-solid-positive);
+    --#{$prefix}btn-disabled-border-color: var(--portal-solid-positive);
+}
+.btn-outline-danger { --#{$prefix}btn-color: var(--portal-danger-text); }
+.btn-outline-primary { --#{$prefix}btn-color: var(--portal-info-text); }
+[data-bs-theme='dark'] .btn-light { --#{$prefix}btn-color: #c3c7ce; }
+
+// Tinted alerts: text in the text-safe shade of their own hue.
+.alert-info { color: var(--portal-info-text); }
+.alert-success { color: var(--portal-positive-text); }
+.alert-warning { color: var(--portal-warning-text); }
+.alert-danger { color: var(--portal-danger-text); }
+:is(.alert-info, .alert-success, .alert-warning, .alert-danger) .alert-link { color: inherit; }
+
+// Support ticket status pills (shared by /supporto and /supporto/gestione).
+.ticket-status {
+    flex-shrink: 0;
+    padding: 0.2rem 0.5rem;
+    border-radius: var(--portal-radius-sm);
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+    &.is-open { color: var(--portal-warning-text); background: rgba(var(--portal-warning-rgb), 0.2); }
+    &.is-progress { color: var(--portal-info-text); background: rgba(var(--portal-polito-blue-rgb), 0.12); }
+    &.is-resolved { color: var(--portal-positive-text); background: rgba(var(--portal-positive-rgb), 0.14); }
+}
+
+// Shown by the tableScrollHint action only while a table overflows its container.
+.table-scroll-hint {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    margin: 0 0 0.6rem;
+    color: var(--portal-muted);
+    font-size: 0.8rem;
+    &[hidden] { display: none; }
+    i { font-size: 1rem; color: var(--portal-polito-blue); }
+}
+.table-responsive[tabindex]:focus-visible { outline: 2px solid var(--portal-focus); outline-offset: 2px; }
+
+// Comfortable touch targets (44px) on small screens and on any coarse pointer,
+// including compact .btn-sm actions in table rows and icon-only buttons.
+@media (max-width: 767.98px), (pointer: coarse) {
+    .btn,
+    .btn-sm { min-height: 44px; }
+    .btn-sm { display: inline-flex; align-items: center; justify-content: center; }
+    .btn-icon { min-width: 44px; min-height: 44px; }
+    .btn-close { box-sizing: border-box; min-width: 44px; min-height: 44px; background-position: center; }
+}
+
+// Reduced motion removes spatial movement (slides, lifts, zooms, bounces) but keeps
+// colour/opacity feedback and loading spinners, so state changes stay legible.
+// Bootstrap's own .fade/.collapse transitions already honour this via $enable-reduced-motion.
+@media (prefers-reduced-motion: reduce) {
+    html, *, *::before, *::after { scroll-behavior: auto !important; }
+
+    .skip-link { transition-property: color, background-color, border-color, box-shadow, opacity !important; }
+    .skip-link:focus { transform: none !important; }
+
+    .dropdown-menu,
+    .navbar-menu .dropdown-menu,
+    .modal .modal-dialog,
+    .animated-progress .progress-bar,
+    #back-to-top:hover { animation: none !important; }
+
+    .modal.fade .modal-dialog { transform: none !important; }
+}

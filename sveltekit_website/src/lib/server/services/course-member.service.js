@@ -82,6 +82,12 @@ export const courseMemberService = {
 		return record;
 	},
 
+	/**
+	 * Add a user to a course. Course managers can add anyone as STUDENT, or a
+	 * professor/admin account as PROFESSOR. Anyone else can only enrol
+	 * themselves as STUDENT, and only if their email is verified and matches
+	 * a non-expired course invitation (created by the CSV/JSON import).
+	 */
 	async create(input, currentUser) {
 		requireUser(currentUser);
 		const courseId = numericId(input.courseId, 'courseId');
@@ -112,8 +118,8 @@ export const courseMemberService = {
 		const role = input.role ?? 'STUDENT';
 		if (!['PROFESSOR', 'STUDENT'].includes(role)) throw new ApiError(400, 'role must be PROFESSOR or STUDENT.', 'VALIDATION_ERROR');
 		if (!managerAuthorized && role !== 'STUDENT') throw new ApiError(403, 'An invitation can only create a student membership.', 'MEMBER_ROLE_DENIED');
-		if (role === 'PROFESSOR' && !['professor', 'developer'].includes(targetUser.role)) {
-			throw new ApiError(400, 'Only a professor or developer account can receive the PROFESSOR course role.', 'MEMBER_ROLE_DENIED');
+		if (role === 'PROFESSOR' && !['professor', 'admin'].includes(targetUser.role)) {
+			throw new ApiError(400, 'Only a professor or admin account can receive the PROFESSOR course role.', 'MEMBER_ROLE_DENIED');
 		}
 
 		return db.transaction(async (tx) => {
@@ -126,6 +132,13 @@ export const courseMemberService = {
 		});
 	},
 
+	/**
+	 * Change a member's course role and/or status (course managers only).
+	 * The course role PROFESSOR is only granted to accounts whose global role
+	 * is professor or admin, so a student cannot be promoted to manage a
+	 * course through membership alone.
+	 * @throws {ApiError} 400 on invalid values or when nothing would change.
+	 */
 	async update(id, input, currentUser) {
 		const record = await findMember(id);
 		await courseService.requireCourseManager(record.courseId, currentUser);
@@ -134,8 +147,8 @@ export const courseMemberService = {
 			if (!['PROFESSOR', 'STUDENT'].includes(input.role)) throw new ApiError(400, 'role must be PROFESSOR or STUDENT.', 'VALIDATION_ERROR');
 			if (input.role === 'PROFESSOR') {
 				const targetUser = await findUser(record.userId);
-				if (!['professor', 'developer'].includes(targetUser.role)) {
-					throw new ApiError(400, 'Only a professor or developer account can receive the PROFESSOR course role.', 'MEMBER_ROLE_DENIED');
+				if (!['professor', 'admin'].includes(targetUser.role)) {
+					throw new ApiError(400, 'Only a professor or admin account can receive the PROFESSOR course role.', 'MEMBER_ROLE_DENIED');
 				}
 			}
 			values.role = input.role;

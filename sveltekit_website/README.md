@@ -6,8 +6,8 @@ A SvelteKit teaching-support portal for managing courses, publishing image-based
 activities, and providing students with asynchronous, AI-assisted feedback by
 comparing their submissions with instructor-provided reference images.
 
-The application is currently in an alpha stage and is being developed as a
-thesis project for Politecnico di Torino.
+The application is being developed as a thesis project for Politecnico di
+Torino.
 
 ## Table of contents
 
@@ -49,7 +49,7 @@ polls the worker until the job completes or fails.
 ### Main features
 
 - Email-and-password authentication with email verification and password reset.
-- Global `developer`, `professor`, and `student` roles.
+- Global `admin`, `professor`, and `student` roles.
 - Course-specific memberships and authorization.
 - Course, member, activity, and reference-image management.
 - Student correction sessions with a fixed reference view and analysis focus.
@@ -130,6 +130,7 @@ Python service.
 | Variable | Required | Description |
 | --- | --- | --- |
 | `DATABASE_URL` | Yes | PostgreSQL connection URL used by the application and Drizzle. |
+| `LOCAL_STORAGE_PATH` | Yes | Server-local folder for uploaded image binaries. Relative paths are resolved from the application working directory. PostgreSQL stores only file metadata and a local URL. |
 | `BETTER_AUTH_SECRET` | Yes | Long, random secret used by Better Auth. |
 | `BETTER_AUTH_URL` | Yes | Public base URL of the application, such as `http://localhost:5173`. |
 | `BETTER_AUTH_CLIENT_URL` | Recommended | Browser-facing callback URL. Defaults to `http://localhost:5173` in some flows. |
@@ -175,9 +176,9 @@ configuration.
 | `INITIAL_PROFESSOR_EMAIL` | For seeding | Initial professor's `@polito.it` address. |
 | `INITIAL_PROFESSOR_NAME` | Optional | Initial professor's first name. |
 | `INITIAL_PROFESSOR_SURNAME` | Optional | Initial professor's surname. |
-| `INITIAL_DEVELOPER_EMAIL` | For seeding | Initial developer's `@polito.it` address. |
-| `INITIAL_DEVELOPER_NAME` | Optional | Initial developer's first name. |
-| `INITIAL_DEVELOPER_SURNAME` | Optional | Initial developer's surname. |
+| `INITIAL_ADMIN_EMAIL` | For seeding | Initial admin's `@polito.it` address. |
+| `INITIAL_ADMIN_NAME` | Optional | Initial admin's first name. |
+| `INITIAL_ADMIN_SURNAME` | Optional | Initial admin's surname. |
 | `INITIAL_STUDENT_EMAIL` | For seeding | Initial student's `@polito.it` address. |
 | `INITIAL_STUDENT_NAME` | Optional | Initial student's first name. |
 | `INITIAL_STUDENT_SURNAME` | Optional | Initial student's surname. |
@@ -190,13 +191,18 @@ Create a PostgreSQL database, set `DATABASE_URL`, and load the complete baseline
 psql "$DATABASE_URL" -f drizzle/0000_initial_schema.sql
 ```
 
-For a database that already uses the baseline, apply the newer numbered migrations in order (currently `0002` through `0004`) instead of reloading `0000`.
+`0000_initial_schema.sql` contains the complete current schema. It is intended
+for an empty database and must not be executed over an already initialized
+database.
 
-Do not run `drizzle/0001_nuke_system.sql` as part of normal setup: it drops and
-recreates the entire `public` schema.
+Databases created before the support-ticket feature only need the upgrade script:
+
+```sh
+psql "$DATABASE_URL" -f drizzle/0001_support_tickets.sql
+```
 
 The schema, relationships, authorization model, API coverage, constraints,
-known limitations, and migration notes are documented separately in
+known limitations, and schema notes are documented separately in
 [Database architecture](docs/database.md).
 
 To inspect the configured database with Drizzle Studio:
@@ -215,7 +221,7 @@ npm run db:seed-initial-users
 ```
 
 The seed command is idempotent for the configured accounts. It creates a
-professor, developer, and student account, or updates their credentials and
+professor, admin, and student account, or updates their credentials and
 profile information if they already exist.
 
 ## Usage
@@ -241,12 +247,15 @@ profile information if they already exist.
 
 | Role | Scope |
 | --- | --- |
-| `developer` | Global administrator with access to all courses. |
+| `admin` | Global administrator with access to all courses. |
 | `professor` | Creates courses and manages courses where the user has an active professor membership. |
 | `student` | Accesses courses where the user has an active membership and submits correction attempts. |
 
 Application roles and course memberships are intentionally separate. A global
-professor does not automatically manage every course.
+professor does not automatically manage every course. The full list of what
+each role can do, and the known gaps between the interface and the API, is in
+[Roles and permissions](../README.md#roles-and-permissions) in the root
+README.
 
 ### Localization
 
@@ -358,7 +367,7 @@ them. Use HTTPS or a trusted private network between the services.
 
 ## Project status
 
-This is an alpha thesis project. The main course, activity, correction, and
+This is a thesis project. The main course, activity, correction, and
 result workflows are implemented, while the image processor still exposes a
 placeholder analysis implementation. Consult the
 [database documentation](docs/database.md#known-limitations) for current data

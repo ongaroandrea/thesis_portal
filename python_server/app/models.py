@@ -23,10 +23,17 @@ class ImageType(str, Enum):
     TEXTURE = "texture"
     LIGHT = "light"
     MATERIAL = "material"
+    GENERAL = "general"
 
 
 class ImageJobRequest(BaseModel):
     type: ImageType
+    model: str
+    system_prompt: str = Field(exclude=True, repr=False)
+    user_prompt: str = Field(exclude=True, repr=False)
+    output_schema: dict = Field(exclude=True, repr=False)
+    prompt_version: str
+    prompt_hash: str
     image: bytes = Field(exclude=True, repr=False)
     image_format: str
     content_type: str

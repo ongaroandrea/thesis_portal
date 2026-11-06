@@ -1,10 +1,10 @@
 import { A as escape_html, O as attr, g as unsubscribe_stores, m as store_get, s as head } from "../../../../chunks/server.js";
-import { t as $format } from "../../../../chunks/runtime.js";
-import { S as Alert, h as Col, m as Container, n as Row, s as Label, v as CardBody, y as Card } from "../../../../chunks/dist.js";
+import { t as Link } from "../../../../chunks/svelte-link.js";
+import { _ as Card, b as Alert, g as CardBody, m as Col, n as Row, p as Container, s as Label } from "../../../../chunks/dist.js";
 import { t as ParticlesAuth } from "../../../../chunks/ParticlesAuth.js";
 import "../../../../chunks/auth-client.js";
-import { t as Link } from "../../../../chunks/svelte-link.js";
-//#region src/routes/(public)/password-dimenticata/+page.svelte
+import { t as $format } from "../../../../chunks/runtime.js";
+// src/routes/(public)/password-dimenticata/+page.svelte
 function _page($$renderer, $$props) {
 	$$renderer.component(($$renderer) => {
 		var $$store_subs;
@@ -56,7 +56,7 @@ function _page($$renderer, $$props) {
 												CardBody($$renderer, {
 													class: "p-4",
 													children: ($$renderer) => {
-														$$renderer.push(`<div class="text-center mt-2"><h5 class="text-primary">${escape_html(store_get($$store_subs ??= {}, "$_", $format)("auth.forgotPassword"))}</h5> <p class="text-muted">${escape_html(store_get($$store_subs ??= {}, "$_", $format)("auth.forgotHelp"))}</p> <lord-icon src="//cdn.lordicon.com/rhvddzym.json" trigger="loop" colors="primary:#0ab39c" class="avatar-xl" style="width: 120px; height: 125px"></lord-icon></div> `);
+														$$renderer.push(`<div class="text-center mt-2"><h1 class="h4 text-primary">${escape_html(store_get($$store_subs ??= {}, "$_", $format)("auth.forgotPassword"))}</h1> <p class="text-muted">${escape_html(store_get($$store_subs ??= {}, "$_", $format)("auth.forgotHelp"))}</p> <div class="reset-icon svelte-19zmier" aria-hidden="true"><i class="ri-mail-send-line"></i></div></div> `);
 														Alert($$renderer, {
 															class: "border-0 alert-warning text-center mb-2 mx-2",
 															role: "alert",
@@ -74,7 +74,7 @@ function _page($$renderer, $$props) {
 															},
 															$$slots: { default: true }
 														});
-														$$renderer.push(`<!----> <input type="email" class="form-control" id="email"${attr("placeholder", store_get($$store_subs ??= {}, "$_", $format)("auth.emailPlaceholder"))}${attr("value", email)}/></div> <div class="text-center mt-4"><button class="btn btn-primary w-100" type="submit"${attr("disabled", loading, true)}>`);
+														$$renderer.push(`<!----> <input type="email" class="form-control" id="email" name="email" autocomplete="email" required=""${attr("placeholder", store_get($$store_subs ??= {}, "$_", $format)("auth.emailPlaceholder"))}${attr("value", email)}/></div> <div class="text-center mt-4"><button class="btn btn-primary w-100" type="submit"${attr("disabled", loading, true)}>`);
 														$$renderer.push(`<!--[-1-->${escape_html(store_get($$store_subs ??= {}, "$_", $format)("auth.sendReset"))}`);
 														$$renderer.push(`<!--]--></button></div> `);
 														$$renderer.push("<!--[-1-->");
@@ -114,5 +114,4 @@ function _page($$renderer, $$props) {
 		if ($$store_subs) unsubscribe_stores($$store_subs);
 	});
 }
-//#endregion
 export { _page as default };

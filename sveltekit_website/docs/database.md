@@ -2,10 +2,9 @@
 
 This document describes the PostgreSQL database used by the teaching-support portal, its main relationships, the authorization model built on top of it, and the current limitations.
 
-The database definitions currently have two sources:
+The database definitions currently have two synchronized sources:
 
 - `drizzle/0000_initial_schema.sql`: the complete SQL baseline for a new database.
-- `drizzle/0002_*.sql` through `drizzle/0004_*.sql`: incremental migrations for existing databases, including correction topics, derived session status, and exam submissions.
 - `src/lib/server/db/schema.js`: the Drizzle ORM mapping used by the implemented APIs. It currently maps authentication, courses, memberships, imports, invitations, activities, correction sessions, correction records, and exam results. Some tables from the full baseline are not mapped yet.
 
 ## High-level relationship diagram
@@ -58,7 +57,7 @@ There are two related but different role systems.
 
 | Role | Meaning |
 | --- | --- |
-| `developer` | Global administrator with access to every course. |
+| `admin` | Global administrator with access to every course. |
 | `professor` | May create courses and manage courses where they have an active professor membership. |
 | `student` | May access courses where they have an active membership. |
 
@@ -71,7 +70,7 @@ There are two related but different role systems.
 | `role` | `PROFESSOR`, `STUDENT` | Course-specific responsibility. |
 | `status` | `ACTIVE`, `SUSPENDED`, `REMOVED` | Only `ACTIVE` memberships grant access. |
 
-A global `professor` does not automatically manage every course. The user also needs an `ACTIVE` `PROFESSOR` membership for that course. Developers are the exception and can manage all courses.
+A global `professor` does not automatically manage every course. The user also needs an `ACTIVE` `PROFESSOR` membership for that course. Admins are the exception and can manage all courses.
 
 When a course is inserted, the `course_creator_membership_trigger` automatically creates an active professor membership for its creator. `course.created_by_user_id` is therefore historical ownership, while current management permission comes from `course_member`.
 
@@ -111,10 +110,10 @@ Represents a course. It contains a name, description, optional start/end dates, 
 
 Rules:
 
-- Only a global professor or developer can create a course through the API.
+- Only a global professor or admin can create a course through the API.
 - An authorized member can read an active course.
 - An active course professor can manage their course.
-- A developer can manage every course.
+- An admin can manage every course.
 - The end date must be later than the start date when both are provided.
 
 Deleting a course cascades to its memberships, imports, invitations, activities, correction aspects, and their dependent records.
@@ -125,16 +124,16 @@ Connects one user to one course. The `(course_id, user_id)` pair is unique.
 
 A membership can be created in either of these ways:
 
-1. A course professor or developer explicitly authorizes the user.
+1. A course professor or admin explicitly authorizes the user.
 2. A user with a verified email accepts a valid, unexpired invitation matching that email.
 
-Only an `ACTIVE` membership grants course access. Professors and developers can assign, suspend, reactivate, change, or remove memberships through the service layer.
+Only an `ACTIVE` membership grants course access. Professors and admins can assign, suspend, reactivate, change, or remove memberships through the service layer.
 
 ### `course_import`
 
 Records an import operation and its result counters. It stores the source filename, an optional storage key, totals, rejected-row details, and the uploading user.
 
-Only a professor or developer can import members. A professor must also manage the target course.
+Only a professor or admin can import members. A professor must also manage the target course.
 
 ### `course_invitation`
 
@@ -156,17 +155,35 @@ Members can access an activity only when all the following are true:
 - The current time is at or after `available_from`, when defined.
 - For lessons, the current time is at or before `available_until`, when defined. Exams remain readable after the deadline so students can review their locked submission and, later, their published result.
 
-Course professors and developers can manage activities outside the publication and availability window.
+Course professors and admins can manage activities outside the publication and availability window.
 
 The database also ensures that duration and correction limits are positive, that the availability interval is valid, and that `results_released_at` is used only for exams.
 
 ### `activity_reference_image`
 
-Stores reference images associated with an activity. It records the storage key, filename, MIME type, view type, alternative text, and display order.
+Stores reference-image metadata associated with an activity. The binary image is
+written below `LOCAL_STORAGE_PATH`; PostgreSQL records only its local URL,
+filename, MIME type, view type, alternative text, and display order.
 
 When the view type is `OTHER`, `custom_view_label` is required. For predefined view types, the custom label must be `NULL`.
 
-No CRUD API or Drizzle mapping has been implemented for this table yet.
+Reference images are managed through the activity image API and Drizzle mapping.
+
+### `prompt_template` and `prompt_template_revision`
+
+Prompt templates are stored in PostgreSQL for the five analysis types: camera,
+light, material, texture, and general. Admins create immutable revisions of
+global templates. Professors can create course-scoped revisions only for
+courses they manage. Resolution prefers a course override and otherwise uses
+the global template.
+
+### Activity prompt configuration
+
+`course_activity` stores the optional professor addendum and its revision.
+These private fields are omitted from every student DTO. Exam prompt
+configuration is frozen at the exam start or, when it has not started, at the
+first evaluation. The frozen configuration remains reproducible if templates
+are edited later.
 
 ## Correction workflow
 
@@ -196,37 +213,31 @@ There is no direct user foreign key because ownership and access come from the p
 
 ## Analysis and results
 
+### `analysis_job`
+
+Stores the private prompt snapshot, hash, template/activity revisions, model,
+provider job identifier, execution state, and raw/validated results. Prompt
+snapshots are never returned by student-facing attempt or activity APIs.
+
 ### `exam_submission` and `exam_submission_file`
 
-Each student has at most one submission record per exam. Its files are versioned per configured reference view: uploading a replacement marks the previous file as historical and inserts a new revision, while removal also preserves the old row. A partial unique index guarantees that only one current file exists for each submission and view.
+Each student has at most one submission record per exam. Its files are versioned per configured reference view: uploading a replacement marks the previous file as historical and inserts a new revision, while removal also preserves the old row. A partial unique index guarantees that only one current file exists for each submission and view. File binaries live below `LOCAL_STORAGE_PATH`; submission rows contain metadata and the authenticated local-file URL only.
 
 Students may add, replace, or remove their own current files only while the published exam is inside its submission window. After `available_until`, the API is read-only. Course managers can inspect every student's current files and revision history. Exam activities require a submission deadline and use this workflow instead of correction sessions.
-
-### `error_type`
-
-Defines global or course-specific error categories. Codes are unique in their applicable scope.
-
-### `analysis_error`
-
-Stores individual errors detected for a correction attempt, including severity, confidence, description, suggestion, and optional coordinates. Each error references `correction_attempt` directly. Confidence is constrained to the range 0–1.
 
 ### `exam_result`
 
 Stores one official result per student and exam activity. It supports `DRAFT`, `READY`, and `PUBLISHED` states. **Exam scores are constrained to 0–30**, and a published result must have `published_at` set.
 
-Exam results are exposed through `/api/risultati` and `/api/risultati/[id]`. Developers and active professor managers may create, read, update, and delete results for exams in courses they manage. Students may only read their own `PUBLISHED` result after both `published_at` and the activity's optional `results_released_at` have been reached. These publication fields apply only to exam results: the service and database reject result creation or grading unless the activity is currently an `EXAM`.
+Exam results are exposed through `/api/risultati` and `/api/risultati/[id]`. Admins and active professor managers may create, read, update, and delete results for exams in courses they manage. Students may only read their own `PUBLISHED` result after both `published_at` and the activity's optional `results_released_at` have been reached. These publication fields apply only to exam results: the service and database reject result creation or grading unless the activity is currently an `EXAM`.
 
-The database enforces the grading scope with `exam_result_scope_constraint`: the activity must be an exam, the result owner must be an active student member, and `graded_by_user_id` must identify either a developer or an active professor manager of the activity's course.
+The database enforces the grading scope with `exam_result_scope_constraint`: the activity must be an exam, the result owner must be an active student member, and `graded_by_user_id` must identify either an admin or an active professor manager of the activity's course.
 
 ## Database views
 
 ### `professor_correction_overview`
 
 Provides a professor-facing correction-session projection. It hides student names and emails for anonymous sessions. The application must still restrict rows to courses managed by the requesting professor.
-
-### `activity_error_statistics`
-
-Aggregates completed analysis errors by activity and error type, including occurrence counts and average attempt scores.
 
 ## Delete behavior
 
@@ -273,7 +284,7 @@ Correction sessions use an explicit state machine: `OPEN` may move to `PROCESSIN
 
 2. **The Drizzle mapping is incomplete.** Correction aspects, analysis errors, and the database views exist in the baseline SQL but are not represented in `schema.js` and do not have services or APIs.
 
-3. **Migration bookkeeping is manual.** The unified SQL baseline is not tracked by a Drizzle migration journal/snapshot. Running `drizzle-kit generate` without first establishing a baseline snapshot may generate a duplicate initial migration.
+3. **The schema uses one initialization script.** There is no incremental migration journal. Existing populated databases require a separately planned schema upgrade or a backup-and-recreate procedure when the baseline changes.
 
 4. **Course dates are not access gates yet.** `course.starts_at` and `course.ends_at` are stored and validated, but member visibility currently depends on `is_active`, not on the course date interval. Activity date intervals are enforced.
 
@@ -295,7 +306,7 @@ Correction sessions use an explicit state machine: `OPEN` may move to `PROCESSIN
 
 ## Recommended next steps
 
-1. Record the unified baseline in Drizzle metadata and establish the migration workflow for future schema changes.
+1. Establish a versioned upgrade workflow before applying future schema changes to populated production databases.
 2. Decide whether course dates should also control member access.
 3. Add services and APIs for analysis errors as that feature is activated.
 4. Add an audit log or soft-delete policy for security-sensitive and grading data.

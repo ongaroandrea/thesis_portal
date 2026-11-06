@@ -11,6 +11,11 @@ const DATABASE_CONFLICTS = new Map([
 	['40P01', { code: 'CONCURRENT_WRITE_CONFLICT', message: 'The operation conflicted with another write. Retry it.' }]
 ]);
 
+/**
+ * Convert known errors into ApiError: ApiError passes through, and common
+ * PostgreSQL error codes (unique/foreign-key/check violations, serialization
+ * failures) become 409 responses. Returns null for unexpected errors.
+ */
 export function normalizeApiError(error) {
 	if (error instanceof ApiError) return error;
 	const databaseCode = error?.code ?? error?.cause?.code;
@@ -28,6 +33,11 @@ export async function readJson(request) {
 	}
 }
 
+/**
+ * Run a route operation and wrap the result as `{ data }`, or an error as
+ * `{ error: { code, message } }`. Unexpected errors are logged and returned
+ * as a generic 500 so internals are not leaked.
+ */
 export async function apiResponse(operation, status = 200) {
 	try {
 		return json({ data: await operation() }, { status });

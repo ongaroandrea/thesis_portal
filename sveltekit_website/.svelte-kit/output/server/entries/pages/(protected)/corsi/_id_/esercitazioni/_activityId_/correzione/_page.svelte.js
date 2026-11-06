@@ -1,13 +1,14 @@
 import { A as escape_html, g as unsubscribe_stores, m as store_get, s as head } from "../../../../../../../../chunks/server.js";
 import { r as onDestroy } from "../../../../../../../../chunks/index-server2.js";
-import { n as CORRECTION_FOCUS_OPTIONS } from "../../../../../../../../chunks/correction-focus.js";
-import { t as $format } from "../../../../../../../../chunks/runtime.js";
-import "../../../../../../../../chunks/client.js";
 import { n as page } from "../../../../../../../../chunks/stores.js";
 import "../../../../../../../../chunks/navigation.js";
-import "../../../../../../../../chunks/api.js";
+import "../../../../../../../../chunks/client.js";
+import { n as apiRequest } from "../../../../../../../../chunks/api.js";
+import "../../../../../../../../chunks/modal-dialog.js";
+import { n as CORRECTION_FOCUS_OPTIONS } from "../../../../../../../../chunks/correction-focus.js";
 import { t as PageHeader } from "../../../../../../../../chunks/PageHeader.js";
-//#region src/routes/(protected)/corsi/[id]/esercitazioni/[activityId]/correzione/+page.svelte
+import { t as $format } from "../../../../../../../../chunks/runtime.js";
+// src/routes/(protected)/corsi/[id]/esercitazioni/[activityId]/correzione/+page.svelte
 function _page($$renderer, $$props) {
 	$$renderer.component(($$renderer) => {
 		var $$store_subs;
@@ -42,7 +43,24 @@ function _page($$renderer, $$props) {
 		let selectedReferenceId = "";
 		let correctionFocus = focusOptions[0].id;
 		let selectedRequestId = null;
+		let errorMessage = "";
 		let pollTimer;
+		let feedbackAttemptId = null;
+		async function loadFeedback(attemptId) {
+			feedbackAttemptId = attemptId;
+			try {
+				const record = await apiRequest(`/api/feedback-correzione?attemptId=${attemptId}`);
+				if (feedbackAttemptId !== attemptId) return;
+				record?.isUseful;
+				record?.studentComment;
+				record?.verdict;
+				record?.professorComment;
+			} catch (error) {
+				if (feedbackAttemptId === attemptId) errorMessage = error.message;
+			} finally {
+				if (feedbackAttemptId === attemptId);
+			}
+		}
 		onDestroy(() => {
 			clearInterval(pollTimer);
 			for (const url of localRequestImages.values()) URL.revokeObjectURL(url);
@@ -82,6 +100,7 @@ function _page($$renderer, $$props) {
 		$: conversationLocked = Boolean(activeSession);
 		$: conversationLocked && !focusOptions.some((option) => option.id === correctionFocus) && [...focusOptions, ...CORRECTION_FOCUS_OPTIONS.filter((option) => option.id === correctionFocus)];
 		$: categoriesForFocus(selectedRequest?.focus || correctionFocus);
+		$: if (selectedRequest?.response && selectedRequest.id !== feedbackAttemptId) loadFeedback(selectedRequest.id);
 		head("q88v8j", $$renderer, ($$renderer) => {
 			$$renderer.title(($$renderer) => {
 				$$renderer.push(`<title>${escape_html(store_get($$store_subs ??= {}, "$_", $format)("correction.imageCorrection"))}</title>`);
@@ -95,7 +114,8 @@ function _page($$renderer, $$props) {
 			parentLabel: store_get($$store_subs ??= {}, "$_", $format)("activity.activity")
 		});
 		$$renderer.push(`<!----> `);
-		$$renderer.push("<!--[-1-->");
+		if (errorMessage) $$renderer.push(`<!--[0--><div class="alert alert-danger"><i class="ri-error-warning-line me-2"></i>${escape_html(errorMessage)}</div>`);
+		else $$renderer.push("<!--[-1-->");
 		$$renderer.push(`<!--]--> `);
 		$$renderer.push("<!--[-1-->");
 		$$renderer.push(`<!--]--> `);
@@ -106,5 +126,4 @@ function _page($$renderer, $$props) {
 		if ($$store_subs) unsubscribe_stores($$store_subs);
 	});
 }
-//#endregion
 export { _page as default };

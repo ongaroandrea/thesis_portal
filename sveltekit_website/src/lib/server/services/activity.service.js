@@ -11,6 +11,31 @@ async function findActivity(id) {
 	return record;
 }
 
+const publicActivitySelection = {
+	id: activity.id,
+	courseId: activity.courseId,
+	createdByUserId: activity.createdByUserId,
+	kind: activity.kind,
+	status: activity.status,
+	title: activity.title,
+	description: activity.description,
+	objective: activity.objective,
+	durationMinutes: activity.durationMinutes,
+	maxCorrectionsPerStudent: activity.maxCorrectionsPerStudent,
+	allowedCorrectionFocuses: activity.allowedCorrectionFocuses,
+	availableFrom: activity.availableFrom,
+	availableUntil: activity.availableUntil,
+	resultsReleasedAt: activity.resultsReleasedAt,
+	displayOrder: activity.displayOrder,
+	createdAt: activity.createdAt,
+	updatedAt: activity.updatedAt
+};
+
+/**
+ * Whether a student can see an activity now: it must be PUBLISHED and past
+ * `availableFrom`. Lessons also close at `availableUntil`; exams stay
+ * visible after the deadline so students can see their submission/results.
+ */
 const isAvailable = (record, now = new Date()) => record.status === 'PUBLISHED'
 	&& (!record.availableFrom || record.availableFrom <= now)
 	&& (record.kind === 'EXAM' || !record.availableUntil || record.availableUntil >= now);
@@ -34,6 +59,8 @@ function activityValues(input, partial = false) {
 	if (!partial || input.objective !== undefined) values.objective = requiredText(input.objective, 'objective', 10000);
 	const description = optionalText(input.description, 'description', 20000);
 	if (description !== undefined) values.description = description;
+	const promptAddendum = optionalText(input.promptAddendum, 'promptAddendum', 8000);
+	if (promptAddendum !== undefined) values.promptAddendum = promptAddendum;
 	if (!partial || input.kind !== undefined) {
 		if (!['LESSON', 'EXAM'].includes(input.kind)) throw new ApiError(400, 'kind must be LESSON or EXAM.', 'VALIDATION_ERROR');
 		values.kind = input.kind;
@@ -66,6 +93,11 @@ function activityValues(input, partial = false) {
 	return values;
 }
 
+/**
+ * Cross-field checks on the merged result of `values` over `existing`
+ * (for partial updates): the availability window must be ordered, exams
+ * need a deadline, and only exams may have `resultsReleasedAt`.
+ */
 function validateActivity(values, existing = null) {
 	const from = values.availableFrom === undefined ? existing?.availableFrom : values.availableFrom;
 	const until = values.availableUntil === undefined ? existing?.availableUntil : values.availableUntil;
@@ -76,6 +108,10 @@ function validateActivity(values, existing = null) {
 	if (resultsReleasedAt && kind !== 'EXAM') throw new ApiError(400, 'resultsReleasedAt is only valid for exams.', 'VALIDATION_ERROR');
 }
 
+/**
+ * Course managers can access any activity of their course; other members
+ * only available ones (see `isAvailable`). Throws 403 otherwise.
+ */
 async function requireActivityAccess(id, currentUser) {
 	requireUser(currentUser);
 	const record = await findActivity(id);
@@ -94,6 +130,14 @@ export const activityService = {
 	findActivity,
 	requireActivityAccess,
 
+	/**
+	 * Paginated activities of a course, ordered by `displayOrder`.
+	 * Managers get every row with all columns (drafts included). Other
+	 * members get only currently available activities (same rules as
+	 * `isAvailable`, expressed in SQL) through `publicActivitySelection`, so
+	 * staff-only fields are never sent to students. A 403 from the manager
+	 * check is the signal to fall back to the member view.
+	 */
 	async list(courseId, currentUser, searchParams) {
 		requireUser(currentUser);
 		const id = numericId(courseId, 'courseId');
@@ -119,14 +163,26 @@ export const activityService = {
 			or(eq(activity.kind, 'EXAM'), isNull(activity.availableUntil), gte(activity.availableUntil, now))
 		);
 		const [items, [{ total }]] = await Promise.all([
-			db.select().from(activity).where(condition).orderBy(asc(activity.displayOrder), asc(activity.id))
+			db.select(publicActivitySelection).from(activity).where(condition).orderBy(asc(activity.displayOrder), asc(activity.id))
 				.limit(pagination.pageSize).offset(pagination.offset),
 			db.select({ total: count() }).from(activity).where(condition)
 		]);
 		return paginated(items, total, pagination);
 	},
 
-	get: requireActivityAccess,
+	async get(id, currentUser) {
+		const record = await findActivity(id);
+		try {
+			await courseService.requireCourseManager(record.courseId, currentUser);
+			return record;
+		} catch (error) {
+			if (!(error instanceof ApiError) || error.status !== 403) throw error;
+		}
+		await requireActivityAccess(id, currentUser);
+		const [visible] = await db.select(publicActivitySelection).from(activity)
+			.where(eq(activity.id, record.id)).limit(1);
+		return visible;
+	},
 
 	async create(input, currentUser) {
 		const courseId = numericId(input.courseId, 'courseId');
@@ -141,10 +197,23 @@ export const activityService = {
 		return created;
 	},
 
+	/**
+	 * Partial update by a course manager. Changing the professor's prompt
+	 * instructions bumps `promptRevision`, and is refused (409) once an exam
+	 * has started or its prompt has been frozen.
+	 */
 	async update(id, input, currentUser) {
 		const record = await findActivity(id);
 		await courseService.requireCourseManager(record.courseId, currentUser);
 		const values = activityValues(input, true);
+		if (values.promptAddendum !== undefined && values.promptAddendum !== record.promptAddendum) {
+			const now = new Date();
+			const examAlreadyStarted = record.kind === 'EXAM' && record.availableFrom && record.availableFrom <= now;
+			if (record.promptFrozenAt || examAlreadyStarted) {
+				throw new ApiError(409, 'The exam prompt is frozen and can no longer be changed.', 'EXAM_PROMPT_FROZEN');
+			}
+			values.promptRevision = record.promptRevision + 1;
+		}
 		validateActivity(values, record);
 		const [updated] = await db.update(activity).set({ ...values, updatedAt: new Date() })
 			.where(eq(activity.id, record.id)).returning();

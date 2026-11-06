@@ -1,7 +1,7 @@
 import { A as escape_html, O as attr, g as unsubscribe_stores, m as store_get, o as ensure_array_like, t as attr_class } from "./server.js";
 import "./index-server2.js";
 import { n as $locale, t as $format } from "./runtime.js";
-//#region src/lib/components/common/LanguageSwitcher.svelte
+// src/lib/components/common/LanguageSwitcher.svelte
 function LanguageSwitcher($$renderer, $$props) {
 	$$renderer.component(($$renderer) => {
 		var $$store_subs;
@@ -15,5 +15,4 @@ function LanguageSwitcher($$renderer, $$props) {
 		if ($$store_subs) unsubscribe_stores($$store_subs);
 	});
 }
-//#endregion
 export { LanguageSwitcher as t };

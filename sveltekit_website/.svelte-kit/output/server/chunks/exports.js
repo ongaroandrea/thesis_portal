@@ -1,4 +1,4 @@
-//#region node_modules/@sveltejs/kit/src/utils/array.js
+// node_modules/@sveltejs/kit/src/utils/array.js
 /**
 * Removes nullish values from an array.
 *
@@ -11,8 +11,7 @@ function compact(arr) {
 		(val) => val != null
 	);
 }
-//#endregion
-//#region node_modules/@sveltejs/kit/src/runtime/pathname.js
+// node_modules/@sveltejs/kit/src/runtime/pathname.js
 var DATA_SUFFIX = "/__data.json";
 var HTML_DATA_SUFFIX = ".html__data.json";
 /** @param {string} pathname */
@@ -52,8 +51,7 @@ function add_resolution_suffix(pathname) {
 function strip_resolution_suffix(pathname) {
 	return pathname.slice(0, -11);
 }
-//#endregion
-//#region node_modules/@sveltejs/kit/src/runtime/telemetry/noop.js
+// node_modules/@sveltejs/kit/src/runtime/telemetry/noop.js
 /**
 * @type {Span}
 */
@@ -100,8 +98,7 @@ var noop_span_context = {
 	spanId: "",
 	traceFlags: 0
 };
-//#endregion
-//#region node_modules/@sveltejs/kit/src/utils/hash.js
+// node_modules/@sveltejs/kit/src/utils/hash.js
 /**
 * Hash using djb2
 * @param {import('types').StrictBody[]} values
@@ -118,8 +115,7 @@ function hash(...values) {
 	} else throw new TypeError("value must be a string or TypedArray");
 	return (hash >>> 0).toString(36);
 }
-//#endregion
-//#region node_modules/@sveltejs/kit/src/utils/exports.js
+// node_modules/@sveltejs/kit/src/utils/exports.js
 /**
 * @param {Set<string>} expected
 */
@@ -187,5 +183,4 @@ var validate_page_exports = validator(valid_page_exports);
 var validate_layout_server_exports = validator(valid_layout_server_exports);
 var validate_page_server_exports = validator(valid_page_server_exports);
 var validate_server_exports = validator(valid_server_exports);
-//#endregion
 export { validate_server_exports as a, add_data_suffix as c, has_resolution_suffix as d, strip_data_suffix as f, validate_page_server_exports as i, add_resolution_suffix as l, compact as m, validate_layout_server_exports as n, hash as o, strip_resolution_suffix as p, validate_page_exports as r, noop_span as s, validate_layout_exports as t, has_data_suffix as u };

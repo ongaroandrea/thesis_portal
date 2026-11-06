@@ -56,6 +56,10 @@ async function isCourseManager(courseId, currentUser) {
 	}
 }
 
+/**
+ * A student sees a result only when it is PUBLISHED, its publishedAt is in
+ * the past, and the exam-wide `resultsReleasedAt` (if set) has passed.
+ */
 function isReleased(record, now = new Date()) {
 	return record.status === 'PUBLISHED'
 		&& record.publishedAt != null
@@ -84,11 +88,15 @@ async function requireActiveStudent(courseId, studentUserId) {
 	}
 }
 
+/**
+ * Managers of the result's course can always read it; otherwise only the
+ * graded student, while still a course member, and only once released.
+ */
 async function requireResultAccess(id, currentUser) {
 	requireUser(currentUser);
 	const record = await findResult(id);
 	if (await isCourseManager(record.courseId, currentUser)) return record;
-	if (currentUser.role !== 'student' || record.studentUserId !== numericId(currentUser.id, 'userId')) {
+	if (record.studentUserId !== numericId(currentUser.id, 'userId')) {
 		throw new ApiError(403, 'You cannot access this exam result.', 'EXAM_RESULT_ACCESS_DENIED');
 	}
 	await courseService.requireCourseAccess(record.courseId, currentUser);
@@ -98,6 +106,18 @@ async function requireResultAccess(id, currentUser) {
 	return record;
 }
 
+/**
+ * Map a create/update body to exam_result columns.
+ *
+ * Keeps `publishedAt` consistent with `status`: PUBLISHED with no date gets
+ * the existing date or "now"; moving to any other status clears it, so a
+ * result that is un-published is hidden from the student again. On create
+ * (`existing` null) the status defaults to DRAFT.
+ *
+ * @param {object} input - Raw request body.
+ * @param {object|null} existing - Current row when updating.
+ * @returns {object} Only the columns that should change.
+ */
 function resultValues(input, existing = null) {
 	const values = {};
 	const score = scoreValue(input.score);
@@ -119,6 +139,12 @@ function resultValues(input, existing = null) {
 export const examResultService = {
 	findResult,
 
+	/**
+	 * Paginated results for one exam. Managers get every student; a student
+	 * gets only their own released results. The release rules of
+	 * `isReleased` are repeated here as SQL conditions so filtering and the
+	 * total count happen in the database.
+	 */
 	async list(activityId, currentUser, searchParams) {
 		requireUser(currentUser);
 		const activityRecord = await activityService.findActivity(activityId);
@@ -128,7 +154,6 @@ export const examResultService = {
 		const conditions = [eq(examResult.activityId, activityRecord.id)];
 		if (!manager) {
 			await courseService.requireCourseAccess(activityRecord.courseId, currentUser);
-			if (currentUser.role !== 'student') throw new ApiError(403, 'You cannot list these exam results.', 'EXAM_RESULT_ACCESS_DENIED');
 			const now = new Date();
 			conditions.push(
 				eq(examResult.studentUserId, numericId(currentUser.id, 'userId')),

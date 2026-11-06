@@ -78,18 +78,18 @@ $value in $theme-colors {
     .sort {
         position: relative;
         &::before {
-            content: "\f035d";
+            content: "\ea4c";
             position: absolute;
             right: 0.5rem;
             top: 18px;
             font-size: 0.8rem;
-            font-family: "Material Design Icons";
+            font-family: "remixicon";
         }
         &::after {
             position:absolute;
             right: 0.5rem;
-            content: "\f0360";
-            font-family: "Material Design Icons";
+            content: "\ea76";
+            font-family: "remixicon";
             font-size: 0.8rem;
             top: 12px;
         }

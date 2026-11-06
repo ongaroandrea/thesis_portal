@@ -33,16 +33,20 @@ export const nodes = [
 	() => import('./nodes/21'),
 	() => import('./nodes/22'),
 	() => import('./nodes/23'),
-	() => import('./nodes/24')
+	() => import('./nodes/24'),
+	() => import('./nodes/25'),
+	() => import('./nodes/26'),
+	() => import('./nodes/27'),
+	() => import('./nodes/28')
 ];
 
-export const server_loads = [6,2,4,5,3];
+export const server_loads = [0,6,2,4,5,3];
 
 export const dictionary = {
 		"/": [7],
-		"/auth/verifica-password": [24,[6]],
+		"/auth/verifica-password": [28,[6]],
 		"/(protected)/corsi": [11,[2]],
-		"/(protected)/corsi/aggiungi": [20,[2]],
+		"/(protected)/corsi/aggiungi": [~21,[2]],
 		"/(protected)/corsi/[id]": [12,[2]],
 		"/(protected)/corsi/[id]/esercitazioni": [13,[2]],
 		"/(protected)/corsi/[id]/esercitazioni/aggiungi": [17,[2]],
@@ -50,13 +54,17 @@ export const dictionary = {
 		"/(protected)/corsi/[id]/esercitazioni/[activityId]/correzione": [15,[2]],
 		"/(protected)/corsi/[id]/esercitazioni/[activityId]/modifica": [16,[2]],
 		"/(protected)/corsi/[id]/modifica": [18,[2]],
-		"/(protected)/corsi/[id]/statistiche": [19,[2]],
-		"/(public)/login": [22,[4,5]],
-		"/(public)/password-dimenticata": [23,[4]],
-		"/(protected)/profilo": [21,[2]],
+		"/(protected)/corsi/[id]/prompt": [~19,[2]],
+		"/(protected)/corsi/[id]/statistiche": [20,[2]],
+		"/(public)/login": [26,[4,5]],
+		"/(public)/password-dimenticata": [27,[4]],
+		"/(protected)/profilo": [22,[2]],
+		"/(protected)/prompt": [~23,[2]],
 		"/(protected)/(professore)/studenti": [8,[2,3]],
-		"/(protected)/(professore)/studenti/aggiungi": [10,[2,3]],
-		"/(protected)/(professore)/studenti/[id]": [9,[2,3]]
+		"/(protected)/(professore)/studenti/aggiungi": [~10,[2,3]],
+		"/(protected)/(professore)/studenti/[id]": [9,[2,3]],
+		"/(protected)/supporto": [24,[2]],
+		"/(protected)/supporto/gestione": [~25,[2]]
 	};
 
 export const hooks = {

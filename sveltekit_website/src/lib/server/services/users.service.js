@@ -28,6 +28,11 @@ async function findUser(id) {
 	return record;
 }
 
+/**
+ * Ids of courses where a professor has an ACTIVE PROFESSOR membership, i.e.
+ * the courses they manage (`canManage` in course.service.js; admins are
+ * handled separately).
+ */
 async function managedCourseIds(currentUser) {
 	if (currentUser.role !== 'professor') return [];
 	const memberships = await db.select({ courseId: courseMember.courseId }).from(courseMember).where(and(
@@ -38,12 +43,26 @@ async function managedCourseIds(currentUser) {
 	return memberships.map((membership) => membership.courseId);
 }
 
+/**
+ * Membership filter for the users a professor can see: ACTIVE members of the
+ * courses they manage. Suspended and removed members are left out on
+ * purpose; they stay visible, and can be restored, in the course member
+ * table (`/api/membri`), which lists every status.
+ */
+function visibleMembershipCondition(courseIds) {
+	return and(inArray(courseMember.courseId, courseIds), eq(courseMember.status, 'ACTIVE'));
+}
+
+/**
+ * Admins can read any user, everyone can read themselves, and professors
+ * can read active members of the courses they manage.
+ */
 async function canReadUser(targetId, currentUser) {
-	if (currentUser.role === 'developer' || numericId(currentUser.id, 'userId') === targetId) return true;
+	if (currentUser.role === 'admin' || numericId(currentUser.id, 'userId') === targetId) return true;
 	const courseIds = await managedCourseIds(currentUser);
 	if (courseIds.length === 0) return false;
 	const [membership] = await db.select({ id: courseMember.id }).from(courseMember).where(and(
-		inArray(courseMember.courseId, courseIds),
+		visibleMembershipCondition(courseIds),
 		eq(courseMember.userId, targetId)
 	)).limit(1);
 	return Boolean(membership);
@@ -71,17 +90,30 @@ function nullableText(value, field, maxLength) {
 	return optionalText(value, field, maxLength);
 }
 
-function updateValues(input, developer) {
+/**
+ * Validate a user PATCH body and map it to `user` table columns.
+ *
+ * Profile fields (name, surname, image) are always accepted; role,
+ * verification, first-access and ban fields are silently ignored unless
+ * `admin` is true. `firstAccess` maps to the snake_case `first_access`
+ * column. Empty strings clear nullable fields.
+ *
+ * @param {object} input - Raw request body.
+ * @param {boolean} admin - Whether the caller is a global admin.
+ * @returns {object} Column values to update.
+ * @throws {ApiError} 400 when invalid or when no editable field is present.
+ */
+function updateValues(input, admin) {
 	const values = {};
 	if (input.name !== undefined) values.name = normalizeNameForStorage(requiredText(input.name, 'name', 100));
 	if (input.surname !== undefined) values.surname = normalizeNameForStorage(String(input.surname ?? '').trim());
 	const image = nullableText(input.image, 'image', 2000);
 	if (image !== undefined) values.image = image;
 
-	if (developer) {
+	if (admin) {
 		if (input.role !== undefined) {
-			if (!['developer', 'professor', 'student'].includes(input.role)) {
-				throw new ApiError(400, 'role must be developer, professor, or student.', 'VALIDATION_ERROR');
+			if (!['admin', 'professor', 'student'].includes(input.role)) {
+				throw new ApiError(400, 'role must be admin, professor, or student.', 'VALIDATION_ERROR');
 			}
 			values.role = input.role;
 		}
@@ -110,7 +142,7 @@ export const userService = {
 	async list(currentUser, searchParams) {
 		requireUser(currentUser);
 		const pagination = paginationParams(searchParams);
-		if (currentUser.role === 'developer') {
+		if (currentUser.role === 'admin') {
 			const [items, [{ total }]] = await Promise.all([
 				db.select(PUBLIC_USER_FIELDS).from(user).orderBy(asc(user.surname), asc(user.name), asc(user.id))
 					.limit(pagination.pageSize).offset(pagination.offset),
@@ -120,9 +152,9 @@ export const userService = {
 		}
 		const courseIds = await managedCourseIds(currentUser);
 		if (courseIds.length === 0) {
-			throw new ApiError(403, 'Only developers or authorized course professors can list users.', 'USER_LIST_DENIED');
+			throw new ApiError(403, 'Only admins or authorized course professors can list users.', 'USER_LIST_DENIED');
 		}
-		const condition = inArray(courseMember.courseId, courseIds);
+		const condition = visibleMembershipCondition(courseIds);
 		const [items, [{ total }]] = await Promise.all([
 			db.selectDistinct(PUBLIC_USER_FIELDS).from(user)
 				.innerJoin(courseMember, eq(courseMember.userId, user.id))
@@ -143,10 +175,15 @@ export const userService = {
 		return findUser(targetId);
 	},
 
+	/**
+	 * Admin-only account creation through Better Auth's admin plugin.
+	 * A random temporary password is generated and returned once so the admin
+	 * can hand it over; it is not emailed.
+	 */
 	async create(input, currentUser, headers) {
 		requireUser(currentUser);
-		if (currentUser.role !== 'developer') {
-			throw new ApiError(403, 'Only a developer can create user accounts.', 'USER_CREATE_DENIED');
+		if (currentUser.role !== 'admin') {
+			throw new ApiError(403, 'Only an admin can create user accounts.', 'USER_CREATE_DENIED');
 		}
 		const email = requiredText(input.email, 'email', 320).toLowerCase();
 		if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -154,8 +191,8 @@ export const userService = {
 		}
 		const temporaryPassword = generateTemporaryPassword();
 		const role = input.role ?? 'student';
-		if (!['developer', 'professor', 'student'].includes(role)) {
-			throw new ApiError(400, 'role must be developer, professor, or student.', 'VALIDATION_ERROR');
+		if (!['admin', 'professor', 'student'].includes(role)) {
+			throw new ApiError(400, 'role must be admin, professor, or student.', 'VALIDATION_ERROR');
 		}
 		try {
 			const api = await authApi();
@@ -175,15 +212,20 @@ export const userService = {
 		}
 	},
 
+	/**
+	 * Users may edit their own name/surname/image; admins may edit anyone and
+	 * also role, verification and ban fields. Banning deletes the user's
+	 * sessions in the same transaction so they are logged out at once.
+	 */
 	async update(id, input, currentUser) {
 		requireUser(currentUser);
 		const targetId = numericId(id, 'userId');
-		const developer = currentUser.role === 'developer';
-		if (!developer && targetId !== numericId(currentUser.id, 'userId')) {
+		const admin = currentUser.role === 'admin';
+		if (!admin && targetId !== numericId(currentUser.id, 'userId')) {
 			throw new ApiError(403, 'You can only update your own profile.', 'USER_UPDATE_DENIED');
 		}
 		await findUser(targetId);
-		const values = updateValues(input, developer);
+		const values = updateValues(input, admin);
 		const [updated] = await db.transaction(async (tx) => {
 			const records = await tx.update(user).set({ ...values, updatedAt: new Date() })
 				.where(eq(user.id, targetId)).returning(PUBLIC_USER_FIELDS);
@@ -193,10 +235,16 @@ export const userService = {
 		return updated;
 	},
 
+	/**
+	 * Admin-only hard delete through Better Auth's `removeUser`, so sessions
+	 * and accounts are cleaned up by the auth library. Admins cannot delete
+	 * themselves here. A Postgres foreign-key violation (23503) means the user
+	 * still owns rows without cascade and is reported as 409.
+	 */
 	async remove(id, currentUser, headers) {
 		requireUser(currentUser);
-		if (currentUser.role !== 'developer') {
-			throw new ApiError(403, 'Only a developer can delete user accounts.', 'USER_DELETE_DENIED');
+		if (currentUser.role !== 'admin') {
+			throw new ApiError(403, 'Only an admin can delete user accounts.', 'USER_DELETE_DENIED');
 		}
 		const targetId = numericId(id, 'userId');
 		if (targetId === numericId(currentUser.id, 'userId')) {

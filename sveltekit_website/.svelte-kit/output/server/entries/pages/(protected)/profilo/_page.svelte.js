@@ -1,9 +1,10 @@
 import { A as escape_html, O as attr, g as unsubscribe_stores, h as stringify, k as clsx, m as store_get, n as attr_style, o as ensure_array_like, s as head, t as attr_class } from "../../../../chunks/server.js";
+import { _ as Card, a as ModalHeader, b as Alert, c as Input, g as CardBody, h as CardHeader, i as Modal, l as FormGroup, m as Col, n as Row, o as ModalBody, p as Container, r as ModalFooter, s as Label, t as Spinner, y as Button } from "../../../../chunks/dist.js";
+import { t as authClient } from "../../../../chunks/auth-client.js";
+import { t as PageHeader } from "../../../../chunks/PageHeader.js";
 import { t as formatNameForDisplay } from "../../../../chunks/text.js";
 import { t as $format } from "../../../../chunks/runtime.js";
-import { S as Alert, _ as CardHeader, a as ModalHeader, c as Input, g as CardTitle, h as Col, i as Modal, l as FormGroup, m as Container, n as Row, o as ModalBody, r as ModalFooter, s as Label, t as Spinner, v as CardBody, x as Button, y as Card } from "../../../../chunks/dist.js";
-import { t as authClient } from "../../../../chunks/auth-client.js";
-//#region src/routes/(protected)/profilo/+page.svelte
+// src/routes/(protected)/profilo/+page.svelte
 function _page($$renderer, $$props) {
 	$$renderer.component(($$renderer) => {
 		var $$store_subs;
@@ -16,7 +17,7 @@ function _page($$renderer, $$props) {
 			type: "success"
 		};
 		const roleNames = {
-			developer: "role.developer",
+			admin: "role.admin",
 			professor: "role.professor",
 			student: "role.student"
 		};
@@ -60,19 +61,19 @@ function _page($$renderer, $$props) {
 				score,
 				label: "password.weak",
 				color: "danger",
-				hex: "#dc3545"
+				hex: "var(--portal-danger)"
 			};
 			if (score <= 4) return {
 				score,
 				label: "password.fair",
 				color: "warning",
-				hex: "#ffc107"
+				hex: "var(--portal-warning)"
 			};
 			return {
 				score,
 				label: "password.strong",
 				color: "success",
-				hex: "#198754"
+				hex: "var(--portal-positive)"
 			};
 		})();
 		let $$settled = true;
@@ -83,9 +84,17 @@ function _page($$renderer, $$props) {
 					$$renderer.push(`<title>${escape_html(store_get($$store_subs ??= {}, "$_", $format)("profile.title"))} | ${escape_html(store_get($$store_subs ??= {}, "$_", $format)("home.eyebrow"))}</title>`);
 				});
 			});
+			$$renderer.push(`<div class="page-content">`);
 			Container($$renderer, {
-				class: "py-5",
+				class: "py-4",
 				children: ($$renderer) => {
+					PageHeader($$renderer, {
+						title: store_get($$store_subs ??= {}, "$_", $format)("profile.title"),
+						subtitle: store_get($$store_subs ??= {}, "$_", $format)("profile.subtitle"),
+						parentLabel: store_get($$store_subs ??= {}, "$_", $format)("common.portal"),
+						parentHref: "/corsi"
+					});
+					$$renderer.push(`<!----> `);
 					if (store_get($$store_subs ??= {}, "$session", session).isPending) {
 						$$renderer.push(`<!--[0--><div class="text-center">`);
 						Spinner($$renderer, { color: "primary" });
@@ -95,15 +104,6 @@ function _page($$renderer, $$props) {
 						Row($$renderer, {
 							children: ($$renderer) => {
 								Col($$renderer, {
-									xs: "12",
-									class: "mb-4",
-									children: ($$renderer) => {
-										$$renderer.push(`<h2>${escape_html(store_get($$store_subs ??= {}, "$_", $format)("profile.title"))}</h2> <p class="text-muted">${escape_html(store_get($$store_subs ??= {}, "$_", $format)("profile.subtitle"))}</p>`);
-									},
-									$$slots: { default: true }
-								});
-								$$renderer.push(`<!----> `);
-								Col($$renderer, {
 									lg: "8",
 									class: "mb-4",
 									children: ($$renderer) => {
@@ -112,13 +112,7 @@ function _page($$renderer, $$props) {
 											children: ($$renderer) => {
 												CardHeader($$renderer, {
 													children: ($$renderer) => {
-														CardTitle($$renderer, {
-															class: "m-0",
-															children: ($$renderer) => {
-																$$renderer.push(`<!---->${escape_html(store_get($$store_subs ??= {}, "$_", $format)("profile.personalInfo"))}`);
-															},
-															$$slots: { default: true }
-														});
+														$$renderer.push(`<h2 class="card-title h5 m-0">${escape_html(store_get($$store_subs ??= {}, "$_", $format)("profile.personalInfo"))}</h2>`);
 													},
 													$$slots: { default: true }
 												});
@@ -247,18 +241,11 @@ function _page($$renderer, $$props) {
 									class: "mb-4",
 									children: ($$renderer) => {
 										Card($$renderer, {
-											class: "h-100 shadow-sm border-warning",
+											class: "h-100 shadow-sm",
 											children: ($$renderer) => {
 												CardHeader($$renderer, {
-													class: "bg-warning  bg-opacity-10",
 													children: ($$renderer) => {
-														CardTitle($$renderer, {
-															class: "m-0",
-															children: ($$renderer) => {
-																$$renderer.push(`<!---->${escape_html(store_get($$store_subs ??= {}, "$_", $format)("profile.security"))}`);
-															},
-															$$slots: { default: true }
-														});
+														$$renderer.push(`<h2 class="card-title h5 m-0">${escape_html(store_get($$store_subs ??= {}, "$_", $format)("profile.security"))}</h2>`);
 													},
 													$$slots: { default: true }
 												});
@@ -266,7 +253,7 @@ function _page($$renderer, $$props) {
 												CardBody($$renderer, {
 													class: "d-flex flex-column gap-3",
 													children: ($$renderer) => {
-														$$renderer.push(`<div><h6>Password</h6> <p class="text-muted small">${escape_html(store_get($$store_subs ??= {}, "$_", $format)("profile.lastChangedNever"))}</p> `);
+														$$renderer.push(`<div><h3 class="h6">Password</h3> <p class="text-muted small">${escape_html(store_get($$store_subs ??= {}, "$_", $format)("profile.lastChangedNever"))}</p> `);
 														Button($$renderer, {
 															outline: true,
 															color: "dark",
@@ -305,7 +292,7 @@ function _page($$renderer, $$props) {
 				},
 				$$slots: { default: true }
 			});
-			$$renderer.push(`<!----> `);
+			$$renderer.push(`<!----></div> `);
 			Modal($$renderer, {
 				isOpen: pwModalOpen,
 				toggle: togglePwModal,
@@ -334,6 +321,7 @@ function _page($$renderer, $$props) {
 							FormGroup($$renderer, {
 								children: ($$renderer) => {
 									Label($$renderer, {
+										for: "current-password",
 										children: ($$renderer) => {
 											$$renderer.push(`<!---->${escape_html(store_get($$store_subs ??= {}, "$_", $format)("password.current"))}`);
 										},
@@ -341,7 +329,9 @@ function _page($$renderer, $$props) {
 									});
 									$$renderer.push(`<!----> <div class="input-group">`);
 									Input($$renderer, {
+										id: "current-password",
 										type: showCurrent ? "text" : "password",
+										autocomplete: "current-password",
 										get value() {
 											return pwData.current;
 										},
@@ -350,7 +340,7 @@ function _page($$renderer, $$props) {
 											$$settled = false;
 										}
 									});
-									$$renderer.push(`<!----> <button type="button" class="btn btn-outline-secondary"${attr("title", store_get($$store_subs ??= {}, "$_", $format)(showCurrent ? "common.hide" : "common.show"))}><i${attr_class(clsx(showCurrent ? "ri-eye-off-line" : "ri-eye-line"))}></i></button></div>`);
+									$$renderer.push(`<!----> <button type="button" class="btn btn-outline-secondary"${attr("title", store_get($$store_subs ??= {}, "$_", $format)(showCurrent ? "common.hide" : "common.show"))}${attr("aria-label", store_get($$store_subs ??= {}, "$_", $format)(showCurrent ? "common.hide" : "common.show"))}><i${attr_class(clsx(showCurrent ? "ri-eye-off-line" : "ri-eye-line"))}></i></button></div>`);
 								},
 								$$slots: { default: true }
 							});
@@ -358,6 +348,7 @@ function _page($$renderer, $$props) {
 							FormGroup($$renderer, {
 								children: ($$renderer) => {
 									Label($$renderer, {
+										for: "new-password",
 										children: ($$renderer) => {
 											$$renderer.push(`<!---->${escape_html(store_get($$store_subs ??= {}, "$_", $format)("password.new"))}`);
 										},
@@ -365,6 +356,7 @@ function _page($$renderer, $$props) {
 									});
 									$$renderer.push(`<!----> <div class="input-group">`);
 									Input($$renderer, {
+										id: "new-password",
 										type: showNew ? "text" : "password",
 										autocomplete: "new-password",
 										get value() {
@@ -375,7 +367,7 @@ function _page($$renderer, $$props) {
 											$$settled = false;
 										}
 									});
-									$$renderer.push(`<!----> <button type="button" class="btn btn-outline-secondary"${attr("title", store_get($$store_subs ??= {}, "$_", $format)(showNew ? "common.hide" : "common.show"))}><i${attr_class(clsx(showNew ? "ri-eye-off-line" : "ri-eye-line"))}></i></button> <button type="button" class="btn btn-outline-secondary"${attr("disabled", !pwData.new, true)}${attr("title", store_get($$store_subs ??= {}, "$_", $format)("password.copy"))}><i${attr_class(clsx(passwordCopied ? "ri-check-line text-success" : "ri-file-copy-line"))}></i></button> <button type="button" class="btn btn-primary"${attr("title", store_get($$store_subs ??= {}, "$_", $format)("password.generateSecure"))}><i class="ri-shield-keyhole-line me-1"></i> ${escape_html(store_get($$store_subs ??= {}, "$_", $format)("common.generate"))}</button></div> `);
+									$$renderer.push(`<!----> <button type="button" class="btn btn-outline-secondary"${attr("title", store_get($$store_subs ??= {}, "$_", $format)(showNew ? "common.hide" : "common.show"))}${attr("aria-label", store_get($$store_subs ??= {}, "$_", $format)(showNew ? "common.hide" : "common.show"))}><i${attr_class(clsx(showNew ? "ri-eye-off-line" : "ri-eye-line"))}></i></button> <button type="button" class="btn btn-outline-secondary"${attr("disabled", !pwData.new, true)}${attr("title", store_get($$store_subs ??= {}, "$_", $format)("password.copy"))}${attr("aria-label", store_get($$store_subs ??= {}, "$_", $format)("password.copy"))}><i${attr_class(clsx(passwordCopied ? "ri-check-line text-success" : "ri-file-copy-line"))}></i></button> <button type="button" class="btn btn-primary"${attr("title", store_get($$store_subs ??= {}, "$_", $format)("password.generateSecure"))}${attr("aria-label", store_get($$store_subs ??= {}, "$_", $format)("password.generateSecure"))}><i class="ri-shield-keyhole-line me-1"></i> ${escape_html(store_get($$store_subs ??= {}, "$_", $format)("common.generate"))}</button></div> `);
 									if (pwData.new) {
 										$$renderer.push(`<!--[0--><div class="mt-2"><div class="d-flex gap-1 mb-1"><!--[-->`);
 										const each_array = ensure_array_like([
@@ -400,6 +392,7 @@ function _page($$renderer, $$props) {
 							FormGroup($$renderer, {
 								children: ($$renderer) => {
 									Label($$renderer, {
+										for: "confirm-password",
 										children: ($$renderer) => {
 											$$renderer.push(`<!---->${escape_html(store_get($$store_subs ??= {}, "$_", $format)("password.confirmNew"))}`);
 										},
@@ -407,6 +400,7 @@ function _page($$renderer, $$props) {
 									});
 									$$renderer.push(`<!----> <div class="input-group">`);
 									Input($$renderer, {
+										id: "confirm-password",
 										type: showConfirm ? "text" : "password",
 										invalid: pwData.new !== "" && pwData.confirm !== "" && pwData.new !== pwData.confirm,
 										get value() {
@@ -417,7 +411,7 @@ function _page($$renderer, $$props) {
 											$$settled = false;
 										}
 									});
-									$$renderer.push(`<!----> <button type="button" class="btn btn-outline-secondary"${attr("title", store_get($$store_subs ??= {}, "$_", $format)(showConfirm ? "common.hide" : "common.show"))}><i${attr_class(clsx(showConfirm ? "ri-eye-off-line" : "ri-eye-line"))}></i></button></div> `);
+									$$renderer.push(`<!----> <button type="button" class="btn btn-outline-secondary"${attr("title", store_get($$store_subs ??= {}, "$_", $format)(showConfirm ? "common.hide" : "common.show"))}${attr("aria-label", store_get($$store_subs ??= {}, "$_", $format)(showConfirm ? "common.hide" : "common.show"))}><i${attr_class(clsx(showConfirm ? "ri-eye-off-line" : "ri-eye-line"))}></i></button></div> `);
 									if (pwData.new !== "" && pwData.confirm !== "" && pwData.new !== pwData.confirm) $$renderer.push(`<!--[0--><div class="text-danger small mt-1">${escape_html(store_get($$store_subs ??= {}, "$_", $format)("password.mismatch"))}</div>`);
 									else $$renderer.push("<!--[-1-->");
 									$$renderer.push(`<!--]-->`);
@@ -467,5 +461,4 @@ function _page($$renderer, $$props) {
 		if ($$store_subs) unsubscribe_stores($$store_subs);
 	});
 }
-//#endregion
 export { _page as default };

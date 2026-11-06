@@ -1,7 +1,7 @@
 import { N as get } from "./server.js";
 import "./index-server.js";
 import { n as $locale, t as $format } from "./runtime.js";
-//#region src/lib/client/api.js
+// src/lib/client/api.js
 function localeCode() {
 	return get($locale) === "en" ? "en-GB" : "it-IT";
 }
@@ -58,5 +58,4 @@ function toDateInput(value) {
 	const offset = date.getTimezoneOffset() * 6e4;
 	return new Date(date.getTime() - offset).toISOString().slice(0, 10);
 }
-//#endregion
 export { toDateInput as a, formatDateTime as i, apiRequest as n, toDateTimeLocal as o, formatDate as r, apiListRequest as t };

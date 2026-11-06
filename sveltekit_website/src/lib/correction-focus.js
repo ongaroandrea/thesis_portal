@@ -3,7 +3,7 @@ export const CORRECTION_FOCUS_OPTIONS = Object.freeze([
 	{ id: 'CAMERA', labelKey: 'correction.camera', analysisType: 'camera' },
 	{ id: 'MATERIAL', labelKey: 'correction.materials', analysisType: 'material' },
 	{ id: 'TEXTURE', labelKey: 'correction.texture', analysisType: 'texture' },
-	{ id: 'GENERAL', labelKey: 'correction.generalQuality', analysisType: 'camera' }
+	{ id: 'GENERAL', labelKey: 'correction.generalQuality', analysisType: 'general' }
 ]);
 
 export const CORRECTION_FOCUS_IDS = new Set(

@@ -1,19 +1,12 @@
 <script>
   import { page } from "$app/stores";
   import { goto } from "$app/navigation";
+  import { onDestroy } from 'svelte';
   import Link from "svelte-link";
-  import {
-    Alert,
-    Card,
-    CardBody,
-    Col,
-    Container,
-    Row,
-    Label,
-    Button,
-  } from "@sveltestrap/sveltestrap";
+  import { Alert, Label, Button } from "@sveltestrap/sveltestrap";
   import ParticlesAuth from '$lib/components/layouts/ParticlesAuth.svelte';
   import { authClient } from "$lib/client/auth/auth-client";
+  import { authErrorMessage } from "$lib/client/auth/auth-errors.js";
   import { _ } from 'svelte-i18n';
 
   let password = "";
@@ -23,6 +16,9 @@
   let success = false;
   let showPassword = false;
   let showConfirmPassword = false;
+  let redirectTimer;
+
+  onDestroy(() => clearTimeout(redirectTimer));
 
   // 1. Extract the token explicitly from the URL
   // BetterAuth usually looks for the token automatically, but passing it explicitly is safer.
@@ -33,7 +29,7 @@
   $: hasUpper = /[A-Z]/.test(password);
   $: hasNumber = /[0-9]/.test(password);
   $: passwordStrength = (() => {
-    if (!password) return { score: 0, label: "", color: "", hex: "#dee2e6" };
+    if (!password) return { score: 0, label: "", color: "", hex: "var(--portal-border)" };
     let score = 0;
     if (password.length >= 12) score++;
     if (password.length >= 16) score++;
@@ -42,12 +38,12 @@
     if (/[0-9]/.test(password)) score++;
     if (/[^A-Za-z0-9]/.test(password)) score++;
     if (score <= 2) {
-	  return { score, label: 'password.weak', color: "danger", hex: "#dc3545" };
+	  return { score, label: 'password.weak', color: "danger", hex: "var(--portal-danger)" };
     }
     if (score <= 4) {
-	  return { score, label: 'password.fair', color: "warning", hex: "#ffc107" };
+	  return { score, label: 'password.fair', color: "warning", hex: "var(--portal-warning)" };
     }
-	return { score, label: 'password.strong', color: "success", hex: "#198754" };
+	return { score, label: 'password.strong', color: "success", hex: "var(--portal-positive)" };
   })();
 
   async function handleReset() {
@@ -71,24 +67,24 @@
 
     try {
       // 3. Call the reset function
-      const { data, error: err } = await authClient.resetPassword({
+      const { error: err } = await authClient.resetPassword({
         newPassword: password,
         token: token,
       });
 
       if (err) {
-        throw new Error(err.message);
+        error = authErrorMessage(err, 'auth.errors.resetFailed');
+        return;
       }
 
       success = true;
 
       // Optional: Redirect automatically after a few seconds
-      setTimeout(() => {
+      redirectTimer = setTimeout(() => {
         goto("/login");
       }, 3000);
     } catch (err) {
-      console.error("Reset error:", err);
-	  error = err.message || $_('common.unexpectedError');
+	  error = $_('auth.errors.resetFailed');
     } finally {
       loading = false;
     }
@@ -96,38 +92,17 @@
 </script>
 
 <svelte:head>
-  <title>{$_('password.reset')} | {$_('home.eyebrow')}</title>
+  <title>{$_('password.reset')} | {$_('site.name')}</title>
 </svelte:head>
 
 <ParticlesAuth>
-  <div class="auth-page-content pt-5">
-    <Container>
-      <Row>
-        <Col lg={12}>
-          <div class="text-center mt-sm-5 mb-4 text-white-50">
-            <div>
-              <Link href="/" class="d-inline-block auth-logo">
-                <img src="/images/polito_logo_desktop.svg" alt="Politecnico di Torino" height="76" />
-              </Link>
-            </div>
-			<p class="mt-3 fs-15 fw-medium">{$_('home.eyebrow')} <span class="alpha-label">Alpha</span></p>
-          </div>
-        </Col>
-      </Row>
+              <h1>{$_('password.createNew')}</h1>
+              <p class="auth-lead">{$_('password.mustDiffer')}</p>
 
-      <Row class="justify-content-center">
-        <Col md={8} lg={6} xl={5}>
-          <Card class="mt-4">
-            <CardBody class="p-4">
-              <div class="text-center mt-2">
-				<h5 class="text-primary">{$_('password.createNew')}</h5>
-				<p class="text-muted">{$_('password.mustDiffer')}</p>
-              </div>
-
-              <div class="p-2">
+              <div>
                 {#if success}
-                  <Alert color="success" class="text-center">
-					<h5 class="message">{$_('password.updated')}</h5>
+                  <Alert color="success" role="status">
+					<h2 class="h6 message">{$_('password.updated')}</h2>
 					<p>{$_('password.redirecting')}</p>
                   </Alert>
                   <div class="mt-4 text-center">
@@ -140,8 +115,8 @@
                 {:else}
                   <form on:submit|preventDefault={handleReset}>
                     {#if error || errorParam}
-                      <Alert color="danger" class="text-center">
-                        {error || errorParam}
+                      <Alert color="danger" role="alert">
+                        {error || authErrorMessage(errorParam, 'password.invalidToken')}
                       </Alert>
                     {/if}
 
@@ -195,7 +170,7 @@
 							  style="height: 4px; background-color: {i <
 							  passwordStrength.score
 								? passwordStrength.hex
-								: '#dee2e6'};"
+								: 'var(--portal-border)'};"
 							></div>
                           {/each}
                         </div>
@@ -302,39 +277,24 @@
                   </form>
                 {/if}
               </div>
-            </CardBody>
-          </Card>
 
-          <div class="mt-4 text-center">
-            <p class="mb-0">
+          <p class="auth-secondary">
 			  {$_('password.remember')}
-              <Link
-                href="/login"
-                class="fw-semibold text-primary text-decoration-underline"
-              >
-				{$_('auth.backToLogin')}
-              </Link>
-            </p>
-          </div>
-        </Col>
-      </Row>
-    </Container>
-  </div>
+              <Link href="/login" class="fw-semibold">{$_('auth.backToLogin')}</Link>
+          </p>
 </ParticlesAuth>
 
 <style lang="scss">
-  :global(.auth-logo img) { width: 148px; height: auto; padding: 0.55rem; border-radius: 6px; background: #ffffff; }
-  .alpha-label { margin-left: 0.35rem; padding: 0.2rem 0.45rem; border: 1px solid rgba(255,255,255,.4); border-radius: 999px; font-size: .65rem; letter-spacing: .08em; text-transform: uppercase; }
-
+  
   :global(.valid) {
-    color: #0ab39c !important;
+    color: var(--portal-positive-text) !important;
     &::before {
       content: "✓ ";
     }
   }
 
   :global(.invalid) {
-    color: #f06548 !important;
+    color: var(--portal-danger-text) !important;
     &::before {
       content: "✗ ";
     }

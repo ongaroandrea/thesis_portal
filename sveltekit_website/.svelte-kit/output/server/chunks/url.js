@@ -1,6 +1,6 @@
 import { env } from "@better-auth/core/env";
 import { BetterAuthError } from "@better-auth/core/error";
-//#region node_modules/better-auth/dist/utils/wildcard.mjs
+// node_modules/better-auth/dist/utils/wildcard.mjs
 /**
 * Escapes a character if it has a special meaning in regular expressions
 * and returns the character as is if it doesn't
@@ -46,9 +46,11 @@ function transform(pattern, separator = true) {
 		const nextSegment = segments[s + 1];
 		let currentSeparator = "";
 		if (!segment && s > 0) continue;
-		if (separator) if (s === segments.length - 1) currentSeparator = optionalSeparator;
-		else if (nextSegment !== "**") currentSeparator = requiredSeparator;
-		else currentSeparator = "";
+		if (separator) {
+			if (s === segments.length - 1) currentSeparator = optionalSeparator;
+			else if (nextSegment !== "**") currentSeparator = requiredSeparator;
+			else currentSeparator = "";
+		}
 		if (separator && segment === "**") {
 			if (currentSeparator) {
 				result += s === 0 ? "" : currentSeparator;
@@ -104,8 +106,7 @@ function wildcardMatch(pattern, options) {
 	fn.regexp = regexp;
 	return fn;
 }
-//#endregion
-//#region node_modules/better-auth/dist/utils/url.mjs
+// node_modules/better-auth/dist/utils/url.mjs
 var SLASH_CHAR_CODE = "/".charCodeAt(0);
 /**
 * Minimal loopback check for dev scheme inference only. Reachable from
@@ -338,5 +339,4 @@ function resolveBaseURL(config, basePath, source, loadEnv, trustedProxyHeaders) 
 	if (typeof config === "string") return getBaseURL(config, basePath, request, loadEnv, trustedProxyHeaders);
 	return getBaseURL(void 0, basePath, request, loadEnv, trustedProxyHeaders);
 }
-//#endregion
 export { isDynamicBaseURLConfig as a, wildcardMatch as c, getProtocol as i, getHost as n, isRequestLike as o, getOrigin as r, resolveBaseURL as s, getBaseURL as t };

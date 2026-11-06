@@ -1,9 +1,9 @@
-import { a as numericId, c as paginationParams, i as dateValue, l as requireUser, o as optionalText, r as ApiError, s as paginated } from "./handler.js";
-import { h as user, l as courseMember, n as activity, t as db, u as examResult } from "./db.js";
-import { t as courseService } from "./course.service.js";
+import { b as user, d as courseMember, f as examResult, n as activity, t as db } from "./db.js";
+import { a as paginated, i as optionalText, n as dateValue, o as paginationParams, r as numericId, s as requireUser, t as ApiError } from "./api.service.js";
 import { t as activityService } from "./activity.service.js";
+import { t as courseService } from "./course.service.js";
 import { and, asc, count, eq, isNull, lte, or } from "drizzle-orm";
-//#region src/lib/server/services/exam-result.service.js
+// src/lib/server/services/exam-result.service.js
 var RESULT_STATUSES = /* @__PURE__ */ new Set([
 	"DRAFT",
 	"READY",
@@ -151,5 +151,4 @@ var examResultService = {
 		return { id: record.id };
 	}
 };
-//#endregion
 export { examResultService as t };

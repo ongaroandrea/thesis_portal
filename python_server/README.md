@@ -42,15 +42,16 @@ teaching portal. The web server creates a signed multipart request containing:
 
 - `image`: the student's submitted image;
 - `reference_image`: the reference image selected for the correction session;
-- `type`: the requested analysis category.
+- `type`: the requested analysis category;
+- the complete system/user prompts, output schema, model, version, and hash.
 
 After validating both files, the server returns `202 Accepted` and places the
 job in memory. A single consumer processes queued jobs in submission order. The
 web application can then read the job status until the result is available.
 
-Camera jobs are processed by Ollama using the configured vision model and the
-prompt files under `app/input`. Other analysis categories still return a
-placeholder response.
+SvelteKit creates and versions every prompt from PostgreSQL. This service only
+validates the signed job parameters, queues the work, calls Ollama, and returns
+the raw structured result.
 
 ### Main features
 
@@ -118,7 +119,10 @@ registry. All operations that inspect or change queue state are synchronized.
 - `QUEUE_MAX_SIZE` limits waiting jobs; the currently active job is separate.
 - A full queue rejects new work with `503 Service Unavailable`.
 - Deleting a queued job removes it immediately.
-- Deleting the active job cancels its processor task and removes the job.
+- Deleting the active job removes it from the API immediately and discards its
+  result. The underlying model call is allowed to finish before the FIFO
+  advances, because Python cannot safely cancel a running worker thread.
+- During shutdown, queued work is discarded instead of draining the backlog.
 - Only the configured number of terminal jobs is retained.
 - Snapshots and job reads return deep copies so callers cannot mutate internal
   queue state.
@@ -221,6 +225,8 @@ still require valid signature headers.
 | `MAX_IMAGE_PIXELS` | `40000000` | Positive integer | Maximum width multiplied by height for each image. |
 | `API_PORT` | `8000` | Valid host port | Host port used by Docker Compose. |
 | `DEVELOPMENT_MODE` | `false` | Boolean | Return an immediate mock result without contacting Ollama. |
+| `OLLAMA_ALLOWED_MODELS` | `qwen3.8:27b` | Comma-separated model names | Worker-side allowlist for models selected by SvelteKit. |
+| `OLLAMA_TIMEOUT_SECONDS` | `900` | 1–3600 | Maximum duration of an Ollama request. |
 
 The application rejects known placeholder secrets such as
 `replace-with-a-long-random-secret`.
@@ -243,7 +249,13 @@ Multipart fields:
 | --- | --- | --- |
 | `image` | File | Student-submitted JPEG, PNG, or WEBP image. |
 | `reference_image` | File | Instructor reference JPEG, PNG, or WEBP image. |
-| `type` | String | `camera`, `texture`, `light`, or `material`. |
+| `type` | String | `camera`, `texture`, `light`, `material`, or `general`. |
+| `model` | String | Model selected by SvelteKit; must be in the worker allowlist. |
+| `system_prompt` | String | Complete immutable system prompt created by SvelteKit. |
+| `user_prompt` | String | Complete immutable evaluation prompt created by SvelteKit. |
+| `output_schema` | JSON string | Object schema supplied to Ollama's structured output mode. |
+| `prompt_version` | String | SvelteKit template/activity revision identifier. |
+| `prompt_hash` | String | Lowercase SHA-256 digest of the prompt snapshot. |
 
 Successful response: `202 Accepted`
 
@@ -390,7 +402,7 @@ Install the development dependencies and provide a non-placeholder secret:
 
 ```sh
 python -m pip install -r requirements-dev.txt
-HMAC_SECRET="0123456789abcdef0123456789abcdef" pytest -q
+HMAC_SECRET="0123456789abcdef0123456789abcdef" python -m pytest -q
 ```
 
 The tests cover:
@@ -425,8 +437,7 @@ python -m compileall -q app tests
 
 ## Current limitations
 
-1. Only camera analysis is connected to Ollama; the other categories still
-   return a placeholder response.
+1. Prompt quality and output semantics are owned by the SvelteKit application.
 2. Queue and nonce state are stored only in memory.
 3. There is no recovery after a restart.
 4. Horizontal scaling is not supported by the current single-GPU queue design.
@@ -438,22 +449,11 @@ python -m compileall -q app tests
 
 ## Extending the processor
 
-Camera model and prompt behaviour are configured in `app/ollama/main.py`:
-
-```python
-"camera": {
-    "model": "qwen3.8:27b",
-    "prompt": "prompt.txt",
-    "parameter_explanation": True,
-    "magnitude": True,
-}
-```
-
-The processor sends the reference as Image A and the submitted image as Image
-B. Set `parameter_explanation` to control the dataset-convention block and set
-`magnitude` to control magnitude estimation. With magnitude disabled, the
-response schema is preserved but all magnitude values are forced to `none`.
-Exceptions are caught by the queue and stored as a failed job's `error` value.
+Prompt templates, revisions, output schemas, and activity-specific additions
+are stored in PostgreSQL and administered through SvelteKit. The processor
+sends the reference as Image A and the submitted image as Image B without
+changing prompt semantics. Exceptions are caught by the queue and stored as a
+failed job's `error` value.
 
 Avoid adding concurrency inside the processor unless the deployment and GPU
 resource model are changed deliberately.

@@ -1,11 +1,11 @@
-import { v as noop } from "./shared.js";
-import "./internal.js";
-import "./exports.js";
-import "./routing.js";
-import { F as writable, zt as noop$1 } from "./server.js";
-import "./index-server.js";
 import { n as index_server_exports } from "./index-server2.js";
+import "./routing.js";
+import { v as noop } from "./shared.js";
+import "./exports.js";
+import "./index-server.js";
 import "./paths.js";
+import "./internal.js";
+import { F as writable, zt as noop$1 } from "./server.js";
 import "@sveltejs/kit/internal";
 import "devalue";
 var PRELOAD_PRIORITIES = {
@@ -52,8 +52,7 @@ function create_updated_store() {
 		check: async () => false
 	};
 }
-//#endregion
-//#region node_modules/@sveltejs/kit/src/runtime/client/state.svelte.js
+// node_modules/@sveltejs/kit/src/runtime/client/state.svelte.js
 var page;
 var navigating;
 var updated;
@@ -91,8 +90,7 @@ if (is_legacy) {
 	}();
 	updated_listener.v = () => updated.current = true;
 }
-//#endregion
-//#region node_modules/@sveltejs/kit/src/runtime/client/client.js
+// node_modules/@sveltejs/kit/src/runtime/client/client.js
 /** @import { RemoteFunctionDataNode, ServerNodesResponse, ServerRedirectNode } from 'types' */
 /** @import { CacheEntry } from './remote-functions/cache.svelte.js' */
 /** @import { Query } from './remote-functions/query/instance.svelte.js' */
@@ -123,5 +121,4 @@ var stores = {
 function goto(url, opts = {}) {
 	throw new Error("Cannot call goto(...) on the server");
 }
-//#endregion
 export { page as i, stores as n, navigating as r, goto as t };

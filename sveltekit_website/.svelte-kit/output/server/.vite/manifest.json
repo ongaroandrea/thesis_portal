@@ -10,29 +10,21 @@
       "_internal2.js"
     ]
   },
-  "_ActivityForm.BelPIBsv.css": {
-    "file": "_app/immutable/assets/ActivityForm.BelPIBsv.css",
-    "src": "_ActivityForm.BelPIBsv.css"
+  "_ActivityForm.B2UeVvbW.css": {
+    "file": "_app/immutable/assets/ActivityForm.B2UeVvbW.css",
+    "src": "_ActivityForm.B2UeVvbW.css"
   },
   "_ActivityForm.js": {
     "file": "chunks/ActivityForm.js",
     "name": "ActivityForm",
     "imports": [
       "_server.js",
+      "_api.js",
       "_correction-focus.js",
-      "_runtime.js",
-      "_api.js"
+      "_runtime.js"
     ],
     "css": [
-      "_app/immutable/assets/ActivityForm.BelPIBsv.css"
-    ]
-  },
-  "_BreadCrumb.js": {
-    "file": "chunks/BreadCrumb.js",
-    "name": "BreadCrumb",
-    "imports": [
-      "_server.js",
-      "_dist.js"
+      "_app/immutable/assets/ActivityForm.B2UeVvbW.css"
     ]
   },
   "_CourseForm.js": {
@@ -40,13 +32,13 @@
     "name": "CourseForm",
     "imports": [
       "_server.js",
-      "_runtime.js",
-      "_api.js"
+      "_api.js",
+      "_runtime.js"
     ]
   },
-  "_LanguageSwitcher.CU0rOTlj.css": {
-    "file": "_app/immutable/assets/LanguageSwitcher.CU0rOTlj.css",
-    "src": "_LanguageSwitcher.CU0rOTlj.css"
+  "_LanguageSwitcher.Btdv-VAz.css": {
+    "file": "_app/immutable/assets/LanguageSwitcher.Btdv-VAz.css",
+    "src": "_LanguageSwitcher.Btdv-VAz.css"
   },
   "_LanguageSwitcher.js": {
     "file": "chunks/LanguageSwitcher.js",
@@ -57,7 +49,7 @@
       "_runtime.js"
     ],
     "css": [
-      "_app/immutable/assets/LanguageSwitcher.CU0rOTlj.css"
+      "_app/immutable/assets/LanguageSwitcher.Btdv-VAz.css"
     ]
   },
   "_PageHeader.js": {
@@ -68,38 +60,55 @@
       "_runtime.js"
     ]
   },
+  "_ParticlesAuth.C1rXhns1.css": {
+    "file": "_app/immutable/assets/ParticlesAuth.C1rXhns1.css",
+    "src": "_ParticlesAuth.C1rXhns1.css"
+  },
   "_ParticlesAuth.js": {
     "file": "chunks/ParticlesAuth.js",
     "name": "ParticlesAuth",
     "imports": [
       "_server.js",
-      "_runtime.js",
-      "_LanguageSwitcher.js"
+      "_LanguageSwitcher.js",
+      "_runtime.js"
     ],
     "css": [
-      "_app/immutable/assets/ParticlesAuth.vBtjVclp.css"
+      "_app/immutable/assets/ParticlesAuth.C1rXhns1.css"
     ]
   },
-  "_ParticlesAuth.vBtjVclp.css": {
-    "file": "_app/immutable/assets/ParticlesAuth.vBtjVclp.css",
-    "src": "_ParticlesAuth.vBtjVclp.css"
+  "_PromptManager.DwjRUvA8.css": {
+    "file": "_app/immutable/assets/PromptManager.DwjRUvA8.css",
+    "src": "_PromptManager.DwjRUvA8.css"
+  },
+  "_PromptManager.js": {
+    "file": "chunks/PromptManager.js",
+    "name": "PromptManager",
+    "imports": [
+      "_server.js",
+      "_index-server2.js",
+      "_api.js"
+    ],
+    "css": [
+      "_app/immutable/assets/PromptManager.DwjRUvA8.css"
+    ]
   },
   "_activity-reference-image.service.js": {
     "file": "chunks/activity-reference-image.service.js",
     "name": "activity-reference-image.service",
     "imports": [
-      "_handler.js",
       "_db.js",
+      "_api.service.js",
+      "_activity.service.js",
       "_course.service.js",
-      "_activity.service.js"
+      "_local-storage.service.js"
     ]
   },
   "_activity.service.js": {
     "file": "chunks/activity.service.js",
     "name": "activity.service",
     "imports": [
-      "_handler.js",
       "_db.js",
+      "_api.service.js",
       "_course.service.js",
       "_correction-focus.js"
     ]
@@ -113,6 +122,10 @@
       "_runtime.js"
     ]
   },
+  "_api.service.js": {
+    "file": "chunks/api.service.js",
+    "name": "api.service"
+  },
   "_auth-client.js": {
     "file": "chunks/auth-client.js",
     "name": "auth-client",
@@ -125,12 +138,12 @@
     "name": "auth",
     "imports": [
       "_rolldown-runtime.js",
+      "_url.js",
+      "_paths.js",
       "_shared.js",
-      "_shared-server.js",
       "_remote.js",
       "_db.js",
-      "_paths.js",
-      "_url.js"
+      "_shared-server.js"
     ],
     "dynamicImports": [
       "node_modules/better-auth/dist/adapters/kysely-adapter/index.mjs"
@@ -140,24 +153,35 @@
     "file": "chunks/client.js",
     "name": "client",
     "imports": [
-      "_shared.js",
-      "_internal.js",
-      "_exports.js",
-      "_routing.js",
-      "_server.js",
-      "_index-server.js",
       "_index-server2.js",
-      "_paths.js"
+      "_routing.js",
+      "_shared.js",
+      "_exports.js",
+      "_index-server.js",
+      "_paths.js",
+      "_internal.js",
+      "_server.js"
     ]
   },
   "_correction-attempt.service.js": {
     "file": "chunks/correction-attempt.service.js",
     "name": "correction-attempt.service",
     "imports": [
-      "_handler.js",
       "_db.js",
-      "_correction-focus.js",
-      "_correction-session.service.js"
+      "_api.service.js",
+      "_correction-session.service.js",
+      "_correction-focus.js"
+    ]
+  },
+  "_correction-feedback.service.js": {
+    "file": "chunks/correction-feedback.service.js",
+    "name": "correction-feedback.service",
+    "imports": [
+      "_db.js",
+      "_api.service.js",
+      "_correction-attempt.service.js",
+      "_correction-session.service.js",
+      "_course.service.js"
     ]
   },
   "_correction-focus.js": {
@@ -168,19 +192,19 @@
     "file": "chunks/correction-session.service.js",
     "name": "correction-session.service",
     "imports": [
-      "_handler.js",
       "_db.js",
+      "_api.service.js",
+      "_activity.service.js",
       "_course.service.js",
-      "_correction-focus.js",
-      "_activity.service.js"
+      "_correction-focus.js"
     ]
   },
   "_course-member.service.js": {
     "file": "chunks/course-member.service.js",
     "name": "course-member.service",
     "imports": [
-      "_handler.js",
       "_db.js",
+      "_api.service.js",
       "_course.service.js"
     ]
   },
@@ -188,8 +212,8 @@
     "file": "chunks/course.service.js",
     "name": "course.service",
     "imports": [
-      "_handler.js",
-      "_db.js"
+      "_db.js",
+      "_api.service.js"
     ]
   },
   "_db.js": {
@@ -209,8 +233,8 @@
     "name": "dist",
     "imports": [
       "_server.js",
-      "_index-server.js",
-      "_index-server2.js"
+      "_index-server2.js",
+      "_index-server.js"
     ],
     "css": [
       "_app/immutable/assets/dist.DhaulA-e.css"
@@ -224,20 +248,21 @@
     "file": "chunks/exam-result.service.js",
     "name": "exam-result.service",
     "imports": [
-      "_handler.js",
       "_db.js",
-      "_course.service.js",
-      "_activity.service.js"
+      "_api.service.js",
+      "_activity.service.js",
+      "_course.service.js"
     ]
   },
   "_exam-submission.service.js": {
     "file": "chunks/exam-submission.service.js",
     "name": "exam-submission.service",
     "imports": [
-      "_handler.js",
       "_db.js",
+      "_api.service.js",
+      "_activity.service.js",
       "_course.service.js",
-      "_activity.service.js"
+      "_local-storage.service.js"
     ]
   },
   "_exports.js": {
@@ -246,7 +271,10 @@
   },
   "_handler.js": {
     "file": "chunks/handler.js",
-    "name": "handler"
+    "name": "handler",
+    "imports": [
+      "_api.service.js"
+    ]
   },
   "_index-server.js": {
     "file": "chunks/index-server.js",
@@ -271,13 +299,21 @@
     "file": "chunks/internal2.js",
     "name": "internal",
     "imports": [
-      "_internal.js",
       "_server.js",
-      "_index-server2.js"
+      "_index-server2.js",
+      "_internal.js"
     ],
     "dynamicImports": [
       "src/hooks.server.js"
     ]
+  },
+  "_local-storage.service.js": {
+    "file": "chunks/local-storage.service.js",
+    "name": "local-storage.service"
+  },
+  "_modal-dialog.js": {
+    "file": "chunks/modal-dialog.js",
+    "name": "modal-dialog"
   },
   "_navigation.js": {
     "file": "chunks/navigation.js",
@@ -295,13 +331,22 @@
       "_internal2.js"
     ]
   },
+  "_prompt-template.service.js": {
+    "file": "chunks/prompt-template.service.js",
+    "name": "prompt-template.service",
+    "imports": [
+      "_db.js",
+      "_api.service.js",
+      "_course.service.js"
+    ]
+  },
   "_remote.js": {
     "file": "chunks/remote.js",
     "name": "remote",
     "imports": [
+      "_utils.js",
       "_shared.js",
-      "_internal.js",
-      "_utils.js"
+      "_internal.js"
     ]
   },
   "_rolldown-runtime.js": {
@@ -341,6 +386,14 @@
       "_client.js"
     ]
   },
+  "_support-ticket.service.js": {
+    "file": "chunks/support-ticket.service.js",
+    "name": "support-ticket.service",
+    "imports": [
+      "_db.js",
+      "_api.service.js"
+    ]
+  },
   "_svelte-link.js": {
     "file": "chunks/svelte-link.js",
     "name": "svelte-link",
@@ -360,8 +413,8 @@
     "file": "chunks/users.service.js",
     "name": "users.service",
     "imports": [
-      "_handler.js",
       "_db.js",
+      "_api.service.js",
       "_text.js"
     ],
     "dynamicImports": [
@@ -374,6 +427,118 @@
     "imports": [
       "_shared.js"
     ]
+  },
+  "node_modules/@fontsource/ibm-plex-sans/files/ibm-plex-sans-latin-400-normal.woff": {
+    "file": "_app/immutable/assets/ibm-plex-sans-latin-400-normal.CYLoc0-x.woff",
+    "src": "node_modules/@fontsource/ibm-plex-sans/files/ibm-plex-sans-latin-400-normal.woff"
+  },
+  "node_modules/@fontsource/ibm-plex-sans/files/ibm-plex-sans-latin-400-normal.woff2": {
+    "file": "_app/immutable/assets/ibm-plex-sans-latin-400-normal.CDDApCn2.woff2",
+    "src": "node_modules/@fontsource/ibm-plex-sans/files/ibm-plex-sans-latin-400-normal.woff2"
+  },
+  "node_modules/@fontsource/ibm-plex-sans/files/ibm-plex-sans-latin-500-normal.woff": {
+    "file": "_app/immutable/assets/ibm-plex-sans-latin-500-normal.BgVn5rGT.woff",
+    "src": "node_modules/@fontsource/ibm-plex-sans/files/ibm-plex-sans-latin-500-normal.woff"
+  },
+  "node_modules/@fontsource/ibm-plex-sans/files/ibm-plex-sans-latin-500-normal.woff2": {
+    "file": "_app/immutable/assets/ibm-plex-sans-latin-500-normal.6ng42L7E.woff2",
+    "src": "node_modules/@fontsource/ibm-plex-sans/files/ibm-plex-sans-latin-500-normal.woff2"
+  },
+  "node_modules/@fontsource/ibm-plex-sans/files/ibm-plex-sans-latin-600-normal.woff": {
+    "file": "_app/immutable/assets/ibm-plex-sans-latin-600-normal.Cu4Hd6ag.woff",
+    "src": "node_modules/@fontsource/ibm-plex-sans/files/ibm-plex-sans-latin-600-normal.woff"
+  },
+  "node_modules/@fontsource/ibm-plex-sans/files/ibm-plex-sans-latin-600-normal.woff2": {
+    "file": "_app/immutable/assets/ibm-plex-sans-latin-600-normal.CuJfVYMP.woff2",
+    "src": "node_modules/@fontsource/ibm-plex-sans/files/ibm-plex-sans-latin-600-normal.woff2"
+  },
+  "node_modules/@fontsource/ibm-plex-sans/files/ibm-plex-sans-latin-700-normal.woff": {
+    "file": "_app/immutable/assets/ibm-plex-sans-latin-700-normal.Bth3BMcD.woff",
+    "src": "node_modules/@fontsource/ibm-plex-sans/files/ibm-plex-sans-latin-700-normal.woff"
+  },
+  "node_modules/@fontsource/ibm-plex-sans/files/ibm-plex-sans-latin-700-normal.woff2": {
+    "file": "_app/immutable/assets/ibm-plex-sans-latin-700-normal.Bxkt5Cjx.woff2",
+    "src": "node_modules/@fontsource/ibm-plex-sans/files/ibm-plex-sans-latin-700-normal.woff2"
+  },
+  "node_modules/@fontsource/ibm-plex-sans/files/ibm-plex-sans-latin-ext-400-normal.woff": {
+    "file": "_app/immutable/assets/ibm-plex-sans-latin-ext-400-normal.RBey6euL.woff",
+    "src": "node_modules/@fontsource/ibm-plex-sans/files/ibm-plex-sans-latin-ext-400-normal.woff"
+  },
+  "node_modules/@fontsource/ibm-plex-sans/files/ibm-plex-sans-latin-ext-400-normal.woff2": {
+    "file": "_app/immutable/assets/ibm-plex-sans-latin-ext-400-normal.C5H60-Va.woff2",
+    "src": "node_modules/@fontsource/ibm-plex-sans/files/ibm-plex-sans-latin-ext-400-normal.woff2"
+  },
+  "node_modules/@fontsource/ibm-plex-sans/files/ibm-plex-sans-latin-ext-500-normal.woff": {
+    "file": "_app/immutable/assets/ibm-plex-sans-latin-ext-500-normal.D0aIdm-b.woff",
+    "src": "node_modules/@fontsource/ibm-plex-sans/files/ibm-plex-sans-latin-ext-500-normal.woff"
+  },
+  "node_modules/@fontsource/ibm-plex-sans/files/ibm-plex-sans-latin-ext-500-normal.woff2": {
+    "file": "_app/immutable/assets/ibm-plex-sans-latin-ext-500-normal.DakdToA3.woff2",
+    "src": "node_modules/@fontsource/ibm-plex-sans/files/ibm-plex-sans-latin-ext-500-normal.woff2"
+  },
+  "node_modules/@fontsource/ibm-plex-sans/files/ibm-plex-sans-latin-ext-600-normal.woff": {
+    "file": "_app/immutable/assets/ibm-plex-sans-latin-ext-600-normal.DIrixKbi.woff",
+    "src": "node_modules/@fontsource/ibm-plex-sans/files/ibm-plex-sans-latin-ext-600-normal.woff"
+  },
+  "node_modules/@fontsource/ibm-plex-sans/files/ibm-plex-sans-latin-ext-600-normal.woff2": {
+    "file": "_app/immutable/assets/ibm-plex-sans-latin-ext-600-normal.DOrvGEcy.woff2",
+    "src": "node_modules/@fontsource/ibm-plex-sans/files/ibm-plex-sans-latin-ext-600-normal.woff2"
+  },
+  "node_modules/@fontsource/ibm-plex-sans/files/ibm-plex-sans-latin-ext-700-normal.woff": {
+    "file": "_app/immutable/assets/ibm-plex-sans-latin-ext-700-normal.DZH6Xh-4.woff",
+    "src": "node_modules/@fontsource/ibm-plex-sans/files/ibm-plex-sans-latin-ext-700-normal.woff"
+  },
+  "node_modules/@fontsource/ibm-plex-sans/files/ibm-plex-sans-latin-ext-700-normal.woff2": {
+    "file": "_app/immutable/assets/ibm-plex-sans-latin-ext-700-normal.aMgXseD4.woff2",
+    "src": "node_modules/@fontsource/ibm-plex-sans/files/ibm-plex-sans-latin-ext-700-normal.woff2"
+  },
+  "node_modules/@fontsource/poppins/files/poppins-latin-500-normal.woff": {
+    "file": "_app/immutable/assets/poppins-latin-500-normal.DGXqpDMm.woff",
+    "src": "node_modules/@fontsource/poppins/files/poppins-latin-500-normal.woff"
+  },
+  "node_modules/@fontsource/poppins/files/poppins-latin-500-normal.woff2": {
+    "file": "_app/immutable/assets/poppins-latin-500-normal.C8OXljZJ.woff2",
+    "src": "node_modules/@fontsource/poppins/files/poppins-latin-500-normal.woff2"
+  },
+  "node_modules/@fontsource/poppins/files/poppins-latin-600-normal.woff": {
+    "file": "_app/immutable/assets/poppins-latin-600-normal.BJdTmd5m.woff",
+    "src": "node_modules/@fontsource/poppins/files/poppins-latin-600-normal.woff"
+  },
+  "node_modules/@fontsource/poppins/files/poppins-latin-600-normal.woff2": {
+    "file": "_app/immutable/assets/poppins-latin-600-normal.zEkxB9Mr.woff2",
+    "src": "node_modules/@fontsource/poppins/files/poppins-latin-600-normal.woff2"
+  },
+  "node_modules/@fontsource/poppins/files/poppins-latin-700-normal.woff": {
+    "file": "_app/immutable/assets/poppins-latin-700-normal.BVuQR_eA.woff",
+    "src": "node_modules/@fontsource/poppins/files/poppins-latin-700-normal.woff"
+  },
+  "node_modules/@fontsource/poppins/files/poppins-latin-700-normal.woff2": {
+    "file": "_app/immutable/assets/poppins-latin-700-normal.Qrb0O0WB.woff2",
+    "src": "node_modules/@fontsource/poppins/files/poppins-latin-700-normal.woff2"
+  },
+  "node_modules/@fontsource/poppins/files/poppins-latin-ext-500-normal.woff": {
+    "file": "_app/immutable/assets/poppins-latin-ext-500-normal.CgAe2rWW.woff",
+    "src": "node_modules/@fontsource/poppins/files/poppins-latin-ext-500-normal.woff"
+  },
+  "node_modules/@fontsource/poppins/files/poppins-latin-ext-500-normal.woff2": {
+    "file": "_app/immutable/assets/poppins-latin-ext-500-normal.CK-6C4Hw.woff2",
+    "src": "node_modules/@fontsource/poppins/files/poppins-latin-ext-500-normal.woff2"
+  },
+  "node_modules/@fontsource/poppins/files/poppins-latin-ext-600-normal.woff": {
+    "file": "_app/immutable/assets/poppins-latin-ext-600-normal.Df5ffKXP.woff",
+    "src": "node_modules/@fontsource/poppins/files/poppins-latin-ext-600-normal.woff"
+  },
+  "node_modules/@fontsource/poppins/files/poppins-latin-ext-600-normal.woff2": {
+    "file": "_app/immutable/assets/poppins-latin-ext-600-normal.CAhIAdZj.woff2",
+    "src": "node_modules/@fontsource/poppins/files/poppins-latin-ext-600-normal.woff2"
+  },
+  "node_modules/@fontsource/poppins/files/poppins-latin-ext-700-normal.woff": {
+    "file": "_app/immutable/assets/poppins-latin-ext-700-normal.DctTR6Tg.woff",
+    "src": "node_modules/@fontsource/poppins/files/poppins-latin-ext-700-normal.woff"
+  },
+  "node_modules/@fontsource/poppins/files/poppins-latin-ext-700-normal.woff2": {
+    "file": "_app/immutable/assets/poppins-latin-ext-700-normal.cby-RkWa.woff2",
+    "src": "node_modules/@fontsource/poppins/files/poppins-latin-ext-700-normal.woff2"
   },
   "node_modules/@sveltejs/kit/src/runtime/app/server/remote/index.js": {
     "file": "remote-entry.js",
@@ -402,13 +567,13 @@
       "_shared.js",
       "_internal.js",
       "_utils.js",
-      "_shared-server.js",
       "_exports.js",
       "_routing.js",
-      "_server.js",
       "_index-server.js",
-      "_env.js",
-      "_internal2.js"
+      "_server.js",
+      "_shared-server.js",
+      "_internal2.js",
+      "_env.js"
     ]
   },
   "node_modules/better-auth/dist/adapters/kysely-adapter/index.mjs": {
@@ -426,17 +591,9 @@
       "_auth.js"
     ]
   },
-  "src/lib/assets/fonts/boxicons.woff2": {
-    "file": "_app/immutable/assets/boxicons.CeGEncwm.woff2",
-    "src": "src/lib/assets/fonts/boxicons.woff2"
-  },
-  "src/lib/assets/fonts/materialdesignicons-webfont.woff2": {
-    "file": "_app/immutable/assets/materialdesignicons-webfont.DsMmahHu.woff2",
-    "src": "src/lib/assets/fonts/materialdesignicons-webfont.woff2"
-  },
-  "src/lib/assets/fonts/remixicon.woff2": {
-    "file": "_app/immutable/assets/remixicon.BCkO1-UF.woff2",
-    "src": "src/lib/assets/fonts/remixicon.woff2"
+  "src/lib/assets/fonts/remixicon-subset.woff2": {
+    "file": "_app/immutable/assets/remixicon-subset.DZAYShjZ.woff2",
+    "src": "src/lib/assets/fonts/remixicon-subset.woff2"
   },
   "src/lib/server/auth/auth.js": {
     "file": "chunks/auth2.js",
@@ -453,15 +610,6 @@
     "src": "src/routes/(protected)/(professore)/+layout.server.js",
     "isEntry": true
   },
-  "src/routes/(protected)/(professore)/+layout.svelte": {
-    "file": "entries/pages/(protected)/(professore)/_layout.svelte.js",
-    "name": "entries/pages/(protected)/(professore)/_layout.svelte",
-    "src": "src/routes/(protected)/(professore)/+layout.svelte",
-    "isEntry": true,
-    "imports": [
-      "_server.js"
-    ]
-  },
   "src/routes/(protected)/(professore)/studenti/+page.svelte": {
     "file": "entries/pages/(protected)/(professore)/studenti/_page.svelte.js",
     "name": "entries/pages/(protected)/(professore)/studenti/_page.svelte",
@@ -470,10 +618,13 @@
     "imports": [
       "_server.js",
       "_index-server2.js",
-      "_runtime.js",
       "_auth-client.js",
       "_api.js",
-      "_BreadCrumb.js"
+      "_PageHeader.js",
+      "_runtime.js"
+    ],
+    "css": [
+      "_app/immutable/assets/_page.DJqxJ6AK.css"
     ]
   },
   "src/routes/(protected)/(professore)/studenti/[id]/+page.svelte": {
@@ -484,9 +635,9 @@
     "imports": [
       "_server.js",
       "_index-server2.js",
-      "_runtime.js",
       "_stores.js",
-      "_BreadCrumb.js"
+      "_PageHeader.js",
+      "_runtime.js"
     ],
     "css": [
       "_app/immutable/assets/_page.B5ScYAua.css"
@@ -499,12 +650,12 @@
     "isEntry": true,
     "imports": [
       "_server.js",
-      "_runtime.js",
       "_api.js",
-      "_BreadCrumb.js"
+      "_PageHeader.js",
+      "_runtime.js"
     ],
     "css": [
-      "_app/immutable/assets/_page.Ac4NSTeQ.css"
+      "_app/immutable/assets/_page.BzTWGKx_.css"
     ]
   },
   "src/routes/(protected)/+layout.server.js": {
@@ -520,17 +671,14 @@
     "isEntry": true,
     "imports": [
       "_server.js",
+      "_stores.js",
       "_index-server2.js",
-      "_text.js",
       "_runtime.js",
       "_dist.js",
-      "_LanguageSwitcher.js",
-      "_stores.js",
       "_navigation.js",
-      "_auth-client.js"
-    ],
-    "css": [
-      "_app/immutable/assets/_layout.DSAUXIhH.css"
+      "_auth-client.js",
+      "_text.js",
+      "_LanguageSwitcher.js"
     ]
   },
   "src/routes/(protected)/corsi/+page.svelte": {
@@ -541,13 +689,13 @@
     "imports": [
       "_server.js",
       "_index-server2.js",
-      "_runtime.js",
       "_auth-client.js",
       "_api.js",
-      "_PageHeader.js"
+      "_PageHeader.js",
+      "_runtime.js"
     ],
     "css": [
-      "_app/immutable/assets/_page.DVTLIEf6.css"
+      "_app/immutable/assets/_page.7dbQoEwb.css"
     ]
   },
   "src/routes/(protected)/corsi/[id]/+page.svelte": {
@@ -558,14 +706,14 @@
     "imports": [
       "_server.js",
       "_index-server2.js",
-      "_runtime.js",
       "_stores.js",
       "_navigation.js",
       "_api.js",
-      "_ActivityForm.js"
+      "_ActivityForm.js",
+      "_runtime.js"
     ],
     "css": [
-      "_app/immutable/assets/_page.DUyoD_Hq.css"
+      "_app/immutable/assets/_page.BsXAuLTk.css"
     ]
   },
   "src/routes/(protected)/corsi/[id]/esercitazioni/+page.svelte": {
@@ -576,10 +724,10 @@
     "imports": [
       "_server.js",
       "_index-server2.js",
-      "_runtime.js",
       "_stores.js",
       "_api.js",
-      "_PageHeader.js"
+      "_PageHeader.js",
+      "_runtime.js"
     ]
   },
   "src/routes/(protected)/corsi/[id]/esercitazioni/[activityId]/+page.svelte": {
@@ -590,15 +738,16 @@
     "imports": [
       "_server.js",
       "_index-server2.js",
-      "_correction-focus.js",
-      "_runtime.js",
       "_stores.js",
       "_navigation.js",
       "_api.js",
-      "_PageHeader.js"
+      "_modal-dialog.js",
+      "_PageHeader.js",
+      "_runtime.js",
+      "_correction-focus.js"
     ],
     "css": [
-      "_app/immutable/assets/_page.Du-HKww0.css"
+      "_app/immutable/assets/_page.Coa37HRK.css"
     ]
   },
   "src/routes/(protected)/corsi/[id]/esercitazioni/[activityId]/correzione/+page.svelte": {
@@ -609,16 +758,17 @@
     "imports": [
       "_server.js",
       "_index-server2.js",
-      "_correction-focus.js",
-      "_runtime.js",
-      "_client.js",
       "_stores.js",
       "_navigation.js",
+      "_client.js",
       "_api.js",
-      "_PageHeader.js"
+      "_modal-dialog.js",
+      "_correction-focus.js",
+      "_PageHeader.js",
+      "_runtime.js"
     ],
     "css": [
-      "_app/immutable/assets/_page.TU-hCV2P.css"
+      "_app/immutable/assets/_page.CG09e7lN.css"
     ]
   },
   "src/routes/(protected)/corsi/[id]/esercitazioni/[activityId]/modifica/+page.svelte": {
@@ -629,13 +779,13 @@
     "imports": [
       "_server.js",
       "_index-server2.js",
-      "_runtime.js",
-      "_client.js",
       "_stores.js",
+      "_client.js",
       "_navigation.js",
       "_api.js",
+      "_ActivityForm.js",
       "_PageHeader.js",
-      "_ActivityForm.js"
+      "_runtime.js"
     ]
   },
   "src/routes/(protected)/corsi/[id]/esercitazioni/aggiungi/+page.svelte": {
@@ -645,13 +795,13 @@
     "isEntry": true,
     "imports": [
       "_server.js",
-      "_runtime.js",
-      "_client.js",
       "_stores.js",
+      "_client.js",
       "_navigation.js",
       "_api.js",
+      "_ActivityForm.js",
       "_PageHeader.js",
-      "_ActivityForm.js"
+      "_runtime.js"
     ]
   },
   "src/routes/(protected)/corsi/[id]/modifica/+page.svelte": {
@@ -662,13 +812,33 @@
     "imports": [
       "_server.js",
       "_index-server2.js",
-      "_runtime.js",
-      "_client.js",
       "_stores.js",
+      "_client.js",
       "_navigation.js",
       "_api.js",
+      "_CourseForm.js",
       "_PageHeader.js",
-      "_CourseForm.js"
+      "_runtime.js"
+    ]
+  },
+  "src/routes/(protected)/corsi/[id]/prompt/+page.server.js": {
+    "file": "entries/pages/(protected)/corsi/_id_/prompt/_page.server.js",
+    "name": "entries/pages/(protected)/corsi/_id_/prompt/_page.server",
+    "src": "src/routes/(protected)/corsi/[id]/prompt/+page.server.js",
+    "isEntry": true,
+    "imports": [
+      "_course.service.js"
+    ]
+  },
+  "src/routes/(protected)/corsi/[id]/prompt/+page.svelte": {
+    "file": "entries/pages/(protected)/corsi/_id_/prompt/_page.svelte.js",
+    "name": "entries/pages/(protected)/corsi/_id_/prompt/_page.svelte",
+    "src": "src/routes/(protected)/corsi/[id]/prompt/+page.svelte",
+    "isEntry": true,
+    "imports": [
+      "_server.js",
+      "_stores.js",
+      "_PromptManager.js"
     ]
   },
   "src/routes/(protected)/corsi/[id]/statistiche/+page.svelte": {
@@ -679,13 +849,13 @@
     "imports": [
       "_server.js",
       "_index-server2.js",
-      "_runtime.js",
       "_stores.js",
       "_api.js",
-      "_PageHeader.js"
+      "_PageHeader.js",
+      "_runtime.js"
     ],
     "css": [
-      "_app/immutable/assets/_page.SNP2oeP4.css"
+      "_app/immutable/assets/_page.Bw5LXXCY.css"
     ]
   },
   "src/routes/(protected)/corsi/aggiungi/+page.svelte": {
@@ -695,12 +865,12 @@
     "isEntry": true,
     "imports": [
       "_server.js",
-      "_runtime.js",
-      "_client.js",
       "_navigation.js",
+      "_client.js",
       "_api.js",
+      "_CourseForm.js",
       "_PageHeader.js",
-      "_CourseForm.js"
+      "_runtime.js"
     ]
   },
   "src/routes/(protected)/profilo/+page.svelte": {
@@ -710,10 +880,66 @@
     "isEntry": true,
     "imports": [
       "_server.js",
-      "_text.js",
-      "_runtime.js",
       "_dist.js",
-      "_auth-client.js"
+      "_auth-client.js",
+      "_PageHeader.js",
+      "_text.js",
+      "_runtime.js"
+    ]
+  },
+  "src/routes/(protected)/prompt/+page.server.js": {
+    "file": "entries/pages/(protected)/prompt/_page.server.js",
+    "name": "entries/pages/(protected)/prompt/_page.server",
+    "src": "src/routes/(protected)/prompt/+page.server.js",
+    "isEntry": true
+  },
+  "src/routes/(protected)/prompt/+page.svelte": {
+    "file": "entries/pages/(protected)/prompt/_page.svelte.js",
+    "name": "entries/pages/(protected)/prompt/_page.svelte",
+    "src": "src/routes/(protected)/prompt/+page.svelte",
+    "isEntry": true,
+    "imports": [
+      "_server.js",
+      "_PromptManager.js"
+    ]
+  },
+  "src/routes/(protected)/supporto/+page.svelte": {
+    "file": "entries/pages/(protected)/supporto/_page.svelte.js",
+    "name": "entries/pages/(protected)/supporto/_page.svelte",
+    "src": "src/routes/(protected)/supporto/+page.svelte",
+    "isEntry": true,
+    "imports": [
+      "_server.js",
+      "_index-server2.js",
+      "_stores.js",
+      "_runtime.js",
+      "_api.js",
+      "_PageHeader.js"
+    ],
+    "css": [
+      "_app/immutable/assets/_page.D_BIhHVY.css"
+    ]
+  },
+  "src/routes/(protected)/supporto/gestione/+page.server.js": {
+    "file": "entries/pages/(protected)/supporto/gestione/_page.server.js",
+    "name": "entries/pages/(protected)/supporto/gestione/_page.server",
+    "src": "src/routes/(protected)/supporto/gestione/+page.server.js",
+    "isEntry": true
+  },
+  "src/routes/(protected)/supporto/gestione/+page.svelte": {
+    "file": "entries/pages/(protected)/supporto/gestione/_page.svelte.js",
+    "name": "entries/pages/(protected)/supporto/gestione/_page.svelte",
+    "src": "src/routes/(protected)/supporto/gestione/+page.svelte",
+    "isEntry": true,
+    "imports": [
+      "_server.js",
+      "_index-server2.js",
+      "_runtime.js",
+      "_api.js",
+      "_PageHeader.js"
+    ],
+    "css": [
+      "_app/immutable/assets/_page.BjJzm4vU.css"
     ]
   },
   "src/routes/(public)/+layout.server.js": {
@@ -721,15 +947,6 @@
     "name": "entries/pages/(public)/_layout.server",
     "src": "src/routes/(public)/+layout.server.js",
     "isEntry": true
-  },
-  "src/routes/(public)/+layout.svelte": {
-    "file": "entries/pages/(public)/_layout.svelte.js",
-    "name": "entries/pages/(public)/_layout.svelte",
-    "src": "src/routes/(public)/+layout.svelte",
-    "isEntry": true,
-    "imports": [
-      "_server.js"
-    ]
   },
   "src/routes/(public)/login/+layout.server.js": {
     "file": "entries/pages/(public)/login/_layout.server.js",
@@ -744,12 +961,12 @@
     "isEntry": true,
     "imports": [
       "_server.js",
-      "_runtime.js",
       "_dist.js",
+      "_svelte-link.js",
       "_ParticlesAuth.js",
-      "_navigation.js",
       "_auth-client.js",
-      "_svelte-link.js"
+      "_navigation.js",
+      "_runtime.js"
     ],
     "css": [
       "_app/immutable/assets/_page.4NWObxS1.css"
@@ -762,14 +979,14 @@
     "isEntry": true,
     "imports": [
       "_server.js",
-      "_runtime.js",
+      "_svelte-link.js",
       "_dist.js",
       "_ParticlesAuth.js",
       "_auth-client.js",
-      "_svelte-link.js"
+      "_runtime.js"
     ],
     "css": [
-      "_app/immutable/assets/_page.Y8lDSLmi.css"
+      "_app/immutable/assets/_page.D_TvUKqt.css"
     ]
   },
   "src/routes/+error.svelte": {
@@ -779,11 +996,11 @@
     "isEntry": true,
     "imports": [
       "_server.js",
-      "_index-server2.js",
-      "_runtime.js",
       "_client.js",
+      "_index-server2.js",
       "_dist.js",
-      "_ParticlesAuth.js"
+      "_ParticlesAuth.js",
+      "_runtime.js"
     ]
   },
   "src/routes/+layout.svelte": {
@@ -796,12 +1013,38 @@
       "_runtime.js"
     ],
     "css": [
-      "_app/immutable/assets/_layout.CmsSqnt4.css"
+      "_app/immutable/assets/_layout.QPMOvxQt.css"
     ],
     "assets": [
-      "_app/immutable/assets/materialdesignicons-webfont.DsMmahHu.woff2",
-      "_app/immutable/assets/boxicons.CeGEncwm.woff2",
-      "_app/immutable/assets/remixicon.BCkO1-UF.woff2"
+      "_app/immutable/assets/ibm-plex-sans-latin-400-normal.CDDApCn2.woff2",
+      "_app/immutable/assets/ibm-plex-sans-latin-400-normal.CYLoc0-x.woff",
+      "_app/immutable/assets/ibm-plex-sans-latin-ext-400-normal.C5H60-Va.woff2",
+      "_app/immutable/assets/ibm-plex-sans-latin-ext-400-normal.RBey6euL.woff",
+      "_app/immutable/assets/ibm-plex-sans-latin-500-normal.6ng42L7E.woff2",
+      "_app/immutable/assets/ibm-plex-sans-latin-500-normal.BgVn5rGT.woff",
+      "_app/immutable/assets/ibm-plex-sans-latin-ext-500-normal.DakdToA3.woff2",
+      "_app/immutable/assets/ibm-plex-sans-latin-ext-500-normal.D0aIdm-b.woff",
+      "_app/immutable/assets/ibm-plex-sans-latin-600-normal.CuJfVYMP.woff2",
+      "_app/immutable/assets/ibm-plex-sans-latin-600-normal.Cu4Hd6ag.woff",
+      "_app/immutable/assets/ibm-plex-sans-latin-ext-600-normal.DOrvGEcy.woff2",
+      "_app/immutable/assets/ibm-plex-sans-latin-ext-600-normal.DIrixKbi.woff",
+      "_app/immutable/assets/ibm-plex-sans-latin-700-normal.Bxkt5Cjx.woff2",
+      "_app/immutable/assets/ibm-plex-sans-latin-700-normal.Bth3BMcD.woff",
+      "_app/immutable/assets/ibm-plex-sans-latin-ext-700-normal.aMgXseD4.woff2",
+      "_app/immutable/assets/ibm-plex-sans-latin-ext-700-normal.DZH6Xh-4.woff",
+      "_app/immutable/assets/poppins-latin-500-normal.C8OXljZJ.woff2",
+      "_app/immutable/assets/poppins-latin-500-normal.DGXqpDMm.woff",
+      "_app/immutable/assets/poppins-latin-ext-500-normal.CK-6C4Hw.woff2",
+      "_app/immutable/assets/poppins-latin-ext-500-normal.CgAe2rWW.woff",
+      "_app/immutable/assets/poppins-latin-600-normal.zEkxB9Mr.woff2",
+      "_app/immutable/assets/poppins-latin-600-normal.BJdTmd5m.woff",
+      "_app/immutable/assets/poppins-latin-ext-600-normal.CAhIAdZj.woff2",
+      "_app/immutable/assets/poppins-latin-ext-600-normal.Df5ffKXP.woff",
+      "_app/immutable/assets/poppins-latin-700-normal.Qrb0O0WB.woff2",
+      "_app/immutable/assets/poppins-latin-700-normal.BVuQR_eA.woff",
+      "_app/immutable/assets/poppins-latin-ext-700-normal.cby-RkWa.woff2",
+      "_app/immutable/assets/poppins-latin-ext-700-normal.DctTR6Tg.woff",
+      "_app/immutable/assets/remixicon-subset.DZAYShjZ.woff2"
     ]
   },
   "src/routes/+page.svelte": {
@@ -815,7 +1058,7 @@
       "_LanguageSwitcher.js"
     ],
     "css": [
-      "_app/immutable/assets/_page.uYvbbFIn.css"
+      "_app/immutable/assets/_page.B3LMgyet.css"
     ]
   },
   "src/routes/api/consegne-esame/+server.js": {
@@ -866,6 +1109,7 @@
     "imports": [
       "_handler.js",
       "_db.js",
+      "_api.service.js",
       "_course.service.js"
     ]
   },
@@ -909,6 +1153,26 @@
       "_activity-reference-image.service.js"
     ]
   },
+  "src/routes/api/feedback-correzione/+server.js": {
+    "file": "entries/endpoints/api/feedback-correzione/_server.js",
+    "name": "entries/endpoints/api/feedback-correzione/_server",
+    "src": "src/routes/api/feedback-correzione/+server.js",
+    "isEntry": true,
+    "imports": [
+      "_handler.js",
+      "_correction-feedback.service.js"
+    ]
+  },
+  "src/routes/api/feedback-correzione/statistiche/+server.js": {
+    "file": "entries/endpoints/api/feedback-correzione/statistiche/_server.js",
+    "name": "entries/endpoints/api/feedback-correzione/statistiche/_server",
+    "src": "src/routes/api/feedback-correzione/statistiche/+server.js",
+    "isEntry": true,
+    "imports": [
+      "_handler.js",
+      "_correction-feedback.service.js"
+    ]
+  },
   "src/routes/api/membri/+server.js": {
     "file": "entries/endpoints/api/membri/_server.js",
     "name": "entries/endpoints/api/membri/_server",
@@ -927,6 +1191,16 @@
     "imports": [
       "_handler.js",
       "_course-member.service.js"
+    ]
+  },
+  "src/routes/api/prompt-template/+server.js": {
+    "file": "entries/endpoints/api/prompt-template/_server.js",
+    "name": "entries/endpoints/api/prompt-template/_server",
+    "src": "src/routes/api/prompt-template/+server.js",
+    "isEntry": true,
+    "imports": [
+      "_handler.js",
+      "_prompt-template.service.js"
     ]
   },
   "src/routes/api/risultati/+server.js": {
@@ -976,9 +1250,44 @@
     "isEntry": true,
     "imports": [
       "_handler.js",
-      "_correction-focus.js",
+      "_api.service.js",
       "_activity-reference-image.service.js",
-      "_correction-session.service.js"
+      "_correction-session.service.js",
+      "_correction-attempt.service.js",
+      "_db.js",
+      "_activity.service.js",
+      "_prompt-template.service.js",
+      "_local-storage.service.js",
+      "_correction-focus.js"
+    ]
+  },
+  "src/routes/api/storage/[...key]/+server.js": {
+    "file": "entries/endpoints/api/storage/_...key_/_server.js",
+    "name": "entries/endpoints/api/storage/_...key_/_server",
+    "src": "src/routes/api/storage/[...key]/+server.js",
+    "isEntry": true,
+    "imports": [
+      "_local-storage.service.js"
+    ]
+  },
+  "src/routes/api/supporto/+server.js": {
+    "file": "entries/endpoints/api/supporto/_server.js",
+    "name": "entries/endpoints/api/supporto/_server",
+    "src": "src/routes/api/supporto/+server.js",
+    "isEntry": true,
+    "imports": [
+      "_handler.js",
+      "_support-ticket.service.js"
+    ]
+  },
+  "src/routes/api/supporto/[id]/+server.js": {
+    "file": "entries/endpoints/api/supporto/_id_/_server.js",
+    "name": "entries/endpoints/api/supporto/_id_/_server",
+    "src": "src/routes/api/supporto/[id]/+server.js",
+    "isEntry": true,
+    "imports": [
+      "_handler.js",
+      "_support-ticket.service.js"
     ]
   },
   "src/routes/api/tentativi-correzione/+server.js": {
@@ -1034,16 +1343,17 @@
     "isEntry": true,
     "imports": [
       "_server.js",
-      "_runtime.js",
-      "_dist.js",
-      "_ParticlesAuth.js",
       "_stores.js",
       "_navigation.js",
+      "_index-server2.js",
+      "_svelte-link.js",
+      "_dist.js",
+      "_ParticlesAuth.js",
       "_auth-client.js",
-      "_svelte-link.js"
+      "_runtime.js"
     ],
     "css": [
-      "_app/immutable/assets/_page.BRaRFCaM.css"
+      "_app/immutable/assets/_page.DSTT5yGT.css"
     ]
   },
   "virtual:__sveltekit/env": {

@@ -1,7 +1,7 @@
 import { w as getContext } from "./server.js";
 import "./index-server2.js";
 import "./client.js";
-//#region node_modules/@sveltejs/kit/src/runtime/app/stores.js
+// node_modules/@sveltejs/kit/src/runtime/app/stores.js
 /**
 * A function that returns all of the contextual stores. On the server, this must be called during component initialization.
 * Only use this if you need to defer store subscription until after the component has mounted, for some reason.
@@ -43,5 +43,4 @@ var page = { subscribe(fn) {
 var navigating = { subscribe(fn) {
 	return getStores().navigating.subscribe(fn);
 } };
-//#endregion
 export { page as n, navigating as t };

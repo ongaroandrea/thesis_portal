@@ -1,185 +1,50 @@
 <script>
+	// Shared shell for sign-in, password and error pages: institutional header,
+	// one left-aligned column of content, credit footer. No decorative bands.
 	import LanguageSwitcher from '$lib/components/common/LanguageSwitcher.svelte';
 	import { _ } from 'svelte-i18n';
-	// import Particles from "svelte-particles";
-	// import { loadFull } from "tsparticles";
-
-	const particlesConfig = {
-		particles: {
-			number: {
-				value: 90,
-				density: {
-					enable: true,
-					value_area: 800,
-				},
-			},
-			color: {
-				value: "#ffffff",
-			},
-			shape: {
-				type: "circle",
-				stroke: {
-					width: 0,
-					color: "#000000",
-				},
-				polygon: {
-					nb_sides: 5,
-				},
-				image: {
-					src: "img/github.svg",
-					width: 100,
-					height: 100,
-				},
-			},
-			opacity: {
-				value: 0.8,
-				random: true,
-				anim: {
-					enable: true,
-					speed: 1,
-					opacity_min: 0,
-					sync: false,
-				},
-			},
-			size: {
-				value: 4,
-				random: true,
-				anim: {
-					enable: false,
-					speed: 4,
-					size_min: 0.2,
-					sync: false,
-				},
-			},
-			line_linked: {
-				enable: false,
-				distance: 150,
-				color: "#ffffff",
-				opacity: 0.4,
-				width: 1,
-			},
-			move: {
-				enable: true,
-				speed: 2,
-				direction: "none",
-				random: false,
-				straight: false,
-				out_mode: "out",
-				attract: {
-					enable: false,
-					rotateX: 600,
-					rotateY: 1200,
-				},
-			},
-		},
-		interactivity: {
-			detect_on: "canvas",
-			events: {
-				onhover: {
-					enable: true,
-					mode: "bubble",
-				},
-				onclick: {
-					enable: true,
-					mode: "repulse",
-				},
-				resize: true,
-			},
-			modes: {
-				grab: {
-					distance: 400,
-					line_linked: {
-						opacity: 1,
-					},
-				},
-				bubble: {
-					distance: 400,
-					size: 4,
-					duration: 2,
-					opacity: 0.8,
-					speed: 3,
-				},
-				repulse: {
-					distance: 200,
-				},
-				push: {
-					particles_nb: 4,
-				},
-				remove: {
-					particles_nb: 2,
-				},
-			},
-		},
-		retina_detect: true,
-		config_demo: {
-			hide_card: false,
-			background_color: "#b61924",
-			background_image: "",
-			background_position: "50% 50%",
-			background_repeat: "no-repeat",
-			background_size: "cover",
-		},
-	};
-
-	let onParticlesLoaded = (event) => {
-		const particlesContainer = event.detail.particles;
-
-		// you can use particlesContainer to call all the Container class
-		// (from the core library) methods like play, pause, refresh, start, stop
-	};
-
-	let particlesInit = async (engine) => {
-		// you can use main to customize the tsParticles instance adding presets or custom shapes
-		// this loads the tsparticles package bundle, it's the easiest method for getting everything ready
-		// starting from v2 you can add only the features you need reducing the bundle size
-		await loadFull(engine);
-	};
 </script>
 
-<div class="auth-page-wrapper pt-5">
-	<div class="language-position"><LanguageSwitcher /></div>
-	<div class="auth-one-bg-position auth-one-bg" id="auth-particles">
-		<div class="bg-overlay"></div>
-
-		<div class="shape">
-			<svg
-				xmlns="http://www.w3.org/2000/svg"
-				version="1.1"
-				xmlnsXlink="http://www.w3.org/1999/xlink"
-				viewBox="0 0 1440 120"
-			>
-				<path
-					d="M 0,36 C 144,53.6 432,123.2 720,124 C 1008,124.8 1296,56.8 1440,40L1440 140L0 140z"
-				/>
-			</svg>
+<div class="auth-page-wrapper" data-bs-theme="light">
+	<header class="auth-header">
+		<div class="container auth-header-inner">
+			<a class="auth-brand" href="/" aria-label={`${$_('site.name')}, home`}>
+				<img src="/images/polito_logo_desktop.svg" alt="Politecnico di Torino" />
+			</a>
+			<LanguageSwitcher />
 		</div>
-	</div>
-	<slot />
+	</header>
 
-	<footer class="footer">
-		<div class="container">
-			<div class="row">
-				<div class="col-lg-12">
-					<div class="text-center">
-						<p class="mb-0 text-muted">
-							&copy; {new Date().getFullYear()} {$_('home.eyebrow')} · {$_('common.alphaVersion')}
-							
-						</p>
-					</div>
-				</div>
-			</div>
+	<main class="container auth-main" id="main-content" tabindex="-1">
+		<div class="auth-column">
+			<slot />
 		</div>
+	</main>
+
+	<footer class="auth-footer">
+		<div class="container">{new Date().getFullYear()} © Federico Manuri - Andrea Sanna, Politecnico di Torino</div>
 	</footer>
 </div>
 
 <style>
-	.language-position { position: absolute; z-index: 10; top: 1rem; right: 1rem; }
-	:global(.auth-page-wrapper) { min-height: 100vh; background: #ffffff; }
-	:global(.auth-one-bg) { background: linear-gradient(135deg, #00284b 0%, #007ba1 100%) !important; }
-	:global(.auth-one-bg .bg-overlay) { background: transparent !important; opacity: 1 !important; }
-	:global(.auth-page-wrapper .card) { border: 1px solid rgba(0, 40, 75, 0.1); border-radius: 8px; box-shadow: 0 18px 48px rgba(0, 40, 75, 0.1); }
-	:global(.auth-page-wrapper .text-primary) { color: #007ba1 !important; }
-	:global(.auth-page-wrapper .btn-primary) { border-color: #007ba1; background: #007ba1; }
-	:global(.auth-page-wrapper .btn-primary:hover) { border-color: #00284b; background: #00284b; }
-	:global(.auth-page-wrapper a) { color: #007ba1; }
+	.auth-page-wrapper { min-height: 100vh; display: flex; flex-direction: column; color: var(--portal-polito-ink); background: var(--portal-public-surface); }
+	.auth-header { border-bottom: 1px solid rgba(var(--portal-polito-ink-rgb), 0.12); }
+	.auth-header-inner { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding-block: 1.1rem; }
+	.auth-brand img { display: block; width: 150px; height: auto; }
+	.auth-main { flex: 1; padding-block: clamp(2rem, 7vh, 4rem) 3rem; }
+	.auth-column { max-width: 26rem; }
+	.auth-footer { padding-block: 1.25rem; border-top: 1px solid rgba(var(--portal-polito-ink-rgb), 0.12); color: var(--portal-public-muted); font-size: 0.85rem; }
+
+	/* Public pages always render on the light institutional surface. */
+	.auth-page-wrapper :global(h1) { margin: 0 0 .5rem; color: var(--portal-polito-ink); font-size: 1.6rem; font-weight: 600; line-height: 1.25; }
+	.auth-page-wrapper :global(.auth-lead) { margin: 0 0 1.5rem; color: var(--portal-public-copy); line-height: 1.6; }
+	.auth-page-wrapper :global(.form-label) { color: var(--portal-polito-ink); }
+	.auth-page-wrapper :global(.btn-primary) { border-color: var(--portal-polito-blue); background: var(--portal-polito-blue); }
+	.auth-page-wrapper :global(.btn-primary:hover) { border-color: var(--portal-polito-ink); background: var(--portal-polito-ink); }
+	.auth-page-wrapper :global(a:not(.btn)) { color: var(--portal-polito-blue); }
+	.auth-page-wrapper :global(.auth-secondary) { margin: 1.5rem 0 0; padding-top: 1.25rem; border-top: 1px solid rgba(var(--portal-polito-ink-rgb), 0.12); color: var(--portal-public-copy); font-size: .92rem; }
+
+	@media (max-width: 575.98px) {
+		.auth-brand img { width: 125px; }
+	}
 </style>

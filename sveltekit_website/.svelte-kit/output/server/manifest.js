@@ -10,7 +10,7 @@ return {
 	assets: new Set(["images/favicon.ico","images/polito_logo_desktop.svg","images/polito_logo_desktop_bianco.png","robots.txt"]),
 	mimeTypes: {".svg":"image/svg+xml",".png":"image/png",".txt":"text/plain"},
 	_: {
-		client: {start:"_app/immutable/entry/start.Cj-ctvYV.js",app:"_app/immutable/entry/app.CZZZKTvH.js",imports:["_app/immutable/entry/start.Cj-ctvYV.js","_app/immutable/chunks/R-xf7ibW.js","_app/immutable/chunks/CLKU1sNR.js","_app/immutable/chunks/CtaBhaFl.js","_app/immutable/entry/app.CZZZKTvH.js","_app/immutable/chunks/CLKU1sNR.js","_app/immutable/chunks/uBIymjUX.js","_app/immutable/chunks/xihTtKlq.js"],stylesheets:[],fonts:[],uses_env_dynamic_public:false},
+		client: {start:"_app/immutable/entry/start.BzTZEFYr.js",app:"_app/immutable/entry/app.BSueasaL.js",imports:["_app/immutable/entry/start.BzTZEFYr.js","_app/immutable/chunks/DQOf03GT.js","_app/immutable/chunks/xpPworqp.js","_app/immutable/chunks/BVpGFOjf.js","_app/immutable/entry/app.BSueasaL.js","_app/immutable/chunks/xpPworqp.js","_app/immutable/chunks/xihTtKlq.js","_app/immutable/chunks/CRzLMJPS.js"],stylesheets:[],fonts:[],uses_env_dynamic_public:false},
 		nodes: [
 			__memo(() => import('./nodes/0.js')),
 			__memo(() => import('./nodes/1.js')),
@@ -36,7 +36,11 @@ return {
 			__memo(() => import('./nodes/21.js')),
 			__memo(() => import('./nodes/22.js')),
 			__memo(() => import('./nodes/23.js')),
-			__memo(() => import('./nodes/24.js'))
+			__memo(() => import('./nodes/24.js')),
+			__memo(() => import('./nodes/25.js')),
+			__memo(() => import('./nodes/26.js')),
+			__memo(() => import('./nodes/27.js')),
+			__memo(() => import('./nodes/28.js'))
 		],
 		remotes: {
 			
@@ -113,6 +117,20 @@ return {
 				endpoint: __memo(() => import('./entries/endpoints/api/esercitazioni/_id_/immagini/_imageId_/_server.js'))
 			},
 			{
+				id: "/api/feedback-correzione",
+				pattern: /^\/api\/feedback-correzione\/?$/,
+				params: [],
+				page: null,
+				endpoint: __memo(() => import('./entries/endpoints/api/feedback-correzione/_server.js'))
+			},
+			{
+				id: "/api/feedback-correzione/statistiche",
+				pattern: /^\/api\/feedback-correzione\/statistiche\/?$/,
+				params: [],
+				page: null,
+				endpoint: __memo(() => import('./entries/endpoints/api/feedback-correzione/statistiche/_server.js'))
+			},
+			{
 				id: "/api/membri",
 				pattern: /^\/api\/membri\/?$/,
 				params: [],
@@ -125,6 +143,13 @@ return {
 				params: [{"name":"id","optional":false,"rest":false,"chained":false}],
 				page: null,
 				endpoint: __memo(() => import('./entries/endpoints/api/membri/_id_/_server.js'))
+			},
+			{
+				id: "/api/prompt-template",
+				pattern: /^\/api\/prompt-template\/?$/,
+				params: [],
+				page: null,
+				endpoint: __memo(() => import('./entries/endpoints/api/prompt-template/_server.js'))
 			},
 			{
 				id: "/api/risultati",
@@ -162,6 +187,27 @@ return {
 				endpoint: __memo(() => import('./entries/endpoints/api/sessioni-correzione/_id_/job/_server.js'))
 			},
 			{
+				id: "/api/storage/[...key]",
+				pattern: /^\/api\/storage(?:\/([^]*))?\/?$/,
+				params: [{"name":"key","optional":false,"rest":true,"chained":true}],
+				page: null,
+				endpoint: __memo(() => import('./entries/endpoints/api/storage/_...key_/_server.js'))
+			},
+			{
+				id: "/api/supporto",
+				pattern: /^\/api\/supporto\/?$/,
+				params: [],
+				page: null,
+				endpoint: __memo(() => import('./entries/endpoints/api/supporto/_server.js'))
+			},
+			{
+				id: "/api/supporto/[id]",
+				pattern: /^\/api\/supporto\/([^/]+?)\/?$/,
+				params: [{"name":"id","optional":false,"rest":false,"chained":false}],
+				page: null,
+				endpoint: __memo(() => import('./entries/endpoints/api/supporto/_id_/_server.js'))
+			},
+			{
 				id: "/api/tentativi-correzione",
 				pattern: /^\/api\/tentativi-correzione\/?$/,
 				params: [],
@@ -193,7 +239,7 @@ return {
 				id: "/auth/verifica-password",
 				pattern: /^\/auth\/verifica-password\/?$/,
 				params: [],
-				page: { layouts: [0,6,], errors: [1,,], leaf: 24 },
+				page: { layouts: [0,6,], errors: [1,,], leaf: 28 },
 				endpoint: null
 			},
 			{
@@ -207,7 +253,7 @@ return {
 				id: "/(protected)/corsi/aggiungi",
 				pattern: /^\/corsi\/aggiungi\/?$/,
 				params: [],
-				page: { layouts: [0,2,], errors: [1,,], leaf: 20 },
+				page: { layouts: [0,2,], errors: [1,,], leaf: 21 },
 				endpoint: null
 			},
 			{
@@ -260,31 +306,45 @@ return {
 				endpoint: null
 			},
 			{
+				id: "/(protected)/corsi/[id]/prompt",
+				pattern: /^\/corsi\/([^/]+?)\/prompt\/?$/,
+				params: [{"name":"id","optional":false,"rest":false,"chained":false}],
+				page: { layouts: [0,2,], errors: [1,,], leaf: 19 },
+				endpoint: null
+			},
+			{
 				id: "/(protected)/corsi/[id]/statistiche",
 				pattern: /^\/corsi\/([^/]+?)\/statistiche\/?$/,
 				params: [{"name":"id","optional":false,"rest":false,"chained":false}],
-				page: { layouts: [0,2,], errors: [1,,], leaf: 19 },
+				page: { layouts: [0,2,], errors: [1,,], leaf: 20 },
 				endpoint: null
 			},
 			{
 				id: "/(public)/login",
 				pattern: /^\/login\/?$/,
 				params: [],
-				page: { layouts: [0,4,5,], errors: [1,,,], leaf: 22 },
+				page: { layouts: [0,4,5,], errors: [1,,,], leaf: 26 },
 				endpoint: null
 			},
 			{
 				id: "/(public)/password-dimenticata",
 				pattern: /^\/password-dimenticata\/?$/,
 				params: [],
-				page: { layouts: [0,4,], errors: [1,,], leaf: 23 },
+				page: { layouts: [0,4,], errors: [1,,], leaf: 27 },
 				endpoint: null
 			},
 			{
 				id: "/(protected)/profilo",
 				pattern: /^\/profilo\/?$/,
 				params: [],
-				page: { layouts: [0,2,], errors: [1,,], leaf: 21 },
+				page: { layouts: [0,2,], errors: [1,,], leaf: 22 },
+				endpoint: null
+			},
+			{
+				id: "/(protected)/prompt",
+				pattern: /^\/prompt\/?$/,
+				params: [],
+				page: { layouts: [0,2,], errors: [1,,], leaf: 23 },
 				endpoint: null
 			},
 			{
@@ -306,6 +366,20 @@ return {
 				pattern: /^\/studenti\/([^/]+?)\/?$/,
 				params: [{"name":"id","optional":false,"rest":false,"chained":false}],
 				page: { layouts: [0,2,3,], errors: [1,,,], leaf: 9 },
+				endpoint: null
+			},
+			{
+				id: "/(protected)/supporto",
+				pattern: /^\/supporto\/?$/,
+				params: [],
+				page: { layouts: [0,2,], errors: [1,,], leaf: 24 },
+				endpoint: null
+			},
+			{
+				id: "/(protected)/supporto/gestione",
+				pattern: /^\/supporto\/gestione\/?$/,
+				params: [],
+				page: { layouts: [0,2,], errors: [1,,], leaf: 25 },
 				endpoint: null
 			}
 		],

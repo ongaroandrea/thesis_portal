@@ -1,13 +1,13 @@
 import { A as escape_html, g as unsubscribe_stores, m as store_get, s as head } from "../../../../../../../chunks/server.js";
 import "../../../../../../../chunks/index-server2.js";
-import "../../../../../../../chunks/correction-focus.js";
-import { t as $format } from "../../../../../../../chunks/runtime.js";
 import { n as page } from "../../../../../../../chunks/stores.js";
 import "../../../../../../../chunks/navigation.js";
 import "../../../../../../../chunks/api.js";
+import "../../../../../../../chunks/modal-dialog.js";
 import { t as PageHeader } from "../../../../../../../chunks/PageHeader.js";
-//#endregion
-//#region src/routes/(protected)/corsi/[id]/esercitazioni/[activityId]/+page.svelte
+import { t as $format } from "../../../../../../../chunks/runtime.js";
+import "../../../../../../../chunks/correction-focus.js";
+// src/routes/(protected)/corsi/[id]/esercitazioni/[activityId]/+page.svelte
 function _page($$renderer, $$props) {
 	$$renderer.component(($$renderer) => {
 		var $$store_subs;
@@ -63,5 +63,4 @@ function _page($$renderer, $$props) {
 		if ($$store_subs) unsubscribe_stores($$store_subs);
 	});
 }
-//#endregion
 export { _page as default };

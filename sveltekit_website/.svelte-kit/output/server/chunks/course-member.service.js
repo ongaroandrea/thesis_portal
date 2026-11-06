@@ -1,11 +1,12 @@
-import { a as numericId, c as paginationParams, l as requireUser, r as ApiError, s as paginated } from "./handler.js";
-import { c as courseInvitation, h as user, l as courseMember, t as db } from "./db.js";
+import { b as user, d as courseMember, t as db, u as courseInvitation } from "./db.js";
+import { a as paginated, o as paginationParams, r as numericId, s as requireUser, t as ApiError } from "./api.service.js";
 import { t as courseService } from "./course.service.js";
 import { and, asc, eq, gt, isNull, or, sql } from "drizzle-orm";
-//#region src/lib/server/services/course-member-view.js
+// src/lib/server/services/course-member-view.js
 function combineCourseAuthorizations(members, invitations) {
 	const memberEmails = new Set(members.map((member) => member.email.trim().toLowerCase()));
-	const pending = invitations.filter((invitation) => !memberEmails.has(invitation.email.trim().toLowerCase())).map((invitation) => ({
+	const memberUserIds = new Set(members.map((member) => member.userId).filter(Boolean));
+	const pending = invitations.filter((invitation) => !memberEmails.has(invitation.email.trim().toLowerCase()) && (!invitation.matchedUserId || !memberUserIds.has(invitation.matchedUserId))).map((invitation) => ({
 		id: `invitation-${invitation.id}`,
 		invitationId: invitation.id,
 		courseId: invitation.courseId,
@@ -22,8 +23,7 @@ function combineCourseAuthorizations(members, invitations) {
 	})).sort((left, right) => left.email.localeCompare(right.email, void 0, { sensitivity: "base" }));
 	return [...members, ...pending];
 }
-//#endregion
-//#region src/lib/server/services/course-member.service.js
+// src/lib/server/services/course-member.service.js
 async function findMember(id) {
 	const [record] = await db.select().from(courseMember).where(eq(courseMember.id, numericId(id, "memberId"))).limit(1);
 	if (!record) throw new ApiError(404, "Course member not found.", "MEMBER_NOT_FOUND");
@@ -104,7 +104,7 @@ var courseMemberService = {
 		const role = input.role ?? "STUDENT";
 		if (!["PROFESSOR", "STUDENT"].includes(role)) throw new ApiError(400, "role must be PROFESSOR or STUDENT.", "VALIDATION_ERROR");
 		if (!managerAuthorized && role !== "STUDENT") throw new ApiError(403, "An invitation can only create a student membership.", "MEMBER_ROLE_DENIED");
-		if (role === "PROFESSOR" && !["professor", "developer"].includes(targetUser.role)) throw new ApiError(400, "Only a professor or developer account can receive the PROFESSOR course role.", "MEMBER_ROLE_DENIED");
+		if (role === "PROFESSOR" && !["professor", "admin"].includes(targetUser.role)) throw new ApiError(400, "Only a professor or admin account can receive the PROFESSOR course role.", "MEMBER_ROLE_DENIED");
 		return db.transaction(async (tx) => {
 			const [created] = await tx.insert(courseMember).values({
 				courseId,
@@ -127,7 +127,7 @@ var courseMemberService = {
 			if (!["PROFESSOR", "STUDENT"].includes(input.role)) throw new ApiError(400, "role must be PROFESSOR or STUDENT.", "VALIDATION_ERROR");
 			if (input.role === "PROFESSOR") {
 				const targetUser = await findUser(record.userId);
-				if (!["professor", "developer"].includes(targetUser.role)) throw new ApiError(400, "Only a professor or developer account can receive the PROFESSOR course role.", "MEMBER_ROLE_DENIED");
+				if (!["professor", "admin"].includes(targetUser.role)) throw new ApiError(400, "Only a professor or admin account can receive the PROFESSOR course role.", "MEMBER_ROLE_DENIED");
 			}
 			values.role = input.role;
 		}
@@ -153,5 +153,4 @@ var courseMemberService = {
 		return { id: record.id };
 	}
 };
-//#endregion
 export { courseMemberService as t };

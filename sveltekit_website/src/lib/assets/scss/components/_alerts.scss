@@ -41,7 +41,7 @@
 // Alert border left example
 
 .alert-border-left {
-    border-left: 3px solid;
+    border: 1px solid;
 }
 
 // alert top border example
@@ -132,7 +132,7 @@
                 color: var(--#{$prefix}#{$color});
             }
         }
-        
+
     }
 
     //alert additional example
@@ -150,11 +150,11 @@
         background: transparent !important;
         &::after {
             background: transparent !important;
-            content: "\F0156" !important;
+            content: "\eb99" !important;
             font-size: 18px;
             line-height:15px;
-            font-family: "Material Design Icons" !important;
+            font-family: "remixicon" !important;
         }
     }
 }
-   
+

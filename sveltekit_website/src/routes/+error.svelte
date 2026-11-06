@@ -1,49 +1,45 @@
 <script>
 	import { page } from '$app/state';
-	import { Card, CardBody, Col, Container, Row } from '@sveltestrap/sveltestrap';
 	import ParticlesAuth from '$lib/components/layouts/ParticlesAuth.svelte';
 	import { _ } from 'svelte-i18n';
 
 	const messages = {
 		400: ['error.badRequest', 'error.badRequestBody'],
+		401: ['error.unauthorized', 'error.unauthorizedBody'],
 		403: ['error.forbidden', 'error.forbiddenBody'],
 		404: ['error.notFound', 'error.notFoundBody'],
 		500: ['error.server', 'error.serverBody']
 	};
 
 	let content = $derived(messages[page.status] ?? ['error.generic', 'error.genericBody']);
+	// /supporto needs a session, so signed-out visitors are sent to the login page instead.
+	let canReport = $derived(page.status !== 401);
 </script>
 
 <svelte:head>
-	<title>{page.status} | {$_('home.eyebrow')}</title>
+	<title>{$_(content[0])} ({page.status}) | {$_('site.name')}</title>
 </svelte:head>
 
 <ParticlesAuth>
-	<div class="auth-page-content">
-		<Container>
-			<Row>
-				<Col lg={12}>
-					<div class="text-center mt-sm-5 mb-4">
-						<a href="/" aria-label={$_('common.backHome')}>
-							<img src="/images/polito_logo_desktop.svg" alt="Politecnico di Torino" height="76" />
-						</a>
-					</div>
-				</Col>
-			</Row>
-			<Row class="justify-content-center">
-				<Col md={8} lg={6} xl={5}>
-					<Card class="mt-4">
-						<CardBody class="p-4 p-sm-5 text-center">
-							<p class="display-1 fw-semibold text-primary mb-2">{page.status}</p>
-							<h1 class="h3 mb-3">{$_(content[0])}</h1>
-							<p class="text-muted mb-4">{$_(content[1])}</p>
-							<a href="/" class="btn btn-primary">
-								<i class="mdi mdi-home me-1" aria-hidden="true"></i>{$_('common.backHome')}
-							</a>
-						</CardBody>
-					</Card>
-				</Col>
-			</Row>
-		</Container>
+	<p class="error-code">{$_('error.code', { values: { status: page.status } })}</p>
+	<h1>{$_(content[0])}</h1>
+	<p class="auth-lead">{$_(content[1])}</p>
+	<div class="d-flex flex-wrap gap-2">
+		{#if page.status === 401}
+			<a href="/login" class="btn btn-primary">{$_('login')}</a>
+		{:else}
+			<a href="/corsi" class="btn btn-primary">{$_('error.toCourses')}</a>
+		{/if}
+		<a href="/" class="btn btn-light">{$_('common.backHome')}</a>
 	</div>
+	{#if canReport}
+		<p class="auth-secondary">
+			{$_('error.reportHelp')}
+			<a href={`/supporto?category=WEBSITE&from=${encodeURIComponent(page.url.pathname)}`}>{$_('support.reportProblem')}</a>
+		</p>
+	{/if}
 </ParticlesAuth>
+
+<style>
+	.error-code { margin: 0 0 .5rem; color: var(--portal-public-muted); font-size: .9rem; font-variant-numeric: tabular-nums; }
+</style>

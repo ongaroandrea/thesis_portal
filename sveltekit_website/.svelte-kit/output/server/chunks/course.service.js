@@ -1,8 +1,8 @@
-import { a as numericId, c as paginationParams, i as dateValue, l as requireUser, o as optionalText, r as ApiError, s as paginated, u as requiredText } from "./handler.js";
-import { l as courseMember, o as course, t as db } from "./db.js";
+import { c as course, d as courseMember, t as db } from "./db.js";
+import { a as paginated, c as requiredText, i as optionalText, n as dateValue, o as paginationParams, r as numericId, s as requireUser, t as ApiError } from "./api.service.js";
 import { and, count, desc, eq, or } from "drizzle-orm";
-//#region src/lib/server/services/course.service.js
-var isDeveloper = (currentUser) => currentUser.role === "developer";
+// src/lib/server/services/course.service.js
+var isAdmin = (currentUser) => currentUser.role === "admin";
 async function findCourse(id) {
 	const [record] = await db.select().from(course).where(eq(course.id, numericId(id, "courseId"))).limit(1);
 	if (!record) throw new ApiError(404, "Course not found.", "COURSE_NOT_FOUND");
@@ -16,8 +16,9 @@ async function isAuthorizedMember(courseId, userId) {
 	return Boolean(await findActiveMembership(courseId, userId));
 }
 async function canManage(record, currentUser) {
-	if (isDeveloper(currentUser)) return true;
+	if (isAdmin(currentUser)) return true;
 	if (currentUser.role !== "professor") return false;
+	if (record.createdByUserId === numericId(currentUser.id, "userId")) return true;
 	return (await findActiveMembership(record.id, currentUser.id))?.role === "PROFESSOR";
 }
 async function requireCourseAccess(courseId, currentUser) {
@@ -30,7 +31,7 @@ async function requireCourseAccess(courseId, currentUser) {
 async function requireCourseManager(courseId, currentUser) {
 	requireUser(currentUser);
 	const record = await findCourse(courseId);
-	if (!await canManage(record, currentUser)) throw new ApiError(403, "Only an authorized course professor or a developer can perform this action.", "COURSE_MANAGEMENT_DENIED");
+	if (!await canManage(record, currentUser)) throw new ApiError(403, "Only an authorized course professor or an admin can perform this action.", "COURSE_MANAGEMENT_DENIED");
 	return record;
 }
 function nullableDate(input, field) {
@@ -67,7 +68,7 @@ var courseService = {
 	async list(currentUser, searchParams) {
 		requireUser(currentUser);
 		const pagination = paginationParams(searchParams);
-		if (isDeveloper(currentUser)) {
+		if (isAdmin(currentUser)) {
 			const [records, [{ total }]] = await Promise.all([db.select().from(course).orderBy(desc(course.createdAt), desc(course.id)).limit(pagination.pageSize).offset(pagination.offset), db.select({ total: count() }).from(course)]);
 			return paginated(records.map((record) => ({
 				...record,
@@ -75,8 +76,10 @@ var courseService = {
 				canManage: true
 			})), total, pagination);
 		}
-		const membershipCondition = and(eq(courseMember.courseId, course.id), eq(courseMember.userId, numericId(currentUser.id, "userId")), eq(courseMember.status, "ACTIVE"));
-		const visibilityCondition = or(eq(course.isActive, true), and(eq(courseMember.role, "PROFESSOR"), eq(courseMember.status, "ACTIVE")));
+		const currentUserId = numericId(currentUser.id, "userId");
+		const membershipCondition = and(eq(courseMember.courseId, course.id), eq(courseMember.userId, currentUserId), eq(courseMember.status, "ACTIVE"));
+		const membershipVisibility = or(and(eq(course.isActive, true), eq(courseMember.status, "ACTIVE")), and(eq(courseMember.role, "PROFESSOR"), eq(courseMember.status, "ACTIVE")));
+		const visibilityCondition = currentUser.role === "professor" ? or(eq(course.createdByUserId, currentUserId), membershipVisibility) : membershipVisibility;
 		const selection = {
 			id: course.id,
 			name: course.name,
@@ -89,15 +92,15 @@ var courseService = {
 			updatedAt: course.updatedAt,
 			membershipRole: courseMember.role
 		};
-		const [records, [{ total }]] = await Promise.all([db.select(selection).from(course).innerJoin(courseMember, membershipCondition).where(visibilityCondition).orderBy(desc(course.createdAt), desc(course.id)).limit(pagination.pageSize).offset(pagination.offset), db.select({ total: count() }).from(course).innerJoin(courseMember, membershipCondition).where(visibilityCondition)]);
+		const [records, [{ total }]] = await Promise.all([db.select(selection).from(course).leftJoin(courseMember, membershipCondition).where(visibilityCondition).orderBy(desc(course.createdAt), desc(course.id)).limit(pagination.pageSize).offset(pagination.offset), db.select({ total: count() }).from(course).leftJoin(courseMember, membershipCondition).where(visibilityCondition)]);
 		return paginated(records.map((record) => ({
 			...record,
-			canManage: currentUser.role === "professor" && record.membershipRole === "PROFESSOR"
+			canManage: currentUser.role === "professor" && (record.createdByUserId === currentUserId || record.membershipRole === "PROFESSOR")
 		})), total, pagination);
 	},
 	async get(id, currentUser) {
 		const record = await requireCourseAccess(id, currentUser);
-		const membership = isDeveloper(currentUser) ? null : await findActiveMembership(record.id, currentUser.id);
+		const membership = isAdmin(currentUser) ? null : await findActiveMembership(record.id, currentUser.id);
 		return {
 			...record,
 			membershipRole: membership?.role ?? null,
@@ -106,14 +109,17 @@ var courseService = {
 	},
 	async create(input, currentUser) {
 		requireUser(currentUser);
-		if (!isDeveloper(currentUser) && currentUser.role !== "professor") throw new ApiError(403, "Only a professor or developer can create a course.", "COURSE_CREATE_DENIED");
+		if (!isAdmin(currentUser) && currentUser.role !== "professor") throw new ApiError(403, "Only a professor or admin can create a course.", "COURSE_CREATE_DENIED");
 		const values = courseValues(input);
 		validateWindow(values);
-		const [created] = await db.insert(course).values({
-			...values,
-			createdByUserId: numericId(currentUser.id, "userId")
-		}).returning();
-		return created;
+		const creatorId = numericId(currentUser.id, "userId");
+		return db.transaction(async (tx) => {
+			const [created] = await tx.insert(course).values({
+				...values,
+				createdByUserId: creatorId
+			}).returning();
+			return created;
+		});
 	},
 	async update(id, input, currentUser) {
 		const record = await requireCourseManager(id, currentUser);
@@ -131,5 +137,4 @@ var courseService = {
 		return { id: record.id };
 	}
 };
-//#endregion
 export { courseService as t };

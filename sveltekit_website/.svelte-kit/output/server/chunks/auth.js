@@ -1,15 +1,15 @@
 import { n as __reExport, t as __exportAll } from "./rolldown-runtime.js";
-import "./shared.js";
-import { t as private_env } from "./shared-server.js";
-import "./remote.js";
-import { p as schema_exports, t as db } from "./db.js";
-import "./paths.js";
 import { a as isDynamicBaseURLConfig, c as wildcardMatch, i as getProtocol, n as getHost, o as isRequestLike, r as getOrigin, s as resolveBaseURL, t as getBaseURL } from "./url.js";
+import "./paths.js";
+import "./shared.js";
+import "./remote.js";
+import { _ as schema_exports, t as db } from "./db.js";
+import { t as private_env } from "./shared-server.js";
 import { getRequestEvent } from "@sveltejs/kit/internal/server";
 import { createLogger, env, isDevelopment, isProduction, isTest, logger, shouldPublishLog } from "@better-auth/core/env";
 import { APIError, APIError as APIError$1, BASE_ERROR_CODES, BetterAuthError } from "@better-auth/core/error";
 import { appendQueryParams, normalizePathname } from "@better-auth/core/utils/url";
-import defu$1, { createDefu, defu } from "defu";
+import defu, { createDefu, defu as defu$1 } from "defu";
 import { betterFetch } from "@better-fetch/fetch";
 import "dotenv/config";
 import { createRandomStringGenerator } from "@better-auth/utils/random";
@@ -29,6 +29,7 @@ import { createRouter, kAPIErrorHeaderSymbol, serializeCookie, toResponse } from
 import { base64Url } from "@better-auth/utils/base64";
 import { binary } from "@better-auth/utils/binary";
 import { createHMAC } from "@better-auth/utils/hmac";
+import { bytesToHex as bytesToHex$1, utf8ToBytes as utf8ToBytes$1 } from "@noble/hashes/utils.js";
 import { defineRequestState, getBetterAuthVersion, getCurrentAdapter, getCurrentAuthEndpointContext, hasRequestState, queueAfterTransactionHook, runWithAdapter, runWithEndpointContext, runWithRequestState, runWithTransaction, tryGetCurrentAuthEndpointContext } from "@better-auth/core/context";
 import { isAPIError } from "@better-auth/core/utils/is-api-error";
 import { createAuthEndpoint, createAuthMiddleware, createAuthMiddleware as createAuthMiddleware$1 } from "@better-auth/core/api";
@@ -36,21 +37,20 @@ import { deprecate } from "@better-auth/core/utils/deprecate";
 import { createRateLimitKey, findInvalidTrustedProxies, getIP } from "@better-auth/core/utils/ip";
 import { ATTR_CONTEXT, ATTR_DB_COLLECTION_NAME, ATTR_HOOK_TYPE, ATTR_HTTP_RESPONSE_STATUS_CODE, ATTR_HTTP_ROUTE, ATTR_OPERATION_ID, createWithSpan } from "@better-auth/core/instrumentation";
 import { generateId } from "@better-auth/core/utils/id";
+import { SchemaMismatchError, diffSchema, encodeDeterministicId, formatSchemaFinding, getAuthTablesWithResolvedIndexes, getDatabaseFieldIndexName, getDatabaseIndexStringLength, getPortableDatabaseIdentifierKey, invalidateSchemaChecks, runtimeSchemaCheckFor, schemaCheckFor } from "@better-auth/core/db/internal";
 import { isLoopbackHost } from "@better-auth/core/utils/host";
 import { JWTExpired } from "jose/errors";
 import { additionalAuthorizationParamsSchema, mergeScopes, supportsIdTokenSignIn, verifyProviderIdToken } from "@better-auth/core/oauth2";
 import { SocialProviderListEnum, socialProviders } from "@better-auth/core/social-providers";
-import { SchemaMismatchError, diffSchema, formatSchemaFinding, getAuthTablesWithResolvedIndexes, getDatabaseFieldIndexName, getDatabaseIndexStringLength, getPortableDatabaseIdentifierKey, invalidateSchemaChecks, schemaCheckFor } from "@better-auth/core/db/internal";
 import { createKyselyAdapter, getKyselyDatabaseType, getMssqlSchema, getPostgresSchema, toIntrospectedTables, toPhysicalSchema } from "@better-auth/kysely-adapter";
 import { initGetFieldName, initGetModelName, whereOperators } from "@better-auth/core/db/adapter";
 import { sql } from "kysely";
 import { createTelemetry } from "@better-auth/telemetry";
 import { defineErrorCodes } from "@better-auth/core/utils/error-codes";
 import nodemailer from "nodemailer";
-//#region node_modules/better-auth/dist/crypto/random.mjs
+// node_modules/better-auth/dist/crypto/random.mjs
 var generateRandomString = createRandomStringGenerator("a-z", "0-9", "A-Z", "-_");
-//#endregion
-//#region node_modules/better-auth/dist/crypto/jwt.mjs
+// node_modules/better-auth/dist/crypto/jwt.mjs
 async function signJWT(payload, secret, expiresIn = 3600) {
 	return await new SignJWT(payload).setProtectedHeader({ alg: "HS256" }).setIssuedAt().setExpirationTime(Math.floor(Date.now() / 1e3) + expiresIn).sign(new TextEncoder().encode(secret));
 }
@@ -178,7 +178,8 @@ async function symmetricDecodeJWT(token, secret, salt) {
 		if (secrets.length <= 1) return null;
 		for (let i = 1; i < secrets.length; i++) try {
 			const s = secrets[i];
-			const { payload } = await jwtDecrypt(token, deriveEncryptionSecret(s.value, salt), jwtDecryptOpts);
+			const encryptionSecret = deriveEncryptionSecret(s.value, salt);
+			const { payload } = await jwtDecrypt(token, encryptionSecret, jwtDecryptOpts);
 			return payload;
 		} catch {
 			continue;
@@ -186,8 +187,7 @@ async function symmetricDecodeJWT(token, secret, salt) {
 		return null;
 	}
 }
-//#endregion
-//#region node_modules/better-auth/dist/crypto/password.mjs
+// node_modules/better-auth/dist/crypto/password.mjs
 /**
 * `@better-auth/utils/password` uses the "node" export condition in package.json
 * to automatically pick the right implementation:
@@ -198,8 +198,7 @@ var hashPassword$1 = hashPassword;
 var verifyPassword$1$1 = async ({ hash, password }) => {
 	return verifyPassword(hash, password);
 };
-//#endregion
-//#region node_modules/better-auth/dist/crypto/index.mjs
+// node_modules/better-auth/dist/crypto/index.mjs
 var ENVELOPE_PREFIX = "$ba$";
 function parseEnvelope(data) {
 	if (!data.startsWith(ENVELOPE_PREFIX)) return null;
@@ -219,7 +218,8 @@ function formatEnvelope(version, ciphertext) {
 async function rawEncrypt(secret, data) {
 	const keyAsBytes = await createHash("SHA-256").digest(secret);
 	const dataAsBytes = utf8ToBytes(data);
-	return bytesToHex(managedNonce(xchacha20poly1305)(new Uint8Array(keyAsBytes)).encrypt(dataAsBytes));
+	const chacha = managedNonce(xchacha20poly1305)(new Uint8Array(keyAsBytes));
+	return bytesToHex(chacha.encrypt(dataAsBytes));
 }
 async function rawDecrypt(secret, hex) {
 	const keyAsBytes = await createHash("SHA-256").digest(secret);
@@ -245,8 +245,7 @@ var symmetricDecrypt = async ({ key, data }) => {
 	if (key.legacySecret) return rawDecrypt(key.legacySecret, data);
 	throw new Error("Cannot decrypt legacy bare-hex payload: no legacy secret available. Set BETTER_AUTH_SECRET for backwards compatibility.");
 };
-//#endregion
-//#region node_modules/better-auth/dist/context/store-capabilities.mjs
+// node_modules/better-auth/dist/context/store-capabilities.mjs
 function hasServerSessionStore(options) {
 	return !!options.database || !!options.secondaryStorage;
 }
@@ -256,8 +255,7 @@ function hasServerAccountStore(options) {
 function shouldBindAccountCookieToSessionUser(options) {
 	return hasServerAccountStore(options);
 }
-//#endregion
-//#region node_modules/better-auth/dist/db/schema.mjs
+// node_modules/better-auth/dist/db/schema.mjs
 var cache = /* @__PURE__ */ new WeakMap();
 function getFields(options, modelName, mode) {
 	const cacheKey = `${modelName}:${mode}`;
@@ -278,7 +276,8 @@ function getFields(options, modelName, mode) {
 	return schema;
 }
 function parseUserOutput(options, user) {
-	return filterOutputFields(user, getFields(options, "user", "output"));
+	const schema = getFields(options, "user", "output");
+	return filterOutputFields(user, schema);
 }
 /**
 * Builds a synthetic user object that matches the shape of a real user
@@ -306,10 +305,12 @@ function buildSyntheticUserOutput(options, data) {
 	return result;
 }
 function parseSessionOutput(options, session) {
-	return filterOutputFields(session, getFields(options, "session", "output"));
+	const schema = getFields(options, "session", "output");
+	return filterOutputFields(session, schema);
 }
 function parseAccountOutput(options, account) {
-	const { accessToken: _accessToken, refreshToken: _refreshToken, idToken: _idToken, accessTokenExpiresAt: _accessTokenExpiresAt, refreshTokenExpiresAt: _refreshTokenExpiresAt, password: _password, ...rest } = filterOutputFields(account, getFields(options, "account", "output"));
+	const schema = getFields(options, "account", "output");
+	const { accessToken: _accessToken, refreshToken: _refreshToken, idToken: _idToken, accessTokenExpiresAt: _accessTokenExpiresAt, refreshTokenExpiresAt: _refreshTokenExpiresAt, password: _password, ...rest } = filterOutputFields(account, schema);
 	return rest;
 }
 function parseInputData(data, schema) {
@@ -406,18 +407,15 @@ function mergeSchema(schema, newSchema) {
 	}
 	return schema;
 }
-//#endregion
-//#region node_modules/better-auth/dist/utils/date.mjs
+// node_modules/better-auth/dist/utils/date.mjs
 var getDate = (span, unit = "ms") => {
 	return new Date(Date.now() + (unit === "sec" ? span * 1e3 : span));
 };
-//#endregion
-//#region node_modules/better-auth/dist/utils/is-promise.mjs
+// node_modules/better-auth/dist/utils/is-promise.mjs
 function isPromise(obj) {
 	return !!obj && (typeof obj === "object" || typeof obj === "function") && typeof obj.then === "function";
 }
-//#endregion
-//#region node_modules/better-auth/dist/utils/time.mjs
+// node_modules/better-auth/dist/utils/time.mjs
 var SEC = 1e3;
 var MIN = SEC * 60;
 var HOUR = MIN * 60;
@@ -497,8 +495,7 @@ function parse(value) {
 function sec(value) {
 	return Math.round(parse(value) / 1e3);
 }
-//#endregion
-//#region node_modules/better-auth/dist/cookies/cache.mjs
+// node_modules/better-auth/dist/cookies/cache.mjs
 var cookieCachePayloadSchema = z.looseObject({
 	session: sessionSchema.loose(),
 	user: userSchema.loose(),
@@ -525,8 +522,7 @@ function parseCompactCookieCache(value) {
 	const result = compactCookieCacheSchema.safeParse(value);
 	return result.success ? result.data : null;
 }
-//#endregion
-//#region node_modules/better-auth/dist/cookies/cookie-utils.mjs
+// node_modules/better-auth/dist/cookies/cookie-utils.mjs
 function tryDecode(str) {
 	if (str.indexOf("%") === -1) return str;
 	try {
@@ -683,8 +679,7 @@ function parseCookies(cookie) {
 	}
 	return cookieMap;
 }
-//#endregion
-//#region node_modules/better-auth/dist/cookies/session-store.mjs
+// node_modules/better-auth/dist/cookies/session-store.mjs
 /**
 * Per-cookie byte ceiling.
 * Safari's ~4093 floor is the lowest among browsers.
@@ -860,8 +855,7 @@ var getSessionQuerySchema = z.optional(z.object({
 	disableCookieCache: z.coerce.boolean().meta({ description: "Disable cookie cache and fetch session from database" }).optional(),
 	disableRefresh: z.coerce.boolean().meta({ description: "Disable session refresh. Useful for checking session status, without updating the session" }).optional()
 }));
-//#endregion
-//#region node_modules/better-auth/dist/cookies/index.mjs
+// node_modules/better-auth/dist/cookies/index.mjs
 function createCookieGetter(options) {
 	const baseURLString = typeof options.baseURL === "string" ? options.baseURL : void 0;
 	const dynamicProtocol = typeof options.baseURL === "object" && options.baseURL !== null ? options.baseURL.protocol : void 0;
@@ -960,11 +954,13 @@ async function setCookieCache(ctx, session, dontRememberMe) {
 	sessionStore.setCookies(sessionStore.chunk(data, options));
 	if (ctx.context.options.account?.storeAccountCookie && !hasPendingSetCookie(ctx, ctx.context.authCookies.accountData.name)) {
 		const accountData = await getAccountCookie(ctx);
-		if (accountData) if (!shouldBindAccountCookieToSessionUser(ctx.context.options) || accountData.userId === session.user.id) await setAccountCookie(ctx, accountData);
-		else {
-			expireCookie(ctx, ctx.context.authCookies.accountData);
-			const accountStore = createAccountStore(ctx.context.authCookies.accountData.name, ctx.context.authCookies.accountData.attributes, ctx);
-			accountStore.setCookies(accountStore.clean());
+		if (accountData) {
+			if (!shouldBindAccountCookieToSessionUser(ctx.context.options) || accountData.userId === session.user.id) await setAccountCookie(ctx, accountData);
+			else {
+				expireCookie(ctx, ctx.context.authCookies.accountData);
+				const accountStore = createAccountStore(ctx.context.authCookies.accountData.name, ctx.context.authCookies.accountData.attributes, ctx);
+				accountStore.setCookies(accountStore.clean());
+			}
 		}
 	}
 }
@@ -1098,8 +1094,21 @@ function deleteSessionCookie(ctx, skipDontRememberMe) {
 	sessionStore.setCookies(cleanCookies);
 	if (!skipDontRememberMe) expireCookie(ctx, ctx.context.authCookies.dontRememberToken);
 }
-//#endregion
-//#region node_modules/better-auth/dist/state.mjs
+// node_modules/better-auth/dist/crypto/purpose.mjs
+var salt = utf8ToBytes$1("better-auth:oauth-encryption:v1");
+function deriveSecret(secret, purpose) {
+	return bytesToHex$1(hkdf(sha256, utf8ToBytes$1(secret), salt, utf8ToBytes$1(`better-auth:${purpose}:v1`), 32));
+}
+/** Derive an isolated key for one OAuth ciphertext purpose, retaining rotation versions. */
+function derivePurposeKey(secret, purpose) {
+	if (typeof secret === "string") return deriveSecret(secret, purpose);
+	return {
+		keys: new Map(Array.from(secret.keys, ([version, value]) => [version, deriveSecret(value, purpose)])),
+		currentVersion: secret.currentVersion,
+		...secret.legacySecret && { legacySecret: deriveSecret(secret.legacySecret, purpose) }
+	};
+}
+// node_modules/better-auth/dist/state.mjs
 var stateDataSchema = z.looseObject({
 	callbackURL: z.string(),
 	codeVerifier: z.string(),
@@ -1128,6 +1137,8 @@ var stateDataSchema = z.looseObject({
 	*/
 	serverContext: z.record(z.string(), z.unknown()).optional()
 });
+/** Verification key for database-backed OAuth and SAML relay state. */
+var getAuthStateVerificationIdentifier = (state) => `auth-state:${state}`;
 new Set(Object.keys(stateDataSchema.shape));
 var StateError = class extends BetterAuthError {
 	code;
@@ -1155,7 +1166,7 @@ async function generateGenericState(c, stateData, settings) {
 			oauthState: state
 		};
 		const encryptedData = await symmetricEncrypt({
-			key: c.context.secretConfig,
+			key: derivePurposeKey(c.context.secretConfig, "oauth-state-cookie"),
 			data: JSON.stringify(payload)
 		});
 		const stateCookie = c.context.createAuthCookie(settings?.cookieName ?? "oauth_state", { maxAge: 600 });
@@ -1174,7 +1185,7 @@ async function generateGenericState(c, stateData, settings) {
 			...stateData,
 			oauthState: state
 		}),
-		identifier: state,
+		identifier: getAuthStateVerificationIdentifier(state),
 		expiresAt
 	})) throw new StateError("Unable to create verification. Make sure the database adapter is properly working and there is a verification table in the database", { code: "state_generation_error" });
 	return {
@@ -1195,7 +1206,7 @@ async function parseGenericState(c, state, settings) {
 		});
 		try {
 			const decryptedData = await symmetricDecrypt({
-				key: c.context.secretConfig,
+				key: derivePurposeKey(c.context.secretConfig, "oauth-state-cookie"),
 				data: encryptedData
 			});
 			parsedData = stateDataSchema.parse(JSON.parse(decryptedData));
@@ -1213,7 +1224,7 @@ async function parseGenericState(c, state, settings) {
 		});
 		expireCookie(c, stateCookie);
 	} else {
-		const data = await c.context.internalAdapter.findVerificationValue(state);
+		const data = await c.context.internalAdapter.findVerificationValue(getAuthStateVerificationIdentifier(state));
 		if (!data) throw new StateError("State mismatch: verification not found", {
 			code: "state_mismatch",
 			details: { state }
@@ -1232,7 +1243,7 @@ async function parseGenericState(c, state, settings) {
 			errorURL: parsedData.errorURL
 		});
 		expireCookie(c, stateCookie);
-		await c.context.internalAdapter.deleteVerificationByIdentifier(state);
+		await c.context.internalAdapter.deleteVerificationByIdentifier(getAuthStateVerificationIdentifier(state));
 	}
 	if (parsedData.expiresAt < Date.now()) throw new StateError("Invalid state: request expired", {
 		code: "state_mismatch",
@@ -1241,8 +1252,7 @@ async function parseGenericState(c, state, settings) {
 	});
 	return parsedData;
 }
-//#endregion
-//#region node_modules/better-auth/dist/oauth2/errors.mjs
+// node_modules/better-auth/dist/oauth2/errors.mjs
 /**
 * Error codes used in OAuth callback redirects (`?error=<code>`). These are
 * URL-safe strings, not API error objects. Some also serve as the OAuth seam's
@@ -1288,15 +1298,13 @@ function redirectOnError(ctx, errorURL, error, description) {
 function missingEmailLogMessage(providerId, options) {
 	return `${options?.source === "generic" ? `Generic OAuth provider "${providerId}"` : `Provider "${providerId}"`} did not return an email${options?.source === "id_token" ? " in the id token" : ""}. Either request the provider's email scope, or create a placeholder via \`mapProfileToUser\`. See ${HANDLING_DOCS_URL}`;
 }
-//#endregion
-//#region node_modules/better-auth/dist/api/state/oauth.mjs
+// node_modules/better-auth/dist/api/state/oauth.mjs
 var { get: getRawOAuthState, set: setOAuthState } = defineRequestState(() => null);
 /**
 * @internal Read accumulated server context to embed during state generation.
 */
 var { get: getOAuthServerContext, set: setOAuthServerContext } = defineRequestState(() => null);
-//#endregion
-//#region node_modules/better-auth/dist/oauth2/state.mjs
+// node_modules/better-auth/dist/oauth2/state.mjs
 /**
 * Mint the OIDC `nonce` for the redirect flow, or `undefined` when the provider
 * does not require ID-token nonce binding. Every redirect entrypoint (social
@@ -1356,11 +1364,9 @@ async function parseState(c) {
 	if (parsedData) await setOAuthState(parsedData);
 	return parsedData;
 }
-//#endregion
-//#region node_modules/better-auth/dist/utils/hide-metadata.mjs
+// node_modules/better-auth/dist/utils/hide-metadata.mjs
 var HIDE_METADATA = { scope: "server" };
-//#endregion
-//#region node_modules/better-auth/dist/auth/trusted-origins.mjs
+// node_modules/better-auth/dist/auth/trusted-origins.mjs
 var CONTROL_CHARACTER_PATTERN = /[\u0000-\u001f\u007f-\u009f]/;
 var RELATIVE_URL_PARSER_ORIGIN = "https://better-auth.invalid";
 var ENCODED_PATH_SEPARATOR_PATTERN = /%2[fF]|%5[cC]/;
@@ -1462,8 +1468,7 @@ var matchesOriginPattern = (url, pattern, settings) => {
 	if (!parsedPattern.path) return true;
 	return parsed.path === parsedPattern.path || parsed.path.startsWith(`${parsedPattern.path}/`);
 };
-//#endregion
-//#region node_modules/better-auth/dist/api/middlewares/origin-check.mjs
+// node_modules/better-auth/dist/api/middlewares/origin-check.mjs
 /**
 * Checks if CSRF should be skipped for backward compatibility.
 * Previously, disableOriginCheck also disabled CSRF checks.
@@ -1610,8 +1615,7 @@ async function validateFormCsrf(ctx) {
 	}
 	if (headers.get("origin") || headers.get("referer")) return await validateOrigin(ctx, true);
 }
-//#endregion
-//#region node_modules/better-auth/dist/api/rate-limiter/index.mjs
+// node_modules/better-auth/dist/api/rate-limiter/index.mjs
 var memory = /* @__PURE__ */ new Map();
 var MEMORY_STORE_MAX_ENTRIES = 1e5;
 function pruneMemoryStore() {
@@ -1674,7 +1678,10 @@ function rateLimitResponse(retryAfter) {
 	return new Response(JSON.stringify({ message: "Too many requests. Please try again later." }), {
 		status: 429,
 		statusText: "Too Many Requests",
-		headers: { "X-Retry-After": retryAfter.toString() }
+		headers: {
+			"Content-Type": "application/json",
+			"X-Retry-After": retryAfter.toString()
+		}
 	});
 }
 function getRetryAfter(lastRequest, window) {
@@ -1694,7 +1701,7 @@ function createDatabaseStorageWrapper(ctx) {
 				value: key
 			}]
 		}))[0];
-		if (typeof data?.lastRequest === "bigint") data.lastRequest = Number(data.lastRequest);
+		if (data) data.lastRequest = Number(data.lastRequest);
 		return data;
 	};
 	const consume = async (key, rule) => {
@@ -1923,8 +1930,7 @@ function getDefaultSpecialRules() {
 		max: 3
 	}];
 }
-//#endregion
-//#region node_modules/better-auth/dist/api/state/should-session-refresh.mjs
+// node_modules/better-auth/dist/api/state/should-session-refresh.mjs
 /**
 * State for skipping session refresh
 *
@@ -1934,8 +1940,7 @@ function getDefaultSpecialRules() {
 * data stored in cookies.
 */
 var { get: getShouldSkipSessionRefresh, set: setShouldSkipSessionRefresh } = defineRequestState(() => false);
-//#endregion
-//#region node_modules/better-auth/dist/api/routes/session.mjs
+// node_modules/better-auth/dist/api/routes/session.mjs
 var getSession = () => createAuthEndpoint("/get-session", {
 	method: ["GET", "POST"],
 	operationId: "getSession",
@@ -2156,7 +2161,7 @@ var getSession = () => createAuthEndpoint("/get-session", {
 	} catch (error) {
 		if (isAPIError(error)) throw error;
 		ctx.context.logger.error("INTERNAL_SERVER_ERROR", error);
-		throw APIError.from("INTERNAL_SERVER_ERROR", BASE_ERROR_CODES.FAILED_TO_GET_SESSION);
+		throw APIError.from("INTERNAL_SERVER_ERROR", BASE_ERROR_CODES.FAILED_TO_GET_SESSION, { cause: error });
 	}
 });
 /**
@@ -2400,8 +2405,7 @@ var revokeOtherSessions = createAuthEndpoint("/revoke-other-sessions", {
 	await Promise.all(otherSessions.map((session) => ctx.context.internalAdapter.deleteSession(session.token)));
 	return ctx.json({ status: true });
 });
-//#endregion
-//#region node_modules/better-auth/dist/utils/validate-user-info.mjs
+// node_modules/better-auth/dist/utils/validate-user-info.mjs
 function assertValidUserInfoSource(source) {
 	if (!source?.method) throw new APIError("FORBIDDEN", {
 		code: "validation_source_missing",
@@ -2442,8 +2446,7 @@ async function assertValidUserInfo(ctx, data) {
 		message: result.errorDescription || result.error
 	});
 }
-//#endregion
-//#region node_modules/better-auth/dist/db/verification-token-storage.mjs
+// node_modules/better-auth/dist/db/verification-token-storage.mjs
 var defaultKeyHasher = async (identifier) => {
 	const hash = await createHash("SHA-256").digest(new TextEncoder().encode(identifier));
 	return base64Url.encode(new Uint8Array(hash), { padding: false });
@@ -2464,8 +2467,7 @@ function getStorageOption(identifier, config) {
 	}
 	return config;
 }
-//#endregion
-//#region node_modules/better-auth/dist/db/with-hooks.mjs
+// node_modules/better-auth/dist/db/with-hooks.mjs
 function getWithHooks(adapter, ctx) {
 	const withSpan = createWithSpan(ctx.options);
 	const hooksEntries = ctx.hooks;
@@ -2716,8 +2718,7 @@ function getWithHooks(adapter, ctx) {
 		consumeOneWithHooks
 	};
 }
-//#endregion
-//#region node_modules/better-auth/dist/db/internal-adapter.mjs
+// node_modules/better-auth/dist/db/internal-adapter.mjs
 function getTTLSeconds(expiresAt, now = Date.now()) {
 	const expiresMs = typeof expiresAt === "number" ? expiresAt : expiresAt.getTime();
 	return Math.max(Math.floor((expiresMs - now) / 1e3), 0);
@@ -2728,6 +2729,7 @@ var createInternalAdapter = (adapter, ctx) => {
 	const secondaryStorage = options.secondaryStorage;
 	const verificationConsumeLocks = /* @__PURE__ */ new Map();
 	const sessionExpiration = options.session?.expiresIn || 604800;
+	const databaseSessionFallbackEnabled = !!secondaryStorage && options.session?.storeSessionInDatabase === true && options.session?.preserveSessionInDatabase !== true;
 	const { createWithHooks, updateWithHooks, updateManyWithHooks, deleteWithHooks, deleteManyWithHooks, consumeOneWithHooks } = getWithHooks(adapter, ctx);
 	/**
 	* Ends the live session rows matched by `where` without physically deleting
@@ -2882,6 +2884,17 @@ var createInternalAdapter = (adapter, ctx) => {
 			}, "account", void 0);
 		},
 		listSessions: async (userId, options) => {
+			if (databaseSessionFallbackEnabled) return (await (await getCurrentAdapter(adapter)).findMany({
+				model: "session",
+				where: [{
+					field: "userId",
+					value: userId
+				}, {
+					field: "expiresAt",
+					value: /* @__PURE__ */ new Date(),
+					operator: "gt"
+				}]
+			})).map((session) => parseSessionOutput(ctx.options, session));
 			if (secondaryStorage) {
 				const currentList = await secondaryStorage.get(`active-sessions-${userId}`);
 				if (!currentList) return [];
@@ -2957,7 +2970,7 @@ var createInternalAdapter = (adapter, ctx) => {
 				return ctx?.headers || ctx?.request?.headers;
 			})();
 			const storeInDb = options.session?.storeSessionInDatabase;
-			const databaseSessionFallbackEnabled = storeInDb === true && options.session?.preserveSessionInDatabase !== true;
+			const deferMirror = storageOptions?.deferSecondaryStorageWrites === true && databaseSessionFallbackEnabled;
 			const { id: _, ...rest } = override || {};
 			let sessionId;
 			if (secondaryStorage && !storeInDb) {
@@ -3012,18 +3025,18 @@ var createInternalAdapter = (adapter, ctx) => {
 				}), sessionTTL);
 				return sessionData;
 			};
-			const res = await createWithHooks(data, "session", secondaryStorage ? {
+			return await createWithHooks(data, "session", secondaryStorage ? {
 				fn: async (sessionData) => {
-					return storageOptions?.deferSecondaryStorageWrites ? sessionData : mirrorSessionToSecondaryStorage(sessionData);
+					if (!deferMirror) return mirrorSessionToSecondaryStorage(sessionData);
+					await queueAfterTransactionHook(async () => {
+						await mirrorSessionToSecondaryStorage(sessionData);
+					}, { onError(error) {
+						logger.error("Failed to mirror committed session to secondary storage", error);
+					} });
+					return sessionData;
 				},
 				executeMainFn: storeInDb
 			} : void 0);
-			if (secondaryStorage && storageOptions?.deferSecondaryStorageWrites && res) await queueAfterTransactionHook(async () => {
-				await mirrorSessionToSecondaryStorage(res);
-			}, databaseSessionFallbackEnabled ? { onError(error) {
-				logger.error("Failed to mirror committed session to secondary storage", error);
-			} } : void 0);
-			return res;
 		},
 		findSession: async (token) => {
 			if (secondaryStorage) {
@@ -3064,54 +3077,57 @@ var createInternalAdapter = (adapter, ctx) => {
 			};
 		},
 		findSessions: async (sessionTokens, options) => {
-			if (secondaryStorage) {
-				const sessions = [];
-				for (const sessionToken of sessionTokens) {
-					const sessionStringified = await secondaryStorage.get(sessionToken);
-					if (sessionStringified) try {
-						const s = typeof sessionStringified === "string" ? JSON.parse(sessionStringified) : sessionStringified;
-						if (!s) continue;
-						const expiresAt = new Date(s.session.expiresAt);
-						if (options?.onlyActiveSessions && expiresAt <= /* @__PURE__ */ new Date()) continue;
-						const session = {
-							session: {
-								...s.session,
-								expiresAt: new Date(s.session.expiresAt)
-							},
-							user: {
-								...s.user,
-								createdAt: new Date(s.user.createdAt),
-								updatedAt: new Date(s.user.updatedAt)
-							}
-						};
-						sessions.push(session);
-					} catch {
-						continue;
-					}
+			const uniqueTokens = [...new Set(sessionTokens)];
+			const sessionsByToken = /* @__PURE__ */ new Map();
+			const missingTokens = [];
+			if (secondaryStorage) for (const sessionToken of uniqueTokens) {
+				const sessionStringified = await secondaryStorage.get(sessionToken);
+				if (sessionStringified) try {
+					const s = typeof sessionStringified === "string" ? JSON.parse(sessionStringified) : sessionStringified;
+					if (!s) continue;
+					const expiresAt = new Date(s.session.expiresAt);
+					if (options?.onlyActiveSessions && expiresAt <= /* @__PURE__ */ new Date()) continue;
+					const session = {
+						session: {
+							...s.session,
+							expiresAt: new Date(s.session.expiresAt)
+						},
+						user: {
+							...s.user,
+							createdAt: new Date(s.user.createdAt),
+							updatedAt: new Date(s.user.updatedAt)
+						}
+					};
+					sessionsByToken.set(sessionToken, session);
+				} catch {
+					continue;
 				}
-				return sessions;
+				else missingTokens.push(sessionToken);
 			}
-			const sessions = await (await getCurrentAdapter(adapter)).findMany({
-				model: "session",
-				where: [{
-					field: "token",
-					value: sessionTokens,
-					operator: "in"
-				}, ...options?.onlyActiveSessions ? [{
-					field: "expiresAt",
-					value: /* @__PURE__ */ new Date(),
-					operator: "gt"
-				}] : []],
-				join: { user: true }
-			});
-			if (!sessions.length) return [];
-			if (sessions.some((session) => !session.user)) return [];
-			return sessions.map((_session) => {
-				const { user, ...session } = _session;
-				return {
+			const databaseTokens = secondaryStorage ? missingTokens : uniqueTokens;
+			if (databaseTokens.length > 0 && (!secondaryStorage || databaseSessionFallbackEnabled)) {
+				const databaseSessions = await (await getCurrentAdapter(adapter)).findMany({
+					model: "session",
+					limit: databaseTokens.length,
+					where: [{
+						field: "token",
+						value: databaseTokens,
+						operator: "in"
+					}, ...options?.onlyActiveSessions ? [{
+						field: "expiresAt",
+						value: /* @__PURE__ */ new Date(),
+						operator: "gt"
+					}] : []],
+					join: { user: true }
+				});
+				for (const { user, ...session } of databaseSessions) if (user) sessionsByToken.set(session.token, {
 					session,
 					user
-				};
+				});
+			}
+			return uniqueTokens.flatMap((token) => {
+				const session = sessionsByToken.get(token);
+				return session ? [session] : [];
 			});
 		},
 		updateSession: async (sessionToken, session) => {
@@ -3575,7 +3591,9 @@ var createInternalAdapter = (adapter, ctx) => {
 		* already taken.
 		*
 		* The `verification.identifier` column is non-unique, so uniqueness comes
-		* from a deterministic primary key (`SHA-256` of `reserve:<identifier>`).
+		* from a deterministic primary key (`SHA-256` of `reserve:<identifier>`,
+		* encoded by `encodeDeterministicId` so the configured id strategy keeps
+		* it; see its note on `generateId: "serial"`).
 		* The database path is atomic: the primary key turns the INSERT into the
 		* first-writer-wins gate, and a duplicate is detected portably by
 		* re-reading the row rather than matching adapter-specific errors.
@@ -3589,7 +3607,7 @@ var createInternalAdapter = (adapter, ctx) => {
 		* is best-effort there (it is intended for development and tests).
 		*/
 		reserveVerificationValue: async (data) => {
-			const reservationId = base64Url.encode(new Uint8Array(await createHash("SHA-256").digest(new TextEncoder().encode("reserve:" + data.identifier))), { padding: false });
+			const reservationId = encodeDeterministicId(new Uint8Array(await createHash("SHA-256").digest(new TextEncoder().encode("reserve:" + data.identifier))), options);
 			const storageOption = getStorageOption(data.identifier, options.verification?.storeIdentifier);
 			const storedIdentifier = await processIdentifier(data.identifier, storageOption);
 			if (secondaryStorage && !options.verification?.storeInDatabase) throw new BetterAuthError("reserveVerificationValue requires database-backed verification storage. Set verification.storeInDatabase to true for flows that reserve verification values.");
@@ -3654,8 +3672,7 @@ var createInternalAdapter = (adapter, ctx) => {
 		refreshUserSessions
 	};
 };
-//#endregion
-//#region node_modules/better-auth/dist/context/helpers.mjs
+// node_modules/better-auth/dist/context/helpers.mjs
 async function runPluginInit(context) {
 	let options = context.options;
 	const plugins = options.plugins || [];
@@ -3674,7 +3691,7 @@ async function runPluginInit(context) {
 					hooks: databaseHooks
 				});
 				if (trustedOrigins) pluginTrustedOrigins.push(trustedOrigins);
-				options = defu(options, restOpts);
+				options = defu$1(options, restOpts);
 			}
 			if (result.context) Object.assign(context, result.context);
 		}
@@ -3764,7 +3781,8 @@ function resolveDynamicTrustedProxyHeaders(options) {
 */
 async function resolveRequestContext(ctx, source, trustedProxyHeaders) {
 	const dynamicBaseURLConfig = ctx.options.baseURL;
-	const baseURL = resolveBaseURL(dynamicBaseURLConfig, ctx.options.basePath || "/api/auth", source, void 0, trustedProxyHeaders);
+	const basePath = ctx.options.basePath || "/api/auth";
+	const baseURL = resolveBaseURL(dynamicBaseURLConfig, basePath, source, void 0, trustedProxyHeaders);
 	if (!baseURL) throw new BetterAuthError("Could not resolve base URL from request. Check your allowedHosts config.");
 	const resolved = Object.create(Object.getPrototypeOf(ctx), Object.getOwnPropertyDescriptors(ctx));
 	resolved.baseURL = baseURL;
@@ -3778,10 +3796,11 @@ async function resolveRequestContext(ctx, source, trustedProxyHeaders) {
 	};
 	const needsRequest = typeof ctx.options.trustedOrigins === "function" || typeof ctx.options.account?.accountLinking?.trustedProviders === "function";
 	let callbackRequest;
-	if (needsRequest) if (isRequestLike(source)) callbackRequest = source;
-	else if (source) callbackRequest = new Request(baseURL, { headers: source });
-	else callbackRequest = void 0;
-	else callbackRequest = void 0;
+	if (needsRequest) {
+		if (isRequestLike(source)) callbackRequest = source;
+		else if (source) callbackRequest = new Request(baseURL, { headers: source });
+		else callbackRequest = void 0;
+	} else callbackRequest = void 0;
 	resolved.trustedOrigins = await getTrustedOrigins(trustedOriginOptions, callbackRequest);
 	resolved.trustedProviders = await getTrustedProviders(resolved.options, callbackRequest);
 	if (ctx.options.advanced?.crossSubDomainCookies?.enabled) {
@@ -3803,8 +3822,7 @@ async function getTrustedProviders(options, request) {
 	if (Array.isArray(trustedProviders)) return trustedProviders.filter((v) => Boolean(v));
 	return (await trustedProviders(request) ?? []).filter((v) => Boolean(v));
 }
-//#endregion
-//#region node_modules/better-auth/dist/oauth2/account-key.mjs
+// node_modules/better-auth/dist/oauth2/account-key.mjs
 /**
 * Exposes a provider-declared profile as the raw claim record used by
 * provisioning hooks. Provider profile interfaces are object-shaped but do
@@ -3844,8 +3862,7 @@ async function resolveOAuthAccountKeyForAPI(provider, tokens, profile) {
 		throw APIError.from("UNAUTHORIZED", BASE_ERROR_CODES.FAILED_TO_GET_USER_INFO);
 	}
 }
-//#endregion
-//#region node_modules/better-auth/dist/oauth2/utils.mjs
+// node_modules/better-auth/dist/oauth2/utils.mjs
 /**
 * Check if a string looks like encrypted data
 */
@@ -3875,8 +3892,7 @@ function getOAuthCallbackPath(provider) {
 	if (!provider.callbackPath) return `/callback/${provider.id}`;
 	return provider.callbackPath.startsWith("/") ? provider.callbackPath : `/${provider.callbackPath}`;
 }
-//#endregion
-//#region node_modules/better-auth/dist/utils/request.mjs
+// node_modules/better-auth/dist/utils/request.mjs
 function safeCloneRequest(request) {
 	if (!request) return;
 	try {
@@ -3897,8 +3913,7 @@ function safeCloneRequest(request) {
 		});
 	}
 }
-//#endregion
-//#region node_modules/better-auth/dist/api/routes/email-verification.mjs
+// node_modules/better-auth/dist/api/routes/email-verification.mjs
 async function createEmailVerificationToken(secret, email, updateTo, expiresIn = 3600, extraPayload) {
 	return await signJWT({
 		email: email.toLowerCase(),
@@ -4208,8 +4223,66 @@ var verifyEmail = createAuthEndpoint("/verify-email", {
 		user: null
 	});
 });
-//#endregion
-//#region node_modules/better-auth/dist/oauth2/link-account.mjs
+// node_modules/better-auth/dist/oauth2/link-account.mjs
+function linkOAuthAccountFailure(code, message) {
+	return {
+		linked: false,
+		error: {
+			code,
+			message
+		}
+	};
+}
+async function linkOAuthAccount(c, { link, userInfo, account, profile, scopes }) {
+	try {
+		await assertValidUserInfo(c, {
+			user: {
+				...userInfo,
+				id: link.userId,
+				email: userInfo.email ?? void 0
+			},
+			source: {
+				action: "link-account",
+				method: "oauth",
+				oauth: {
+					providerId: account.providerId,
+					profile
+				}
+			}
+		});
+	} catch (error) {
+		if (!isAPIError(error) || !error.body?.code) throw error;
+		return linkOAuthAccountFailure(error.body.code, error.body.message);
+	}
+	if (!c.context.trustedProviders.includes(account.providerId) && !userInfo.emailVerified || c.context.options.account?.accountLinking?.enabled === false) {
+		c.context.logger.error("Unable to link account - untrusted provider");
+		return linkOAuthAccountFailure(OAUTH_CALLBACK_ERROR_CODES.UNABLE_TO_LINK_ACCOUNT);
+	}
+	if (userInfo.email?.toLowerCase() !== link.email.toLowerCase() && c.context.options.account?.accountLinking?.allowDifferentEmails !== true) return linkOAuthAccountFailure(OAUTH_CALLBACK_ERROR_CODES.EMAIL_DOES_NOT_MATCH);
+	const existingAccount = await c.context.internalAdapter.findAccountByKey(account);
+	if (existingAccount) {
+		if (existingAccount.userId.toString() !== link.userId.toString()) return linkOAuthAccountFailure(OAUTH_CALLBACK_ERROR_CODES.ACCOUNT_ALREADY_LINKED_TO_DIFFERENT_USER);
+		const mergedScope = mergeScopes(existingAccount.scope, scopes);
+		const updateData = Object.fromEntries(Object.entries({
+			providerId: account.providerId,
+			accessToken: await setTokenUtil(account.accessToken, c.context),
+			refreshToken: await setTokenUtil(account.refreshToken, c.context),
+			idToken: account.idToken,
+			accessTokenExpiresAt: account.accessTokenExpiresAt,
+			refreshTokenExpiresAt: account.refreshTokenExpiresAt,
+			scope: mergedScope || void 0
+		}).filter(([_, value]) => value !== void 0));
+		await c.context.internalAdapter.updateAccount(existingAccount.id, updateData);
+	} else if (!await c.context.internalAdapter.createAccount({
+		userId: link.userId,
+		...account,
+		accessToken: await setTokenUtil(account.accessToken, c.context),
+		refreshToken: await setTokenUtil(account.refreshToken, c.context),
+		scope: scopes?.join(",") ?? account.scope
+	})) return linkOAuthAccountFailure(OAUTH_CALLBACK_ERROR_CODES.UNABLE_TO_LINK_ACCOUNT);
+	await applyUpdateUserInfoOnLink(c, link.userId, userInfo);
+	return { linked: true };
+}
 async function handleOAuthUserInfo(c, opts) {
 	const { userInfo, account, callbackURL, disableSignUp, overrideUserInfo } = opts;
 	const source = opts.source ?? {
@@ -4316,8 +4389,10 @@ async function handleOAuthUserInfo(c, opts) {
 					code: "account_hook_binding_conflict",
 					message: "Account hook changed the selected authentication binding"
 				});
-				if (c.context.options.account?.storeAccountCookie) if (opts.deferNonDatabaseWrites) pendingAccountCookie = createdAccount;
-				else await setAccountCookie(c, createdAccount);
+				if (c.context.options.account?.storeAccountCookie) {
+					if (opts.deferNonDatabaseWrites) pendingAccountCookie = createdAccount;
+					else await setAccountCookie(c, createdAccount);
+				}
 			} catch (e) {
 				if (isAPIError(e)) throw e;
 				c.context.logger.error("Unable to link account", e);
@@ -4433,8 +4508,10 @@ async function handleOAuthUserInfo(c, opts) {
 				message: "Account hook changed the selected authentication binding"
 			});
 			user = createdUser;
-			if (c.context.options.account?.storeAccountCookie) if (opts.deferNonDatabaseWrites) pendingAccountCookie = createdAccount;
-			else await setAccountCookie(c, createdAccount);
+			if (c.context.options.account?.storeAccountCookie) {
+				if (opts.deferNonDatabaseWrites) pendingAccountCookie = createdAccount;
+				else await setAccountCookie(c, createdAccount);
+			}
 		} catch (e) {
 			if (isAPIError(e)) throw e;
 			c.context.logger.error("Unable to create OAuth user", e);
@@ -4526,8 +4603,7 @@ async function applyUpdateUserInfoOnLink(c, userId, userInfo) {
 		return;
 	}
 }
-//#endregion
-//#region node_modules/better-auth/dist/api/routes/account.mjs
+// node_modules/better-auth/dist/api/routes/account.mjs
 function parseStoredScopes(scope) {
 	if (!scope) return [];
 	return scope.split(",").map((s) => s.trim()).filter(Boolean);
@@ -5129,8 +5205,69 @@ var accountInfo = createAuthEndpoint("/account-info", {
 		}
 	});
 });
-//#endregion
-//#region node_modules/better-auth/dist/api/routes/callback.mjs
+// node_modules/better-auth/dist/oauth2/callback.mjs
+/**
+* Turns a provider callback into a verified identity. It checks that the
+* callback answers this authorization request, exchanges the code, and
+* resolves the user and account key.
+*
+* Every route that completes a provider callback goes through here, so the
+* routes run the same checks.
+*/
+async function exchangeOAuthCallback(ctx, provider, callback) {
+	if (callback.iss && provider.issuer && callback.iss !== provider.issuer) {
+		ctx.context.logger.error("OAuth issuer mismatch", {
+			expected: provider.issuer,
+			received: callback.iss
+		});
+		return { error: OAUTH_CALLBACK_ERROR_CODES.ISSUER_MISMATCH };
+	}
+	if (provider.requiresIdTokenNonce && !callback.idTokenNonce) {
+		ctx.context.logger.error("OAuth id_token nonce binding required but no expected nonce was found in state", { providerId: provider.id });
+		return { error: OAUTH_CALLBACK_ERROR_CODES.NONCE_BINDING_MISSING };
+	}
+	let tokens;
+	try {
+		tokens = await provider.validateAuthorizationCode({
+			code: callback.code,
+			codeVerifier: callback.codeVerifier,
+			deviceId: callback.deviceId,
+			redirectURI: `${ctx.context.baseURL}${getOAuthCallbackPath(provider)}`
+		});
+	} catch (error) {
+		ctx.context.logger.error("Failed to validate authorization code", error);
+		return { error: OAUTH_CALLBACK_ERROR_CODES.INVALID_CODE };
+	}
+	if (!tokens) return { error: OAUTH_CALLBACK_ERROR_CODES.INVALID_CODE };
+	const result = await provider.getUserInfo({
+		...tokens,
+		expectedIdTokenNonce: callback.idTokenNonce,
+		/**
+		* The user object from the provider
+		* This is only available for some providers like Apple
+		*/
+		user: safeJSONParse(callback.user) ?? void 0
+	});
+	if (!result?.user) {
+		ctx.context.logger.error("Unable to get user info");
+		return { error: OAUTH_CALLBACK_ERROR_CODES.UNABLE_TO_GET_USER_INFO };
+	}
+	const accountKey = await resolveOAuthAccountKey(provider, tokens, result.data).catch((error) => {
+		ctx.context.logger.error("Unable to derive provider account identity", {
+			providerId: provider.id,
+			error
+		});
+		return null;
+	});
+	if (!accountKey) return { error: OAUTH_CALLBACK_ERROR_CODES.UNABLE_TO_GET_USER_INFO };
+	return {
+		tokens,
+		userInfo: result.user,
+		providerProfile: toOAuthProfileRecord(result.data),
+		accountKey
+	};
+}
+// node_modules/better-auth/dist/api/routes/callback.mjs
 var schema$1 = z.object({
 	code: z.string().optional(),
 	error: z.string().optional(),
@@ -5170,7 +5307,8 @@ var callbackOAuth = createAuthEndpoint("/callback/:id", {
 		else throw new Error("Unsupported method");
 	} catch (e) {
 		c.context.logger.error("INVALID_CALLBACK_REQUEST", e);
-		const redirectURL = appendQueryParams(defaultErrorURL, new URLSearchParams({ error: "invalid_callback_request" }));
+		const params = new URLSearchParams({ error: "invalid_callback_request" });
+		const redirectURL = appendQueryParams(defaultErrorURL, params);
 		throw c.redirect(redirectURL);
 	}
 	const { code, error, state, error_description, device_id, user: userData, iss } = queryOrBody;
@@ -5190,7 +5328,8 @@ var callbackOAuth = createAuthEndpoint("/callback/:id", {
 	}
 	if (!state) {
 		c.context.logger.error("State not found", error);
-		const redirectURL = appendQueryParams(defaultErrorURL, new URLSearchParams({ error: "state_not_found" }));
+		const params = new URLSearchParams({ error: "state_not_found" });
+		const redirectURL = appendQueryParams(defaultErrorURL, params);
 		throw c.redirect(redirectURL);
 	}
 	const { codeVerifier, callbackURL, link, errorURL, newUserURL, requestSignUp, idTokenNonce } = await parseState(c);
@@ -5211,127 +5350,41 @@ var callbackOAuth = createAuthEndpoint("/callback/:id", {
 		c.context.logger.warn("OAuth provider not found", { providerId: c.params.id });
 		throw redirectOnError(OAUTH_CALLBACK_ERROR_CODES.PROVIDER_NOT_FOUND);
 	}
-	if (iss && provider.issuer && iss !== provider.issuer) {
-		c.context.logger.error("OAuth issuer mismatch", {
-			expected: provider.issuer,
-			received: iss
-		});
-		throw redirectOnError(OAUTH_CALLBACK_ERROR_CODES.ISSUER_MISMATCH);
-	}
-	if (provider.requiresIdTokenNonce && !idTokenNonce) {
-		c.context.logger.error("OAuth id_token nonce binding required but no expected nonce was found in state", { providerId: provider.id });
-		throw redirectOnError(OAUTH_CALLBACK_ERROR_CODES.NONCE_BINDING_MISSING);
-	}
-	let tokens;
-	try {
-		tokens = await provider.validateAuthorizationCode({
-			code,
-			codeVerifier,
-			deviceId: device_id,
-			redirectURI: `${c.context.baseURL}${getOAuthCallbackPath(provider)}`
-		});
-	} catch (e) {
-		c.context.logger.error("", e);
-		throw redirectOnError(OAUTH_CALLBACK_ERROR_CODES.INVALID_CODE);
-	}
-	if (!tokens) throw redirectOnError(OAUTH_CALLBACK_ERROR_CODES.INVALID_CODE);
-	const parsedUserData = userData ? safeJSONParse(userData) : null;
-	const providerResult = await provider.getUserInfo({
-		...tokens,
-		...idTokenNonce ? { expectedIdTokenNonce: idTokenNonce } : {},
-		/**
-		* The user object from the provider
-		* This is only available for some providers like Apple
-		*/
-		user: parsedUserData ?? void 0
+	const exchanged = await exchangeOAuthCallback(c, provider, {
+		code,
+		codeVerifier,
+		iss,
+		deviceId: device_id,
+		user: userData,
+		idTokenNonce
 	});
-	if (!providerResult?.user) {
-		c.context.logger.error("Unable to get user info");
-		return redirectOnError(OAUTH_CALLBACK_ERROR_CODES.UNABLE_TO_GET_USER_INFO);
-	}
-	const userInfo = providerResult.user;
-	const providerProfile = toOAuthProfileRecord(providerResult.data);
-	let accountKey;
-	try {
-		accountKey = await resolveOAuthAccountKey(provider, tokens, providerResult.data);
-	} catch (error) {
-		c.context.logger.error("Unable to derive provider account identity", {
-			providerId: provider.id,
-			error
-		});
-		return redirectOnError(OAUTH_CALLBACK_ERROR_CODES.UNABLE_TO_GET_USER_INFO);
-	}
+	if (exchanged.error) throw redirectOnError(exchanged.error);
+	const { tokens, userInfo, providerProfile, accountKey } = exchanged;
 	const { accountId } = accountKey;
 	if (!callbackURL) {
 		c.context.logger.error("No callback URL found");
 		throw redirectOnError(OAUTH_CALLBACK_ERROR_CODES.NO_CALLBACK_URL);
-	}
-	if (link) {
-		try {
-			await assertValidUserInfo(c, {
-				user: {
-					...userInfo,
-					id: link.userId,
-					email: userInfo.email ?? void 0
-				},
-				source: {
-					action: "link-account",
-					method: "oauth",
-					oauth: {
-						providerId: provider.id,
-						profile: providerProfile
-					}
-				}
-			});
-		} catch (e) {
-			if (isAPIError(e) && e.body?.code) throw redirectOnError(e.body.code, e.body.message);
-			throw e;
-		}
-		if (!c.context.trustedProviders.includes(provider.id) && !userInfo.emailVerified || c.context.options.account?.accountLinking?.enabled === false) {
-			c.context.logger.error("Unable to link account - untrusted provider");
-			return redirectOnError(OAUTH_CALLBACK_ERROR_CODES.UNABLE_TO_LINK_ACCOUNT);
-		}
-		if (userInfo.email?.toLowerCase() !== link.email.toLowerCase() && c.context.options.account?.accountLinking?.allowDifferentEmails !== true) return redirectOnError(OAUTH_CALLBACK_ERROR_CODES.EMAIL_DOES_NOT_MATCH);
-		const existingAccount = await c.context.internalAdapter.findAccountByKey(accountKey);
-		if (existingAccount) {
-			if (existingAccount.userId.toString() !== link.userId.toString()) return redirectOnError(OAUTH_CALLBACK_ERROR_CODES.ACCOUNT_ALREADY_LINKED_TO_DIFFERENT_USER);
-			const mergedScope = mergeScopes(existingAccount.scope, tokens.scopes);
-			const updateData = Object.fromEntries(Object.entries({
-				providerId: provider.id,
-				accessToken: await setTokenUtil(tokens.accessToken, c.context),
-				refreshToken: await setTokenUtil(tokens.refreshToken, c.context),
-				idToken: tokens.idToken,
-				accessTokenExpiresAt: tokens.accessTokenExpiresAt,
-				refreshTokenExpiresAt: tokens.refreshTokenExpiresAt,
-				scope: mergedScope || void 0
-			}).filter(([_, value]) => value !== void 0));
-			await c.context.internalAdapter.updateAccount(existingAccount.id, updateData);
-		} else if (!await c.context.internalAdapter.createAccount({
-			userId: link.userId,
-			...accountKey,
-			...tokens,
-			accessToken: await setTokenUtil(tokens.accessToken, c.context),
-			refreshToken: await setTokenUtil(tokens.refreshToken, c.context),
-			scope: tokens.scopes?.join(",")
-		})) return redirectOnError(OAUTH_CALLBACK_ERROR_CODES.UNABLE_TO_LINK_ACCOUNT);
-		await applyUpdateUserInfoOnLink(c, link.userId, userInfo);
-		let toRedirectTo;
-		try {
-			toRedirectTo = callbackURL.toString();
-		} catch {
-			toRedirectTo = callbackURL;
-		}
-		throw c.redirect(toRedirectTo);
-	}
-	if (!userInfo.email) {
-		c.context.logger.error(missingEmailLogMessage(provider.id));
-		return redirectOnError(OAUTH_CALLBACK_ERROR_CODES.EMAIL_NOT_FOUND);
 	}
 	const accountData = {
 		...accountKey,
 		...tokens,
 		scope: tokens.scopes?.join(",")
 	};
+	if (link) {
+		const linkResult = await linkOAuthAccount(c, {
+			link,
+			userInfo,
+			account: accountData,
+			profile: providerProfile,
+			scopes: tokens.scopes
+		});
+		if (!linkResult.linked) return redirectOnError(linkResult.error.code, linkResult.error.message);
+		throw c.redirect(callbackURL);
+	}
+	if (!userInfo.email) {
+		c.context.logger.error(missingEmailLogMessage(provider.id));
+		return redirectOnError(OAUTH_CALLBACK_ERROR_CODES.EMAIL_NOT_FOUND);
+	}
 	let result;
 	try {
 		result = await handleOAuthUserInfo(c, {
@@ -5374,8 +5427,7 @@ var callbackOAuth = createAuthEndpoint("/callback/:id", {
 	}
 	throw c.redirect(toRedirectTo);
 });
-//#endregion
-//#region node_modules/better-auth/dist/api/routes/error.mjs
+// node_modules/better-auth/dist/api/routes/error.mjs
 function sanitize(input) {
 	return input.replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;").replace(/&(?!amp;|lt;|gt;|quot;|#39;|#x[0-9a-fA-F]+;|#[0-9]+;)/g, "&amp;");
 }
@@ -5756,8 +5808,7 @@ var error = createAuthEndpoint("/error", {
 	});
 	return new Response(html(c.context.options, safeCode, safeDescription), { headers: { "Content-Type": "text/html" } });
 });
-//#endregion
-//#region node_modules/better-auth/dist/api/routes/ok.mjs
+// node_modules/better-auth/dist/api/routes/ok.mjs
 var ok = createAuthEndpoint("/ok", {
 	method: "GET",
 	metadata: {
@@ -5780,9 +5831,52 @@ var ok = createAuthEndpoint("/ok", {
 }, async (ctx) => {
 	return ctx.json({ ok: true });
 });
-//#endregion
-//#region node_modules/better-auth/dist/utils/password.mjs
+// node_modules/better-auth/dist/utils/password.mjs
+function assertPasswordNotTooShort(ctx, password) {
+	if (password.length < ctx.context.password.config.minPasswordLength) {
+		ctx.context.logger.warn("Password is too short");
+		throw APIError.from("BAD_REQUEST", BASE_ERROR_CODES.PASSWORD_TOO_SHORT);
+	}
+}
+function assertPasswordNotTooLong(ctx, password) {
+	if (password.length > ctx.context.password.config.maxPasswordLength) {
+		ctx.context.logger.warn("Password is too long");
+		throw APIError.from("BAD_REQUEST", BASE_ERROR_CODES.PASSWORD_TOO_LONG);
+	}
+}
+/**
+* Sets a user's credential password after a reset, revoking their sessions
+* when `emailAndPassword.revokeSessionsOnPasswordReset` is enabled.
+*
+* `consumeResetToken` spends the single-use reset token or OTP and throws when
+* it is no longer valid. It runs first inside the same transaction as
+* revocation and the password write, so a failure in any of them leaves all
+* three unchanged and the user can retry. Verification values held only in
+* secondary storage are consumed with `getAndDelete`, which can't roll back,
+* so a later failure there still spends the token. Secondary-storage sessions are
+* removed by an after-commit hook, so they can't roll back with the write.
+* Sessions are revoked before the write so that on an adapter without
+* transactions a failure still keeps the old password rather than committing a
+* new one while existing sessions stay valid.
+*/
+async function resetCredentialPassword(ctx, userId, passwordHash, consumeResetToken) {
+	await runWithTransaction(ctx.context.adapter, async () => {
+		await consumeResetToken?.();
+		if (ctx.context.options.emailAndPassword?.revokeSessionsOnPasswordReset) await ctx.context.internalAdapter.deleteUserSessions(userId);
+		if (!await ctx.context.internalAdapter.findCredentialAccount(userId)) {
+			await ctx.context.internalAdapter.createAccount({
+				userId,
+				providerId: "credential",
+				accountId: userId,
+				password: passwordHash
+			});
+			return;
+		}
+		await ctx.context.internalAdapter.updatePassword(userId, passwordHash);
+	});
+}
 async function validatePassword(ctx, data) {
+	assertPasswordNotTooLong(ctx, data.password);
 	const credentialAccount = await ctx.context.internalAdapter.findCredentialAccount(data.userId);
 	const currentPassword = credentialAccount?.password;
 	if (!credentialAccount || !currentPassword) return false;
@@ -5792,9 +5886,10 @@ async function validatePassword(ctx, data) {
 	});
 }
 async function checkPassword(userId, c) {
+	const password = c.body.password;
+	if (typeof password === "string") assertPasswordNotTooLong(c, password);
 	const credentialAccount = await c.context.internalAdapter.findCredentialAccount(userId);
 	const currentPassword = credentialAccount?.password;
-	const password = c.body.password;
 	if (!credentialAccount || !currentPassword || !password) {
 		if (password) await c.context.password.hash(password);
 		throw APIError.from("BAD_REQUEST", BASE_ERROR_CODES.INVALID_PASSWORD);
@@ -5805,8 +5900,7 @@ async function checkPassword(userId, c) {
 	})) throw APIError.from("BAD_REQUEST", BASE_ERROR_CODES.INVALID_PASSWORD);
 	return true;
 }
-//#endregion
-//#region node_modules/better-auth/dist/api/routes/password.mjs
+// node_modules/better-auth/dist/api/routes/password.mjs
 function redirectError(ctx, callbackURL, query) {
 	const url = callbackURL ? new URL(callbackURL, ctx.baseURL) : new URL(`${ctx.baseURL}/error`);
 	if (query) Object.entries(query).forEach(([k, v]) => url.searchParams.set(k, v));
@@ -5949,26 +6043,18 @@ var resetPassword = createAuthEndpoint("/reset-password", {
 	const token = ctx.body.token || ctx.query?.token;
 	if (!token) throw APIError.from("BAD_REQUEST", BASE_ERROR_CODES.INVALID_TOKEN);
 	const { newPassword } = ctx.body;
-	const minLength = ctx.context.password?.config.minPasswordLength;
-	const maxLength = ctx.context.password?.config.maxPasswordLength;
-	if (newPassword.length < minLength) throw APIError.from("BAD_REQUEST", BASE_ERROR_CODES.PASSWORD_TOO_SHORT);
-	if (newPassword.length > maxLength) throw APIError.from("BAD_REQUEST", BASE_ERROR_CODES.PASSWORD_TOO_LONG);
+	assertPasswordNotTooShort(ctx, newPassword);
+	assertPasswordNotTooLong(ctx, newPassword);
 	const id = `reset-password:${token}`;
-	const verification = await ctx.context.internalAdapter.consumeVerificationValue(id);
-	if (!verification) throw APIError.from("BAD_REQUEST", BASE_ERROR_CODES.INVALID_TOKEN);
+	const verification = await ctx.context.internalAdapter.findVerificationValue(id);
+	if (!verification || verification.expiresAt < /* @__PURE__ */ new Date()) throw APIError.from("BAD_REQUEST", BASE_ERROR_CODES.INVALID_TOKEN);
 	const userId = verification.value;
 	const user = await ctx.context.internalAdapter.findUserById(userId);
 	if (!user) throw APIError.from("BAD_REQUEST", BASE_ERROR_CODES.USER_NOT_FOUND);
-	const hashedPassword = await ctx.context.password.hash(newPassword);
-	if (!await ctx.context.internalAdapter.findCredentialAccount(userId)) await ctx.context.internalAdapter.createAccount({
-		userId,
-		providerId: "credential",
-		accountId: user.id,
-		password: hashedPassword
+	await resetCredentialPassword(ctx, userId, await ctx.context.password.hash(newPassword), async () => {
+		if (!await ctx.context.internalAdapter.consumeVerificationValue(id)) throw APIError.from("BAD_REQUEST", BASE_ERROR_CODES.INVALID_TOKEN);
 	});
-	else await ctx.context.internalAdapter.updatePassword(userId, hashedPassword);
 	if (ctx.context.options.emailAndPassword?.onPasswordReset) await ctx.context.options.emailAndPassword.onPasswordReset({ user }, ctx.request);
-	if (ctx.context.options.emailAndPassword?.revokeSessionsOnPasswordReset) await ctx.context.internalAdapter.deleteUserSessions(userId);
 	return ctx.json({ status: true });
 });
 var verifyPassword$1 = createAuthEndpoint("/verify-password", {
@@ -6002,8 +6088,7 @@ password: z.string().meta({ description: "The password to verify" }) }),
 	})) throw APIError.from("BAD_REQUEST", BASE_ERROR_CODES.INVALID_PASSWORD);
 	return ctx.json({ status: true });
 });
-//#endregion
-//#region node_modules/better-auth/dist/api/routes/sign-in.mjs
+// node_modules/better-auth/dist/api/routes/sign-in.mjs
 var socialSignInBodySchema = z.object({
 	/**
 	* Callback URL to redirect to after the user
@@ -6181,7 +6266,7 @@ var signInSocial = () => createAuthEndpoint("/sign-in/social", {
 				idToken: token
 			},
 			callbackURL: c.body.callbackURL,
-			disableSignUp: provider.disableImplicitSignUp && !c.body.requestSignUp || provider.disableSignUp,
+			disableSignUp: provider.disableImplicitSignUp && !c.body.requestSignUp || provider.options?.disableSignUp || provider.disableSignUp,
 			source: {
 				method: "oauth",
 				oauth: {
@@ -6301,6 +6386,7 @@ var signInEmail = () => createAuthEndpoint("/sign-in/email", {
 	}
 	const { email, password } = ctx.body;
 	if (!z.email().safeParse(email).success) throw APIError.from("BAD_REQUEST", BASE_ERROR_CODES.INVALID_EMAIL);
+	assertPasswordNotTooLong(ctx, password);
 	const userRecord = await ctx.context.internalAdapter.findUserByEmail(email.toLowerCase(), { includeAccounts: true });
 	const credentialAccount = userRecord?.accounts.find((account) => account.providerId === "credential" && account.accountId === userRecord.user.id);
 	if (!userRecord || !credentialAccount) {
@@ -6353,8 +6439,7 @@ var signInEmail = () => createAuthEndpoint("/sign-in/email", {
 		user: parseUserOutput(ctx.context.options, user)
 	});
 });
-//#endregion
-//#region node_modules/better-auth/dist/api/routes/sign-out.mjs
+// node_modules/better-auth/dist/api/routes/sign-out.mjs
 var signOutBodySchema = z.object({
 	callbackURL: z.string().meta({ description: "The URL to redirect to after provider logout" }).optional(),
 	disableRedirect: z.boolean().meta({ description: "Return the provider logout URL without redirecting" }).optional(),
@@ -6445,8 +6530,7 @@ var signOut = createAuthEndpoint("/sign-out", {
 	}
 	return ctx.json(signOutResponse());
 });
-//#endregion
-//#region node_modules/better-auth/dist/api/routes/sign-up.mjs
+// node_modules/better-auth/dist/api/routes/sign-up.mjs
 var signUpEmailBodySchema = z.object({
 	name: z.string(),
 	email: z.email(),
@@ -6585,16 +6669,8 @@ var signUpEmail = () => createAuthEndpoint("/sign-up/email", {
 		const { name, email, password, image, callbackURL: _callbackURL, rememberMe, ...rest } = body;
 		if (!z.email().safeParse(email).success) throw APIError.from("BAD_REQUEST", BASE_ERROR_CODES.INVALID_EMAIL);
 		if (!password || typeof password !== "string") throw APIError.from("BAD_REQUEST", BASE_ERROR_CODES.INVALID_PASSWORD);
-		const minPasswordLength = ctx.context.password.config.minPasswordLength;
-		if (password.length < minPasswordLength) {
-			ctx.context.logger.warn("Password is too short");
-			throw APIError.from("BAD_REQUEST", BASE_ERROR_CODES.PASSWORD_TOO_SHORT);
-		}
-		const maxPasswordLength = ctx.context.password.config.maxPasswordLength;
-		if (password.length > maxPasswordLength) {
-			ctx.context.logger.warn("Password is too long");
-			throw APIError.from("BAD_REQUEST", BASE_ERROR_CODES.PASSWORD_TOO_LONG);
-		}
+		assertPasswordNotTooShort(ctx, password);
+		assertPasswordNotTooLong(ctx, password);
 		const shouldReturnGenericDuplicateResponse = ctx.context.options.emailAndPassword.requireEmailVerification || ctx.context.options.emailAndPassword.autoSignIn === false;
 		const shouldSkipAutoSignIn = ctx.context.options.emailAndPassword.autoSignIn === false || shouldReturnGenericDuplicateResponse;
 		const additionalUserFields = parseUserInput(ctx.context.options, rest, "create");
@@ -6695,7 +6771,7 @@ var signUpEmail = () => createAuthEndpoint("/sign-up/email", {
 			token: null,
 			user: parseUserOutput(ctx.context.options, createdUser)
 		});
-		const session = await ctx.context.internalAdapter.createSession(createdUser.id, rememberMe === false);
+		const session = await ctx.context.internalAdapter.createSession(createdUser.id, rememberMe === false, void 0, void 0, { deferSecondaryStorageWrites: true });
 		if (!session) throw APIError.from("BAD_REQUEST", BASE_ERROR_CODES.FAILED_TO_CREATE_SESSION);
 		await setSessionCookie(ctx, {
 			session,
@@ -6707,8 +6783,7 @@ var signUpEmail = () => createAuthEndpoint("/sign-up/email", {
 		});
 	});
 });
-//#endregion
-//#region node_modules/better-auth/dist/api/routes/update-session.mjs
+// node_modules/better-auth/dist/api/routes/update-session.mjs
 var updateSessionBodySchema = z.record(z.string().meta({ description: "Field name must be a string" }), z.any());
 var updateSession = () => createAuthEndpoint("/update-session", {
 	method: "POST",
@@ -6757,8 +6832,7 @@ var updateSession = () => createAuthEndpoint("/update-session", {
 	});
 	return ctx.json({ session: parseSessionOutput(ctx.context.options, newSession) });
 });
-//#endregion
-//#region node_modules/better-auth/dist/api/routes/update-user.mjs
+// node_modules/better-auth/dist/api/routes/update-user.mjs
 var updateUserBodySchema = z.record(z.string().meta({ description: "Field name must be a string" }), z.any());
 var updateUser = () => createAuthEndpoint("/update-user", {
 	method: "POST",
@@ -6909,16 +6983,9 @@ var changePassword = createAuthEndpoint("/change-password", {
 }, async (ctx) => {
 	const { newPassword, currentPassword, revokeOtherSessions } = ctx.body;
 	const session = ctx.context.session;
-	const minPasswordLength = ctx.context.password.config.minPasswordLength;
-	if (newPassword.length < minPasswordLength) {
-		ctx.context.logger.warn("Password is too short");
-		throw APIError.from("BAD_REQUEST", BASE_ERROR_CODES.PASSWORD_TOO_SHORT);
-	}
-	const maxPasswordLength = ctx.context.password.config.maxPasswordLength;
-	if (newPassword.length > maxPasswordLength) {
-		ctx.context.logger.warn("Password is too long");
-		throw APIError.from("BAD_REQUEST", BASE_ERROR_CODES.PASSWORD_TOO_LONG);
-	}
+	assertPasswordNotTooShort(ctx, newPassword);
+	assertPasswordNotTooLong(ctx, newPassword);
+	assertPasswordNotTooLong(ctx, currentPassword);
 	const account = await ctx.context.internalAdapter.findCredentialAccount(session.user.id);
 	if (!account || !account.password) throw APIError.from("BAD_REQUEST", BASE_ERROR_CODES.CREDENTIAL_ACCOUNT_NOT_FOUND);
 	const passwordHash = await ctx.context.password.hash(newPassword);
@@ -6926,12 +6993,16 @@ var changePassword = createAuthEndpoint("/change-password", {
 		hash: account.password,
 		password: currentPassword
 	})) throw APIError.from("BAD_REQUEST", BASE_ERROR_CODES.INVALID_PASSWORD);
-	await ctx.context.internalAdapter.updateAccount(account.id, { password: passwordHash });
+	const newSession = await runWithTransaction(ctx.context.adapter, async () => {
+		if (revokeOtherSessions) await ctx.context.internalAdapter.deleteUserSessions(session.user.id);
+		await ctx.context.internalAdapter.updateAccount(account.id, { password: passwordHash });
+		if (!revokeOtherSessions) return null;
+		const created = await ctx.context.internalAdapter.createSession(session.user.id, void 0, void 0, void 0, { deferSecondaryStorageWrites: true });
+		if (!created) throw APIError.from("INTERNAL_SERVER_ERROR", BASE_ERROR_CODES.FAILED_TO_GET_SESSION);
+		return created;
+	});
 	let token = null;
-	if (revokeOtherSessions) {
-		await ctx.context.internalAdapter.deleteUserSessions(session.user.id);
-		const newSession = await ctx.context.internalAdapter.createSession(session.user.id);
-		if (!newSession) throw APIError.from("INTERNAL_SERVER_ERROR", BASE_ERROR_CODES.FAILED_TO_GET_SESSION);
+	if (newSession) {
 		await setSessionCookie(ctx, {
 			session: newSession,
 			user: session.user
@@ -6954,16 +7025,8 @@ newPassword: z.string().meta({ description: "The new password to set is required
 }, async (ctx) => {
 	const { newPassword } = ctx.body;
 	const session = ctx.context.session;
-	const minPasswordLength = ctx.context.password.config.minPasswordLength;
-	if (newPassword.length < minPasswordLength) {
-		ctx.context.logger.warn("Password is too short");
-		throw APIError.from("BAD_REQUEST", BASE_ERROR_CODES.PASSWORD_TOO_SHORT);
-	}
-	const maxPasswordLength = ctx.context.password.config.maxPasswordLength;
-	if (newPassword.length > maxPasswordLength) {
-		ctx.context.logger.warn("Password is too long");
-		throw APIError.from("BAD_REQUEST", BASE_ERROR_CODES.PASSWORD_TOO_LONG);
-	}
+	assertPasswordNotTooShort(ctx, newPassword);
+	assertPasswordNotTooLong(ctx, newPassword);
 	const account = await ctx.context.internalAdapter.findCredentialAccount(session.user.id);
 	const passwordHash = await ctx.context.password.hash(newPassword);
 	if (!account) {
@@ -7046,6 +7109,7 @@ var deleteUser = createAuthEndpoint("/delete-user", {
 	}
 	const session = ctx.context.session;
 	if (ctx.body.password) {
+		assertPasswordNotTooLong(ctx, ctx.body.password);
 		const account = await ctx.context.internalAdapter.findCredentialAccount(session.user.id);
 		if (!account || !account.password) throw APIError.from("BAD_REQUEST", BASE_ERROR_CODES.CREDENTIAL_ACCOUNT_NOT_FOUND);
 		if (!await ctx.context.password.verify({
@@ -7269,8 +7333,7 @@ var changeEmail = createAuthEndpoint("/change-email", {
 	}, ctx.request));
 	return ctx.json({ status: true });
 });
-//#endregion
-//#region node_modules/better-auth/dist/api/dispatch.mjs
+// node_modules/better-auth/dist/api/dispatch.mjs
 var defuReplaceArrays = createDefu((obj, key, value) => {
 	if (Array.isArray(obj[key]) && Array.isArray(value)) {
 		obj[key] = value;
@@ -7357,10 +7420,12 @@ async function runBeforeHooks(context, hooks, endpoint, operationId) {
 		if (hookReturn && typeof hookReturn === "object") {
 			if ("context" in hookReturn && typeof hookReturn.context === "object") {
 				const { headers, ...rest } = hookReturn.context;
-				if (headers instanceof Headers) if (modifiedContext.headers) headers.forEach((value, key) => {
-					modifiedContext.headers?.set(key, value);
-				});
-				else modifiedContext.headers = headers;
+				if (headers instanceof Headers) {
+					if (modifiedContext.headers) headers.forEach((value, key) => {
+						modifiedContext.headers?.set(key, value);
+					});
+					else modifiedContext.headers = headers;
+				}
 				modifiedContext = defuReplaceArrays(rest, modifiedContext);
 				continue;
 			}
@@ -7505,7 +7570,7 @@ async function dispatchAuthEndpoint(endpoint, input) {
 		});
 		if (result instanceof Response) return result;
 		internalContext.context.returned = result.response;
-		internalContext.context.responseHeaders = result.headers ?? void 0;
+		mergeResponseHeaders(internalContext.context, result.headers);
 		const after = await runAfterHooks(internalContext, afterHooks, endpoint, operationId);
 		if (after.response !== void 0) result.response = after.response;
 		result.headers = after.headers ?? result.headers;
@@ -7535,8 +7600,7 @@ async function dispatchAuthEndpoint(endpoint, input) {
 		} : result.response;
 	}));
 }
-//#endregion
-//#region node_modules/better-auth/dist/api/to-auth-endpoints.mjs
+// node_modules/better-auth/dist/api/to-auth-endpoints.mjs
 /**
 * Resolves the per-call `AuthContext` for endpoints with a dynamic `baseURL`.
 *
@@ -7589,8 +7653,7 @@ function toAuthEndpoints(endpoints, ctx) {
 	}
 	return api;
 }
-//#endregion
-//#region node_modules/better-auth/dist/api/index.mjs
+// node_modules/better-auth/dist/api/index.mjs
 function checkEndpointConflicts(options, logger) {
 	const endpointRegistry = /* @__PURE__ */ new Map();
 	options.plugins?.forEach((plugin) => {
@@ -7757,11 +7820,15 @@ var router = (ctx, options) => {
 			}
 			return res;
 		},
-		onError(e) {
+		async onError(e) {
 			if (isAPIError(e) && e.status === "FOUND") return;
 			if (options.onAPIError?.throw) throw e;
 			if (options.onAPIError?.onError) {
-				options.onAPIError.onError(e, ctx);
+				try {
+					await options.onAPIError.onError(e, ctx);
+				} catch (hookError) {
+					ctx.logger.error("onAPIError.onError threw", hookError);
+				}
 				return;
 			}
 			const optLogLevel = options.logger?.level;
@@ -7781,8 +7848,7 @@ var router = (ctx, options) => {
 		}
 	});
 };
-//#endregion
-//#region node_modules/better-auth/dist/db/adapter-base.mjs
+// node_modules/better-auth/dist/db/adapter-base.mjs
 async function getBaseAdapter(options, handleDirectDatabase) {
 	let adapter;
 	if (!options.database) {
@@ -7803,8 +7869,7 @@ async function getBaseAdapter(options, handleDirectDatabase) {
 	}
 	return adapter;
 }
-//#endregion
-//#region node_modules/better-auth/dist/db/adapter-kysely.mjs
+// node_modules/better-auth/dist/db/adapter-kysely.mjs
 async function getAdapter(options) {
 	return getBaseAdapter(options, async (opts) => {
 		const { createKyselyAdapter, kyselyAdapter } = await import("./kysely-adapter.js");
@@ -7817,25 +7882,33 @@ async function getAdapter(options) {
 		})(opts);
 	});
 }
-//#endregion
-//#region node_modules/better-auth/dist/db/get-schema.mjs
-function getSchema(config) {
+// node_modules/better-auth/dist/db/get-schema.mjs
+/**
+* @internal
+*/
+function buildSchema(config) {
 	const { indexesByTable, tables } = getAuthTablesWithResolvedIndexes(config);
+	const referenceKeys = /* @__PURE__ */ new Map();
 	const schema = {};
 	for (const key in tables) {
 		const table = tables[key];
 		const fields = table.fields;
 		const actualFields = {};
 		Object.entries(fields).forEach(([key, field]) => {
-			actualFields[field.fieldName || key] = field;
-			if (field.references) {
-				const refTable = tables[field.references.model];
-				if (refTable) actualFields[field.fieldName || key].references = {
-					...field.references,
-					model: refTable.modelName,
-					field: field.references.field
-				};
-			}
+			const reference = field.references;
+			const refTable = reference ? tables[reference.model] : void 0;
+			const actualField = reference && refTable ? {
+				...field,
+				references: {
+					...reference,
+					model: refTable.modelName
+				}
+			} : field;
+			actualFields[field.fieldName || key] = actualField;
+			if (reference) referenceKeys.set(actualField, {
+				modelKey: reference.model,
+				fieldKey: reference.field
+			});
 		});
 		if (schema[table.modelName]) {
 			schema[table.modelName].fields = {
@@ -7852,10 +7925,13 @@ function getSchema(config) {
 		};
 	}
 	for (const [tableName, indexes] of indexesByTable) if (schema[tableName]) schema[tableName].indexes = indexes;
-	return schema;
+	return {
+		schema,
+		tables,
+		referenceKeys
+	};
 }
-//#endregion
-//#region node_modules/better-auth/dist/db/get-migration.mjs
+// node_modules/better-auth/dist/db/get-migration.mjs
 var map = {
 	postgres: {
 		string: [
@@ -7866,6 +7942,7 @@ var map = {
 		],
 		number: [
 			"int4",
+			"int8",
 			"integer",
 			"bigint",
 			"smallint",
@@ -8187,8 +8264,7 @@ function matchType(columnDataType, fieldType, dbType) {
 * existing or already-planned index.
 */
 async function getMigrations(config, { throwOnUnsafe = true } = {}) {
-	const betterAuthSchema = getSchema(config);
-	const authTables = getAuthTables(config);
+	const { schema: betterAuthSchema, tables: authTables, referenceKeys } = buildSchema(config);
 	const logger = createLogger(config.logger);
 	const unsafeChanges = [];
 	const reportUnsafeChange = (message) => {
@@ -8216,8 +8292,10 @@ async function getMigrations(config, { throwOnUnsafe = true } = {}) {
 			};
 			logger.debug(`PostgreSQL migration: Using schema '${schema}' (${schemaName ? "from database.schemaName" : "from search_path"})`);
 			try {
-				if (!(await db.introspection.getSchemas()).some(({ name }) => name === schema)) if (schemaName) logger.debug(`Schema '${schema}' does not exist yet. The migration creates it before creating tables.`);
-				else logger.warn(`Schema '${schema}' does not exist. Create it before running migrations or check your database configuration.`);
+				if (!(await db.introspection.getSchemas()).some(({ name }) => name === schema)) {
+					if (schemaName) logger.debug(`Schema '${schema}' does not exist yet. The migration creates it before creating tables.`);
+					else logger.warn(`Schema '${schema}' does not exist. Create it before running migrations or check your database configuration.`);
+				}
 			} catch (error) {
 				logger.debug(`Could not verify schema existence: ${error instanceof Error ? error.message : String(error)}`);
 			}
@@ -8301,12 +8379,13 @@ async function getMigrations(config, { throwOnUnsafe = true } = {}) {
 				order: value.order || Infinity
 			};
 			const insertIndex = toBeCreated.findIndex((t) => (t.order || Infinity) > tableData.order);
-			if (insertIndex === -1) if (tIndex === -1) toBeCreated.push(tableData);
-			else toBeCreated[tIndex].fields = {
-				...toBeCreated[tIndex].fields,
-				...value.fields
-			};
-			else toBeCreated.splice(insertIndex, 0, tableData);
+			if (insertIndex === -1) {
+				if (tIndex === -1) toBeCreated.push(tableData);
+				else toBeCreated[tIndex].fields = {
+					...toBeCreated[tIndex].fields,
+					...value.fields
+				};
+			} else toBeCreated.splice(insertIndex, 0, tableData);
 			continue;
 		}
 		const toBeAddedFields = {};
@@ -8405,14 +8484,18 @@ async function getMigrations(config, { throwOnUnsafe = true } = {}) {
 		schema: authTables,
 		usePlural: false
 	});
-	function getReferencePath(model, field) {
+	function getReferencePath(field) {
+		const reference = field.references;
+		if (!reference) throw new BetterAuthError("Cannot resolve a field without references.");
+		const keys = referenceKeys.get(field);
+		if (!keys) throw new BetterAuthError(`Missing migration reference metadata for "${reference.model}.${reference.field}".`);
 		try {
-			return `${getModelName(model)}.${getFieldName({
-				model,
-				field
+			return `${getModelName(keys.modelKey)}.${getFieldName({
+				model: keys.modelKey,
+				field: keys.fieldKey
 			})}`;
 		} catch {
-			return `${model}.${field}`;
+			return `${reference.model}.${reference.field}`;
 		}
 	}
 	const deferredIndexes = [];
@@ -8457,10 +8540,11 @@ async function getMigrations(config, { throwOnUnsafe = true } = {}) {
 			}
 			const built = builder.addColumn(fieldName, type, (col) => {
 				col = field.required !== false ? col.notNull() : col;
-				if (field.references) col = col.references(getReferencePath(field.references.model, field.references.field)).onDelete(field.references.onDelete || "cascade");
-				if (timestampDefault) if (dbType === "mysql") col = col.defaultTo(sql`CURRENT_TIMESTAMP(3)`);
-				else col = col.defaultTo(sql`CURRENT_TIMESTAMP`);
-				else if (staticDefault) col = col.defaultTo(typeof field.defaultValue === "boolean" && (dbType === "sqlite" || dbType === "mssql") ? field.defaultValue ? 1 : 0 : field.defaultValue);
+				if (field.references) col = col.references(getReferencePath(field)).onDelete(field.references.onDelete || "cascade");
+				if (timestampDefault) {
+					if (dbType === "mysql") col = col.defaultTo(sql`CURRENT_TIMESTAMP(3)`);
+					else col = col.defaultTo(sql`CURRENT_TIMESTAMP`);
+				} else if (staticDefault) col = col.defaultTo(typeof field.defaultValue === "boolean" && (dbType === "sqlite" || dbType === "mssql") ? field.defaultValue ? 1 : 0 : field.defaultValue);
 				return col;
 			});
 			migrations.push(built);
@@ -8485,10 +8569,12 @@ async function getMigrations(config, { throwOnUnsafe = true } = {}) {
 			const type = getType(field, fieldName, getTableIndexStringLength(table.table, fieldName));
 			dbT = dbT.addColumn(fieldName, type, (col) => {
 				col = field.required !== false ? col.notNull() : col;
-				if (field.references) col = col.references(getReferencePath(field.references.model, field.references.field)).onDelete(field.references.onDelete || "cascade");
+				if (field.references) col = col.references(getReferencePath(field)).onDelete(field.references.onDelete || "cascade");
 				if (field.unique) col = col.unique();
-				if (field.type === "date" && typeof field.defaultValue === "function" && (dbType === "postgres" || dbType === "mysql" || dbType === "mssql")) if (dbType === "mysql") col = col.defaultTo(sql`CURRENT_TIMESTAMP(3)`);
-				else col = col.defaultTo(sql`CURRENT_TIMESTAMP`);
+				if (field.type === "date" && typeof field.defaultValue === "function" && (dbType === "postgres" || dbType === "mysql" || dbType === "mssql")) {
+					if (dbType === "mysql") col = col.defaultTo(sql`CURRENT_TIMESTAMP(3)`);
+					else col = col.defaultTo(sql`CURRENT_TIMESTAMP`);
+				}
 				return col;
 			});
 			if (field.index && !field.unique) {
@@ -8524,11 +8610,9 @@ async function getMigrations(config, { throwOnUnsafe = true } = {}) {
 		compileMigrations
 	};
 }
-//#endregion
-//#region node_modules/better-auth/dist/utils/constants.mjs
+// node_modules/better-auth/dist/utils/constants.mjs
 var DEFAULT_SECRET = "better-auth-secret-12345678901234567890";
-//#endregion
-//#region node_modules/better-auth/dist/context/secret-utils.mjs
+// node_modules/better-auth/dist/context/secret-utils.mjs
 /**
 * Estimates the entropy of a string in bits.
 * This is a simple approximation that helps detect low-entropy secrets.
@@ -8540,12 +8624,12 @@ function estimateEntropy$1(str) {
 }
 function parseSecretsEnv(envValue) {
 	if (!envValue) return null;
-	return envValue.split(",").map((entry) => {
+	return envValue.split(",").map((entry, index) => {
 		entry = entry.trim();
 		const colonIdx = entry.indexOf(":");
-		if (colonIdx === -1) throw new BetterAuthError(`Invalid BETTER_AUTH_SECRETS entry: "${entry}". Expected format: "<version>:<secret>"`);
+		if (colonIdx === -1) throw new BetterAuthError(`Invalid BETTER_AUTH_SECRETS entry at position ${index + 1}. Expected format: "<version>:<secret>"`);
 		const version = parseInt(entry.slice(0, colonIdx), 10);
-		if (!Number.isInteger(version) || version < 0) throw new BetterAuthError(`Invalid version in BETTER_AUTH_SECRETS: "${entry.slice(0, colonIdx)}". Version must be a non-negative integer.`);
+		if (!Number.isInteger(version) || version < 0) throw new BetterAuthError(`Invalid version in BETTER_AUTH_SECRETS entry at position ${index + 1}. Version must be a non-negative integer.`);
 		const value = entry.slice(colonIdx + 1).trim();
 		if (!value) throw new BetterAuthError(`Empty secret value for version ${version} in BETTER_AUTH_SECRETS.`);
 		return {
@@ -8577,8 +8661,7 @@ function buildSecretConfig(secrets, legacySecret) {
 		legacySecret: legacySecret && legacySecret !== "better-auth-secret-12345678901234567890" ? legacySecret : void 0
 	};
 }
-//#endregion
-//#region node_modules/better-auth/dist/context/create-context.mjs
+// node_modules/better-auth/dist/context/create-context.mjs
 /**
 * Estimates the entropy of a string in bits.
 * This is a simple approximation that helps detect low-entropy secrets.
@@ -8604,13 +8687,13 @@ function validateSecret(secret, logger) {
 }
 async function createAuthContext(adapter, options, getDatabaseType) {
 	const isStateful = hasServerSessionStore(options);
-	if (!isStateful) options = defu$1(options, { session: { cookieCache: {
+	if (!isStateful) options = defu(options, { session: { cookieCache: {
 		enabled: true,
 		strategy: "jwe",
 		refreshCache: true,
 		maxAge: options.session?.expiresIn || 604800
 	} } });
-	if (!options.database) options = defu$1(options, { account: { storeAccountCookie: true } });
+	if (!options.database) options = defu(options, { account: { storeAccountCookie: true } });
 	const plugins = options.plugins || [];
 	const internalPlugins = getInternalPlugins(options);
 	const logger = createLogger(options.logger);
@@ -8786,11 +8869,11 @@ Most of the features of Better Auth will not work correctly.`);
 	};
 	const initOrPromise = runPluginInit(ctx);
 	if (isPromise(initOrPromise)) await initOrPromise;
-	ctx.checkSchema = schemaCheckFor(ctx.adapter);
+	ctx.checkSchema = runtimeSchemaCheckFor(ctx.adapter);
+	ctx.explicitSchemaCheck = schemaCheckFor(ctx.adapter);
 	return ctx;
 }
-//#endregion
-//#region node_modules/better-auth/dist/context/init.mjs
+// node_modules/better-auth/dist/context/init.mjs
 var init = async (options) => {
 	const adapter = await getAdapter(options);
 	const getDatabaseType = (database) => getKyselyDatabaseType(database) || "unknown";
@@ -8802,8 +8885,7 @@ var init = async (options) => {
 	};
 	return ctx;
 };
-//#endregion
-//#region node_modules/better-auth/dist/auth/base.mjs
+// node_modules/better-auth/dist/auth/base.mjs
 var createBetterAuth = (options, initFn) => {
 	const authContext = initFn(options).then((ctx) => {
 		const validateSchema = ctx.options.advanced?.database?.validateSchema;
@@ -8861,8 +8943,7 @@ var createBetterAuth = (options, initFn) => {
 		}
 	};
 };
-//#endregion
-//#region node_modules/better-auth/dist/auth/full.mjs
+// node_modules/better-auth/dist/auth/full.mjs
 /**
 * Better Auth initializer for full mode (with Kysely)
 *
@@ -8887,16 +8968,13 @@ var createBetterAuth = (options, initFn) => {
 var betterAuth = (options) => {
 	return createBetterAuth(options, init);
 };
-//#endregion
-//#region node_modules/better-auth/dist/adapters/drizzle-adapter/index.mjs
+// node_modules/better-auth/dist/adapters/drizzle-adapter/index.mjs
 var drizzle_adapter_exports = /* @__PURE__ */ __exportAll({});
 import * as import__better_auth_drizzle_adapter from "@better-auth/drizzle-adapter";
 __reExport(drizzle_adapter_exports, import__better_auth_drizzle_adapter);
-//#endregion
-//#region node_modules/better-auth/dist/version.mjs
-var PACKAGE_VERSION = "1.7.5";
-//#endregion
-//#region node_modules/better-auth/dist/integrations/cookie-plugin-guard.mjs
+// node_modules/better-auth/dist/version.mjs
+var PACKAGE_VERSION = "1.7.15";
+// node_modules/better-auth/dist/integrations/cookie-plugin-guard.mjs
 /**
 * Warns when a cookie integration plugin is not effectively last.
 *
@@ -8912,8 +8990,7 @@ function warnIfCookiePluginNotLast(ctx, pluginId) {
 	if (!plugins.slice(index + 1).some((p) => p.hooks && Array.isArray(p.hooks.after) && p.hooks.after.length > 0)) return;
 	ctx.logger.warn(`[better-auth] Cookie integration plugin "${pluginId}" should be placed last in the plugins array. Plugins with \`hooks.after\` running after it may set cookies that are not forwarded to the framework cookie store. Move your cookie integration plugin to the end of the \`plugins\` array to avoid missing \`Set-Cookie\` headers.`);
 }
-//#endregion
-//#region node_modules/better-auth/dist/integrations/svelte-kit.mjs
+// node_modules/better-auth/dist/integrations/svelte-kit.mjs
 var svelteKitHandler = async ({ auth, event, resolve, building }) => {
 	if (building) return resolve(event);
 	const { request, url } = event;
@@ -8961,8 +9038,7 @@ var sveltekitCookies = (getRequestEvent) => {
 		}] }
 	};
 };
-//#endregion
-//#region node_modules/better-auth/dist/plugins/access/access.mjs
+// node_modules/better-auth/dist/plugins/access/access.mjs
 function unknownResourceResponse(requestedResource) {
 	return {
 		success: false,
@@ -9037,8 +9113,7 @@ function createAccessControl(s) {
 		statements: s
 	};
 }
-//#endregion
-//#region node_modules/better-auth/dist/plugins/admin/access/statement.mjs
+// node_modules/better-auth/dist/plugins/admin/access/statement.mjs
 var defaultStatements = {
 	user: [
 		"create",
@@ -9086,8 +9161,7 @@ var defaultRoles = {
 		session: []
 	})
 };
-//#endregion
-//#region node_modules/better-auth/dist/plugins/admin/error-codes.mjs
+// node_modules/better-auth/dist/plugins/admin/error-codes.mjs
 var ADMIN_ERROR_CODES = defineErrorCodes({
 	FAILED_TO_CREATE_USER: "Failed to create user",
 	USER_ALREADY_EXISTS: "User already exists.",
@@ -9111,10 +9185,10 @@ var ADMIN_ERROR_CODES = defineErrorCodes({
 	YOU_CANNOT_IMPERSONATE_ADMINS: "You cannot impersonate admins",
 	INVALID_ROLE_TYPE: "Invalid role type",
 	YOU_ARE_NOT_ALLOWED_TO_SET_USERS_EMAIL: "You are not allowed to update users email",
-	PASSWORD_CANNOT_BE_UPDATED_VIA_UPDATE_USER: "Password cannot be updated through update-user. Use the set-user-password endpoint instead"
+	PASSWORD_CANNOT_BE_UPDATED_VIA_UPDATE_USER: "Password cannot be updated through update-user. Use the set-user-password endpoint instead",
+	USER_ID_CANNOT_BE_UPDATED: "User id cannot be updated"
 });
-//#endregion
-//#region node_modules/better-auth/dist/utils/plugin-helper.mjs
+// node_modules/better-auth/dist/utils/plugin-helper.mjs
 var getEndpointResponse = async (ctx) => {
 	const returned = ctx.context.returned;
 	if (!returned) return null;
@@ -9125,8 +9199,7 @@ var getEndpointResponse = async (ctx) => {
 	if (isAPIError(returned)) return null;
 	return returned;
 };
-//#endregion
-//#region node_modules/better-auth/dist/plugins/admin/has-permission.mjs
+// node_modules/better-auth/dist/plugins/admin/has-permission.mjs
 var hasPermission = (input) => {
 	if (input.userId && input.options?.adminUserIds?.includes(input.userId)) return true;
 	if (!input.permissions) return false;
@@ -9135,8 +9208,7 @@ var hasPermission = (input) => {
 	for (const role of roles) if ((acRoles[role]?.authorize(input.permissions))?.success) return true;
 	return false;
 };
-//#endregion
-//#region node_modules/better-auth/dist/plugins/admin/routes.mjs
+// node_modules/better-auth/dist/plugins/admin/routes.mjs
 /**
 * Ensures a valid session, if not will throw.
 * Will also provide additional types on the user to include role types.
@@ -9318,6 +9390,7 @@ var createUser = (opts) => createAuthEndpoint("/admin/create-user", {
 	}
 	const email = ctx.body.email.toLowerCase();
 	if (!z.email().safeParse(email).success) throw APIError.from("BAD_REQUEST", BASE_ERROR_CODES.INVALID_EMAIL);
+	if (ctx.body.password) assertPasswordNotTooLong(ctx, ctx.body.password);
 	if (await ctx.context.internalAdapter.findUserByEmail(email)) throw APIError.from("BAD_REQUEST", ADMIN_ERROR_CODES.USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL);
 	const user = await ctx.context.internalAdapter.createUser({
 		...userData,
@@ -9383,6 +9456,7 @@ var adminUpdateUser = (opts) => createAuthEndpoint("/admin/update-user", {
 	const updateData = ctx.body.data;
 	const hasDataKey = (key) => Object.prototype.hasOwnProperty.call(updateData, key);
 	if (hasDataKey("password")) throw APIError.from("BAD_REQUEST", ADMIN_ERROR_CODES.PASSWORD_CANNOT_BE_UPDATED_VIA_UPDATE_USER);
+	if (hasDataKey("id")) throw APIError.from("BAD_REQUEST", ADMIN_ERROR_CODES.USER_ID_CANNOT_BE_UPDATED);
 	if (Object.prototype.hasOwnProperty.call(ctx.body.data, "role")) {
 		if (!hasPermission({
 			userId: ctx.context.session.user.id,
@@ -9951,16 +10025,8 @@ var setUserPassword = (opts) => createAuthEndpoint("/admin/set-user-password", {
 		permissions: { user: ["set-password"] }
 	})) throw APIError.from("FORBIDDEN", ADMIN_ERROR_CODES.YOU_ARE_NOT_ALLOWED_TO_SET_USERS_PASSWORD);
 	const { newPassword, userId } = ctx.body;
-	const minPasswordLength = ctx.context.password.config.minPasswordLength;
-	if (newPassword.length < minPasswordLength) {
-		ctx.context.logger.warn("Password is too short");
-		throw APIError.from("BAD_REQUEST", BASE_ERROR_CODES.PASSWORD_TOO_SHORT);
-	}
-	const maxPasswordLength = ctx.context.password.config.maxPasswordLength;
-	if (newPassword.length > maxPasswordLength) {
-		ctx.context.logger.warn("Password is too long");
-		throw APIError.from("BAD_REQUEST", BASE_ERROR_CODES.PASSWORD_TOO_LONG);
-	}
+	assertPasswordNotTooShort(ctx, newPassword);
+	assertPasswordNotTooLong(ctx, newPassword);
 	const user = await ctx.context.internalAdapter.findUserById(userId);
 	if (!user) throw APIError.from("NOT_FOUND", BASE_ERROR_CODES.USER_NOT_FOUND);
 	const hashedPassword = await ctx.context.password.hash(newPassword);
@@ -10043,8 +10109,7 @@ var userHasPermission = (opts) => {
 		});
 	});
 };
-//#endregion
-//#region node_modules/better-auth/dist/plugins/admin/schema.mjs
+// node_modules/better-auth/dist/plugins/admin/schema.mjs
 var schema = {
 	user: { fields: {
 		role: {
@@ -10075,9 +10140,8 @@ var schema = {
 		input: false
 	} } }
 };
-//#endregion
-//#region node_modules/better-auth/dist/plugins/admin/admin.mjs
-var admin = (options) => {
+// node_modules/better-auth/dist/plugins/admin/admin.mjs
+var admin$1 = (options) => {
 	const opts = {
 		...options || {},
 		defaultRole: options?.defaultRole ?? "user",
@@ -10091,7 +10155,7 @@ var admin = (options) => {
 	return {
 		id: "admin",
 		version: PACKAGE_VERSION,
-		init() {
+		init(authContext) {
 			return { options: { databaseHooks: {
 				user: { create: { async before(user) {
 					return { data: {
@@ -10100,19 +10164,21 @@ var admin = (options) => {
 					} };
 				} } },
 				session: { create: { async before(session, ctx) {
-					if (!ctx) return;
-					const user = await ctx.context.internalAdapter.findUserById(session.userId);
+					const internalAdapter = ctx?.context.internalAdapter ?? authContext.internalAdapter;
+					const user = await internalAdapter.findUserById(session.userId);
 					if (user?.banned) {
 						if (user.banExpires && new Date(user.banExpires).getTime() < Date.now()) {
-							await ctx.context.internalAdapter.updateUser(session.userId, {
+							await internalAdapter.updateUser(session.userId, {
 								banned: false,
 								banReason: null,
 								banExpires: null
 							});
 							return;
 						}
+						const bannedUserMessage = opts.bannedUserMessage;
+						const message = typeof bannedUserMessage === "function" ? await bannedUserMessage(user) : bannedUserMessage;
 						throw APIError.from("FORBIDDEN", {
-							message: opts.bannedUserMessage,
+							message,
 							code: "BANNED_USER"
 						});
 					}
@@ -10154,8 +10220,7 @@ var admin = (options) => {
 		options
 	};
 };
-//#endregion
-//#region node_modules/better-auth/dist/plugins/haveibeenpwned/index.mjs
+// node_modules/better-auth/dist/plugins/haveibeenpwned/index.mjs
 var ERROR_CODES = defineErrorCodes({ PASSWORD_COMPROMISED: "The password you entered has been compromised. Please choose a different password." });
 function getPasswordCompromiseCount(response, hashSuffix) {
 	const matchingEntryPrefix = `${hashSuffix.toUpperCase()}:`;
@@ -10227,8 +10292,7 @@ var haveIBeenPwned = (options) => {
 		$ERROR_CODES: ERROR_CODES
 	};
 };
-//#endregion
-//#region src/lib/server/mail/mailer.js
+// src/lib/server/mail/mailer.js
 function createTransport() {
 	if (!private_env.SMTP_HOST) throw new Error("SMTP_HOST is not configured");
 	return nodemailer.createTransport({
@@ -10250,6 +10314,38 @@ async function sendMail(to, subject, html, { text } = {}) {
 		text
 	});
 }
+// src/lib/server/mail/render-template.js
+function escapeHtml(value) {
+	return String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll("\"", "&quot;").replaceAll("'", "&#039;");
+}
+var templates = {
+	"password-reset": ({ name, resetUrl }) => ({
+		subject: "Reimposta la tua password",
+		message: `Ciao ${name ?? ""}, usa il link seguente per reimpostare la password:`,
+		url: resetUrl,
+		label: "Reimposta password"
+	}),
+	"email-verification": ({ name, verificationUrl }) => ({
+		subject: "Verifica il tuo indirizzo email",
+		message: `Ciao ${name ?? ""}, conferma il tuo indirizzo email:`,
+		url: verificationUrl,
+		label: "Verifica email"
+	})
+};
+function renderMailTemplate(templateName, data = {}) {
+	const template = templates[templateName]?.(data) ?? {
+		subject: "Notifica POLITO",
+		message: "Hai ricevuto una nuova notifica."
+	};
+	const safeMessage = escapeHtml(template.message);
+	const safeUrl = template.url ? escapeHtml(template.url) : "";
+	const link = safeUrl ? `<p><a href="${safeUrl}">${escapeHtml(template.label ?? "Apri")}</a></p>` : "";
+	return {
+		subject: template.subject,
+		text: [template.message, template.url].filter(Boolean).join("\n\n"),
+		html: `<div style="font-family:Arial,sans-serif"><p>${safeMessage}</p>${link}</div>`
+	};
+}
 var ac = createAccessControl({
 	...defaultStatements,
 	project: [
@@ -10259,7 +10355,14 @@ var ac = createAccessControl({
 		"delete"
 	]
 });
-var developer = ac.newRole({
+function passwordResetUrl(token) {
+	const clientUrl = process.env.BETTER_AUTH_CLIENT_URL || process.env.BETTER_AUTH_URL || "http://localhost:5173";
+	const target = new URL("/auth/verifica-password", clientUrl);
+	target.searchParams.set("token", token);
+	target.searchParams.set("callbackUrl", clientUrl);
+	return target.toString();
+}
+var admin = ac.newRole({
 	project: [
 		"create",
 		"update",
@@ -10277,6 +10380,8 @@ var professor = ac.newRole({ project: [
 var student = ac.newRole({ project: ["create", "update"] });
 var auth = betterAuth({
 	appName: "Image Evaluator",
+	secret: process.env.BETTER_AUTH_SECRET,
+	baseURL: process.env.BETTER_AUTH_URL,
 	trustedOrigins: [
 		process.env.BETTER_AUTH_CLIENT_URL,
 		process.env.PUBLIC_URL,
@@ -10306,7 +10411,7 @@ var auth = betterAuth({
 				type: "string",
 				required: false,
 				defaultValue: "student",
-				input: true
+				input: false
 			},
 			first_access: {
 				type: "boolean",
@@ -10319,47 +10424,32 @@ var auth = betterAuth({
 	emailAndPassword: {
 		enabled: true,
 		requireEmailVerification: true,
-		emailVerification: {
-			required: true,
-			tokenExpiration: 86400
-		},
 		minPasswordLength: 8,
 		maxPasswordLength: 128,
-		sendResetPassword: async ({ user, url, token }) => {
-			const urlWithToken = process.env.BETTER_AUTH_URL + `/auth/verifica-password?token=${token}&callbackUrl=` + encodeURIComponent(process.env.BETTER_AUTH_CLIENT_URL || "http://localhost:5173");
-			console.log(`Reset Password URL: ${urlWithToken}`);
-			console.log(user.email);
+		sendResetPassword: async ({ user, token }) => {
+			const urlWithToken = passwordResetUrl(token);
 			const mail = renderMailTemplate("password-reset", {
 				name: user.name,
 				resetUrl: urlWithToken
 			});
 			await sendMail(user.email, mail.subject, mail.html, { text: mail.text });
 		},
-		resetPasswordTokenExpiresIn: 86400,
-		sendResetPasswordEmail: async ({ user, url, token }, request) => {
-			if (process.env.NODE_ENV === "development") console.log(`Reset Password URL (dev mode): ${url}`);
-			else {
-				const urlWithToken = process.env.BETTER_AUTH_URL + `/auth/verifica-password?token=${token}&callbackUrl=` + encodeURIComponent(process.env.BETTER_AUTH_CLIENT_URL || "http://localhost:5173");
-				const mail = renderMailTemplate("password-reset", {
-					name: user.name,
-					resetUrl: urlWithToken
-				});
-				await sendMail(user.email, mail.subject, mail.html, { text: mail.text });
-			}
-		}
+		resetPasswordTokenExpiresIn: 86400
 	},
 	session: {
 		expiresIn: 2592e3,
 		updateAge: 604800
 	},
-	emailVerification: { sendVerificationEmail: async ({ user, url, token }, request) => {
-		const urlWithToken = process.env.BETTER_AUTH_URL + `/auth/verifica-email?token=${token}&callbackUrl=` + encodeURIComponent(process.env.BETTER_AUTH_CLIENT_URL || "http://localhost:5173");
-		const mail = renderMailTemplate("email-verification", {
-			name: user.name,
-			verificationUrl: urlWithToken
-		});
-		await sendMail(user.email, mail.subject, mail.html, { text: mail.text });
-	} },
+	emailVerification: {
+		expiresIn: 86400,
+		sendVerificationEmail: async ({ user, url }) => {
+			const mail = renderMailTemplate("email-verification", {
+				name: user.name,
+				verificationUrl: url
+			});
+			await sendMail(user.email, mail.subject, mail.html, { text: mail.text });
+		}
+	},
 	hooks: {
 		before: createAuthMiddleware$1(async (ctx) => {
 			if (ctx.path === "/request-password-reset") {
@@ -10384,14 +10474,14 @@ var auth = betterAuth({
 		})
 	},
 	plugins: [
-		admin({
+		admin$1({
 			ac,
 			roles: {
-				developer,
+				admin,
 				professor,
 				student
 			},
-			adminRoles: ["developer"],
+			adminRoles: ["admin"],
 			defaultRole: "student"
 		}),
 		haveIBeenPwned({ customPasswordCompromisedMessage: "La password che hai scelto è stata esposta in una violazione dei dati. Per la tua sicurezza, ti consigliamo di scegliere una password diversa." }),
@@ -10399,9 +10489,7 @@ var auth = betterAuth({
 	],
 	advanced: {
 		database: { generateId: "serial" },
-		cookiePrefix: "polito_manuri_sanna_auth_",
-		secret: process.env.BETTER_AUTH_SECRET,
-		baseURL: process.env.BETTER_AUTH_URL
+		cookiePrefix: "polito_manuri_sanna_auth_"
 	}
 });
 var AUTH_ERROR_TRANSLATE = {
@@ -10428,5 +10516,4 @@ var AUTH_ERROR_TRANSLATE = {
 	"BAD_REQUEST": "Richiesta non valida.",
 	"BANNED_USER": "Il tuo account è stato sospeso. Contatta l'amministratore."
 };
-//#endregion
-export { svelteKitHandler as i, developer as n, professor as r, auth as t };
+export { svelteKitHandler as i, auth as n, professor as r, admin as t };

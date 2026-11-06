@@ -1,7 +1,8 @@
 <script>
     import { onMount } from "svelte";
     import { page } from "$app/stores";
-    import BreadCrumb from "$lib/components/common/BreadCrumb.svelte";
+	import PageHeader from "$lib/components/portal/PageHeader.svelte";
+	import { apiRequest } from "$lib/client/api.js";
     import { _, locale } from 'svelte-i18n';
 
     let user = null;
@@ -9,21 +10,18 @@
     let errorMessage = "";
 
     const roleNames = {
-        developer: 'role.developer',
+        admin: 'role.admin',
         professor: 'role.professor',
         student: 'role.student',
     };
 
     const formatDate = (date) => date
         ? new Intl.DateTimeFormat($locale === 'en' ? 'en-GB' : 'it-IT', { dateStyle: "long" }).format(new Date(date))
-        : "N/A";
+        : $_('common.notDefined');
 
     onMount(async () => {
         try {
-            const response = await fetch(`/api/utenti/${$page.params.id}`);
-            const payload = await response.json().catch(() => ({}));
-			if (!response.ok) throw new Error(payload.message || payload.error || $_('users.loadError'));
-            user = payload.data;
+            user = await apiRequest(`/api/utenti/${$page.params.id}`);
         } catch (error) {
             errorMessage = error.message;
         } finally {
@@ -32,23 +30,23 @@
     });
 </script>
 
-<svelte:head><title>{$_('users.detail')}</title></svelte:head>
+<svelte:head><title>{$_('users.detail')} | {$_('site.name')}</title></svelte:head>
 
 <div class="page-content"><div class="container-fluid py-4">
-    <BreadCrumb title={$_('users.detail')} pageTitle={$_('nav.students')} pageHref="/studenti" />
+	<PageHeader title={$_('users.detail')} subtitle={$_('users.detailSubtitle')} parentLabel={$_('nav.students')} parentHref="/studenti" />
     {#if loading}
         <div class="text-center py-5"><span class="spinner-border text-primary"></span></div>
     {:else if errorMessage}
-        <div class="alert alert-danger">{errorMessage}</div>
+        <div class="alert alert-danger">{$_('users.loadError')} {errorMessage}</div>
     {:else if user}
         <div class="row justify-content-center"><div class="col-xl-8"><div class="card border-0 shadow-sm">
             <div class="card-header d-flex justify-content-between align-items-center">
-				<h5 class="mb-0">{$_('users.profile')}</h5><a class="btn btn-sm btn-light" href="/studenti">{$_('users.backToList')}</a>
+				<h2 class="h5 mb-0">{$_('users.profile')}</h2><a class="btn btn-sm btn-light" href="/studenti">{$_('users.backToList')}</a>
             </div>
             <div class="card-body">
                 <div class="d-flex align-items-center gap-3 mb-4">
                     {#if user.image}<img class="rounded-circle object-fit-cover" width="72" height="72" src={user.image} alt={user.name} />{:else}<div class="avatar-placeholder rounded-circle d-flex align-items-center justify-content-center">{user.name?.slice(0, 1)?.toUpperCase()}</div>{/if}
-                    <div><h3 class="mb-1">{user.name} {user.surname || ""}</h3><p class="text-muted mb-0">{user.email}</p></div>
+                    <div><h2 class="h3 mb-1">{user.name} {user.surname || ""}</h2><p class="text-muted mb-0">{user.email}</p></div>
                 </div>
                 <dl class="row mb-0">
 					<dt class="col-sm-4">{$_('common.role')}</dt><dd class="col-sm-8">{roleNames[user.role] ? $_(roleNames[user.role]) : user.role}</dd>

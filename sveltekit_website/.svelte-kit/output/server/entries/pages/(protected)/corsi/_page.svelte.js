@@ -1,10 +1,10 @@
 import { A as escape_html, O as attr, g as unsubscribe_stores, m as store_get, s as head } from "../../../../chunks/server.js";
 import "../../../../chunks/index-server2.js";
-import { t as $format } from "../../../../chunks/runtime.js";
 import { t as authClient } from "../../../../chunks/auth-client.js";
 import "../../../../chunks/api.js";
 import { t as PageHeader } from "../../../../chunks/PageHeader.js";
-//#region src/routes/(protected)/corsi/+page.svelte
+import { t as $format } from "../../../../chunks/runtime.js";
+// src/routes/(protected)/corsi/+page.svelte
 function _page($$renderer, $$props) {
 	$$renderer.component(($$renderer) => {
 		var $$store_subs;
@@ -14,7 +14,7 @@ function _page($$renderer, $$props) {
 		let search = "";
 		let statusFilter = "all";
 		$: currentUser = store_get($$store_subs ??= {}, "$session", session)?.data?.user;
-		$: canCreate = ["professor", "developer"].includes(currentUser?.role);
+		$: canCreate = ["professor", "admin"].includes(currentUser?.role);
 		$: courses.filter((course) => {
 			return `${course.name} ${course.description}`.toLowerCase().includes(search.toLowerCase()) && true;
 		});
@@ -30,8 +30,9 @@ function _page($$renderer, $$props) {
 			parentLabel: store_get($$store_subs ??= {}, "$_", $format)("common.portal"),
 			parentHref: "/"
 		});
-		$$renderer.push(`<!----> <div class="card border-0 shadow-sm mb-4"><div class="card-body course-filters svelte-11i6lxh"><div class="input-group search-box flex-grow-1 svelte-11i6lxh"><span class="input-group-text bg-transparent"><i class="ri-search-line"></i></span> <input class="form-control" type="search"${attr("value", search)}${attr("placeholder", store_get($$store_subs ??= {}, "$_", $format)("courses.search"))}/></div> `);
+		$$renderer.push(`<!----> <div class="card border-0 shadow-sm mb-4"><div class="card-body course-filters svelte-11i6lxh"><div class="input-group search-box flex-grow-1 svelte-11i6lxh"><label class="visually-hidden" for="course-search">${escape_html(store_get($$store_subs ??= {}, "$_", $format)("courses.searchLabel"))}</label> <span class="input-group-text bg-transparent"><i class="ri-search-line" aria-hidden="true"></i></span> <input id="course-search" class="form-control" type="search"${attr("value", search)}${attr("placeholder", store_get($$store_subs ??= {}, "$_", $format)("courses.search"))}/></div> <label class="visually-hidden" for="course-status-filter">${escape_html(store_get($$store_subs ??= {}, "$_", $format)("courses.statusFilterLabel"))}</label> `);
 		$$renderer.select({
+			id: "course-status-filter",
 			class: "form-select status-filter",
 			value: statusFilter
 		}, ($$renderer) => {
@@ -56,5 +57,4 @@ function _page($$renderer, $$props) {
 		if ($$store_subs) unsubscribe_stores($$store_subs);
 	});
 }
-//#endregion
 export { _page as default };

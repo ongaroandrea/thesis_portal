@@ -1,5 +1,5 @@
 import { Rt as fallback, f as slot, i as bind_props, l as rest_props, r as attributes, u as sanitize_props } from "./server.js";
-//#region node_modules/svelte-link/Link.svelte
+// node_modules/svelte-link/Link.svelte
 function Link($$renderer, $$props) {
 	const $$sanitized_props = sanitize_props($$props);
 	const $$restProps = rest_props($$sanitized_props, [
@@ -74,5 +74,4 @@ function Link($$renderer, $$props) {
 		});
 	});
 }
-//#endregion
 export { Link as t };

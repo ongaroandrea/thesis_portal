@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from contextlib import asynccontextmanager
 from io import BytesIO
+import json
+import re
 from uuid import UUID
 
 from fastapi import (
@@ -26,7 +28,13 @@ from .security import HmacVerifier
 
 
 class BodyCachingRoute(APIRoute):
-    """Cache the raw body before FastAPI consumes multipart form data."""
+    """Cache the raw body before FastAPI consumes multipart form data.
+
+    The HMAC signature covers the exact body bytes, but once FastAPI parses
+    ``File``/``Form`` parameters the stream is consumed. Awaiting
+    ``request.body()`` first stores the bytes on the request so
+    ``HmacVerifier.verify`` can hash them afterwards.
+    """
 
     def get_route_handler(self):
         route_handler = super().get_route_handler()
@@ -49,6 +57,7 @@ job_queue = SerialJobQueue(
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
+    """Start the queue consumer on startup and drain it on shutdown."""
     await job_queue.start()
     yield
     await job_queue.stop()
@@ -85,14 +94,44 @@ async def create_job(
     image: UploadFile = File(...),
     reference_image: UploadFile = File(...),
     type: ImageType = Form(...),
+    model: str = Form(..., min_length=1, max_length=200),
+    system_prompt: str = Form(..., min_length=1, max_length=50_000),
+    user_prompt: str = Form(..., min_length=1, max_length=50_000),
+    output_schema: str = Form(..., min_length=2, max_length=50_000),
+    prompt_version: str = Form(..., min_length=1, max_length=100),
+    prompt_hash: str = Form(..., min_length=64, max_length=64),
 ) -> JobAccepted:
+    """Validate a signed multipart job and enqueue it.
+
+    The request carries the student image, the reference image and the full
+    prompt snapshot authored by SvelteKit. Both images are fully read into
+    memory, size-checked, decoded with Pillow to confirm the real format and
+    pixel count, and the declared content type must match the detected
+    format. Returns 202 with the job id and queue position, or 503 when the
+    queue is full. Images are never written to disk by this service.
+    """
     allowed_formats = {
         "JPEG": "image/jpeg",
         "PNG": "image/png",
         "WEBP": "image/webp",
     }
+    if model not in settings.allowed_models:
+        raise HTTPException(status_code=422, detail="The requested model is not allowed")
+    if not re.fullmatch(r"[0-9a-f]{64}", prompt_hash):
+        raise HTTPException(status_code=422, detail="prompt_hash must be a SHA-256 hex digest")
+    try:
+        parsed_output_schema = json.loads(output_schema)
+    except json.JSONDecodeError as error:
+        raise HTTPException(status_code=422, detail="output_schema must be valid JSON") from error
+    if not isinstance(parsed_output_schema, dict):
+        raise HTTPException(status_code=422, detail="output_schema must be a JSON object")
 
     async def read_image(upload: UploadFile, label: str):
+        """Read one upload and return (bytes, format, content type, width, height).
+
+        Reads at most ``max_image_bytes + 1`` bytes so oversize files are
+        detected without buffering them entirely.
+        """
         image_bytes = await upload.read(settings.max_image_bytes + 1)
         await upload.close()
         if not image_bytes:
@@ -138,6 +177,12 @@ async def create_job(
 
     payload = ImageJobRequest(
         type=type,
+        model=model,
+        system_prompt=system_prompt,
+        user_prompt=user_prompt,
+        output_schema=parsed_output_schema,
+        prompt_version=prompt_version,
+        prompt_hash=prompt_hash,
         image=image_bytes,
         image_format=actual_format.lower(),
         content_type=expected_content_type,

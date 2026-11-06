@@ -1,8 +1,10 @@
-
+import * as server from '../entries/pages/(protected)/prompt/_page.server.js';
 
 export const index = 23;
 let component_cache;
-export const component = async () => component_cache ??= (await import('../entries/pages/(public)/password-dimenticata/_page.svelte.js')).default;
-export const imports = ["_app/immutable/nodes/23.Bjd9Av5K.js","_app/immutable/chunks/CLKU1sNR.js","_app/immutable/chunks/xihTtKlq.js","_app/immutable/chunks/DAVU2sXb.js","_app/immutable/chunks/CtaBhaFl.js","_app/immutable/chunks/Br9kuIcU.js","_app/immutable/chunks/8vhSUXJm.js","_app/immutable/chunks/D0Pe_zd4.js","_app/immutable/chunks/BedtOJ0y.js","_app/immutable/chunks/BkPMo14Q.js","_app/immutable/chunks/OC_eyYKs.js"];
-export const stylesheets = ["_app/immutable/assets/dist.DhaulA-e.css","_app/immutable/assets/LanguageSwitcher.CU0rOTlj.css","_app/immutable/assets/ParticlesAuth.vBtjVclp.css","_app/immutable/assets/23.Y8lDSLmi.css"];
+export const component = async () => component_cache ??= (await import('../entries/pages/(protected)/prompt/_page.svelte.js')).default;
+export { server };
+export const server_id = "src/routes/(protected)/prompt/+page.server.js";
+export const imports = ["_app/immutable/nodes/23.BNxebvXx.js","_app/immutable/chunks/xihTtKlq.js","_app/immutable/chunks/Bkx_ML_s.js","_app/immutable/chunks/xpPworqp.js","_app/immutable/chunks/Bw8FW4R_.js","_app/immutable/chunks/Dv9-orXY.js","_app/immutable/chunks/BVpGFOjf.js","_app/immutable/chunks/BznIrGAg.js"];
+export const stylesheets = ["_app/immutable/assets/PromptManager.DwjRUvA8.css"];
 export const fonts = [];

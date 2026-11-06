@@ -1,4 +1,4 @@
-//#region node_modules/@sveltejs/kit/src/utils/url.js
+// node_modules/@sveltejs/kit/src/utils/url.js
 /**
 * Matches a URI scheme. See https://www.rfc-editor.org/rfc/rfc3986#section-3.1
 * @type {RegExp}
@@ -117,8 +117,7 @@ function allow_nodejs_console_log(url) {
 		return inspect(new URL(url), opts);
 	};
 }
-//#endregion
-//#region node_modules/@sveltejs/kit/src/utils/routing.js
+// node_modules/@sveltejs/kit/src/utils/routing.js
 /**
 * @param {RegExpMatchArray} match
 * @param {import('types').RouteParam[]} params
@@ -178,5 +177,4 @@ function find_route(path, routes, matchers) {
 	}
 	return null;
 }
-//#endregion
 export { disable_search as a, resolve as c, decode_pathname as i, SCHEME as n, make_trackable as o, decode_params as r, normalize_path as s, find_route as t };

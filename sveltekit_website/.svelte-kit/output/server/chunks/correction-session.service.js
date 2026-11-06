@@ -1,12 +1,13 @@
-import { a as numericId, c as paginationParams, l as requireUser, r as ApiError, s as paginated, u as requiredText } from "./handler.js";
-import { a as correctionSession, h as user, i as correctionAttempt, n as activity, r as activityReferenceImage, t as db } from "./db.js";
+import { a as correctionAttempt, b as user, n as activity, r as activityReferenceImage, s as correctionSession, t as db } from "./db.js";
+import { a as paginated, c as requiredText, o as paginationParams, r as numericId, s as requireUser, t as ApiError } from "./api.service.js";
+import { t as activityService } from "./activity.service.js";
 import { t as courseService } from "./course.service.js";
 import { t as CORRECTION_FOCUS_IDS } from "./correction-focus.js";
-import { t as activityService } from "./activity.service.js";
-import { and, asc, count, desc, eq, inArray, sql } from "drizzle-orm";
-//#region src/lib/server/services/correction-session.service.js
+import { and, count, desc, eq, inArray, sql } from "drizzle-orm";
+// src/lib/server/services/correction-session.service.js
 function derivedSessionStatus(attempts) {
-	const latest = [...attempts].filter((attempt) => !attempt.cancelledAt).sort((left, right) => left.attemptNumber - right.attemptNumber).at(-1);
+	let latest = null;
+	for (const attempt of attempts) if (!attempt.cancelledAt && (!latest || attempt.attemptNumber > latest.attemptNumber)) latest = attempt;
 	if (!latest?.jobStatus) return "OPEN";
 	if (["queued", "processing"].includes(latest.jobStatus)) return "PROCESSING";
 	if (latest.jobStatus === "completed") return "ANSWERED";
@@ -20,7 +21,7 @@ async function attemptsBySessionIds(sessionIds) {
 		attemptNumber: correctionAttempt.attemptNumber,
 		jobStatus: correctionAttempt.jobStatus,
 		cancelledAt: correctionAttempt.cancelledAt
-	}).from(correctionAttempt).where(inArray(correctionAttempt.sessionId, sessionIds)).orderBy(asc(correctionAttempt.attemptNumber));
+	}).from(correctionAttempt).where(inArray(correctionAttempt.sessionId, sessionIds));
 	const grouped = new Map(sessionIds.map((sessionId) => [sessionId, []]));
 	for (const attempt of attempts) grouped.get(attempt.sessionId)?.push(attempt);
 	return grouped;
@@ -126,7 +127,7 @@ var correctionSessionService = {
 		requireUser(currentUser);
 		const activityRecord = await activityService.requireActivityAccess(input.activityId, currentUser);
 		if (activityRecord.kind === "EXAM") throw new ApiError(400, "Exam activities use the dedicated submission workflow.", "EXAM_USES_SUBMISSIONS");
-		if (!(currentUser.role === "developer" ? true : await courseService.isAuthorizedMember(activityRecord.courseId, currentUser.id))) throw new ApiError(403, "Only an authorized course member can create a correction session.", "MEMBER_NOT_AUTHORIZED");
+		if (!(currentUser.role === "admin" ? true : await courseService.isAuthorizedMember(activityRecord.courseId, currentUser.id))) throw new ApiError(403, "Only an authorized course member can create a correction session.", "MEMBER_NOT_AUTHORIZED");
 		const referenceImageId = numericId(input.referenceImageId, "referenceImageId");
 		const [referenceImage] = await db.select({ id: activityReferenceImage.id }).from(activityReferenceImage).where(and(eq(activityReferenceImage.id, referenceImageId), eq(activityReferenceImage.activityId, activityRecord.id))).limit(1);
 		if (!referenceImage) throw new ApiError(400, "The selected point of view is not available for this activity.", "INVALID_REFERENCE_IMAGE");
@@ -165,5 +166,4 @@ var correctionSessionService = {
 		return { id: record.id };
 	}
 };
-//#endregion
 export { correctionSessionService as t };

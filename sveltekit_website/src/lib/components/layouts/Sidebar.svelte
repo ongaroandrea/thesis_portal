@@ -1,13 +1,7 @@
 <script>
-	//Import Components
-	import { Container } from '@sveltestrap/sveltestrap';
 	import HorizontalLayout from "./HorizontalLayout.svelte";
 	import { _ } from 'svelte-i18n';
 	export let user = null;
-
-	function removesidebar() {
-		document.body.classList.remove("vertical-sidebar-enable");
-	}
 
 	const verticalSidebarClass = () => {
 		if (
@@ -35,9 +29,6 @@
 	};
 </script>
 
-<svelte:head>
-	<script src="https://cdn.jsdelivr.net/npm/simplebar@latest/dist/simplebar.min.js"></script>
-</svelte:head>
 <div class="app-menu navbar-menu">
 	<!-- LOGO -->
 	<div class="navbar-brand-box">

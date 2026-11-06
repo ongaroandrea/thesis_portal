@@ -7,6 +7,7 @@
         apiRequest,
         formatDateTime,
     } from "$lib/client/api.js";
+	import { modalDialog } from "$lib/client/modal-dialog.js";
     import { CORRECTION_FOCUS_OPTIONS, allowedCorrectionFocusIds } from "$lib/correction-focus.js";
     import PageHeader from "$lib/components/portal/PageHeader.svelte";
     import { _ } from 'svelte-i18n';
@@ -38,8 +39,22 @@
         jobStates = {},
         correctionIndexes = {},
         pollTimer;
+	let feedback = null,
+		feedbackLoading = false,
+		feedbackSaving = false,
+		feedbackAttemptId = null,
+		isUseful = null,
+		studentComment = "",
+		verdict = "",
+		professorComment = "",
+		feedbackSaved = false;
 
     $: courseId = $page.params.id;
+	// "Saved" stays visible only while the form still matches the stored record.
+	$: studentFeedbackSaved = feedbackSaved && feedback
+		&& isUseful === (feedback.isUseful ?? null) && studentComment === (feedback.studentComment ?? "");
+	$: professorFeedbackSaved = feedbackSaved && feedback
+		&& verdict === (feedback.verdict ?? "") && professorComment === (feedback.professorComment ?? "");
     $: activityId = $page.params.activityId;
     $: selectedReference =
         referenceImages.find(
@@ -62,7 +77,80 @@
     $: visibleCorrectionCategories = categoriesForFocus(
         selectedRequest?.focus || correctionFocus,
     );
+	$: if (selectedRequest?.response && selectedRequest.id !== feedbackAttemptId) {
+		loadFeedback(selectedRequest.id);
+	}
 
+	/**
+	 * Load the feedback form state for one attempt.
+	 * Triggered reactively whenever a different answered request is selected.
+	 * `feedbackAttemptId` doubles as a race guard: if the user switches
+	 * request while this fetch is in flight, the stale result is dropped.
+	 * @param {number} attemptId
+	 */
+	async function loadFeedback(attemptId) {
+		feedbackAttemptId = attemptId;
+		feedbackLoading = true;
+		feedbackSaved = false;
+		try {
+			const record = await apiRequest(`/api/feedback-correzione?attemptId=${attemptId}`);
+			if (feedbackAttemptId !== attemptId) return;
+			feedback = record;
+			isUseful = record?.isUseful ?? null;
+			studentComment = record?.studentComment ?? "";
+			verdict = record?.verdict ?? "";
+			professorComment = record?.professorComment ?? "";
+		} catch (error) {
+			if (feedbackAttemptId === attemptId) errorMessage = error.message;
+		} finally {
+			if (feedbackAttemptId === attemptId) feedbackLoading = false;
+		}
+	}
+
+	async function saveStudentFeedback(value) {
+		isUseful = value;
+		await saveFeedback({ isUseful, studentComment });
+	}
+
+	async function saveProfessorReview() {
+		if (!verdict) return;
+		await saveFeedback({ verdict, professorComment });
+	}
+
+	/**
+	 * Upsert feedback for the selected attempt (PUT is idempotent per
+	 * attempt). Students send `isUseful`/`studentComment`, professors send
+	 * `verdict`/`professorComment`; the form fields are then refreshed from
+	 * the saved record so they reflect what the server actually stored.
+	 * @param {object} payload
+	 */
+	async function saveFeedback(payload) {
+		if (!selectedRequest?.id) return;
+		feedbackSaving = true;
+		feedbackSaved = false;
+		errorMessage = "";
+		try {
+			feedback = await apiRequest(`/api/feedback-correzione?attemptId=${selectedRequest.id}`, {
+				method: "PUT",
+				body: JSON.stringify(payload),
+			});
+			isUseful = feedback.isUseful ?? null;
+			studentComment = feedback.studentComment ?? "";
+			verdict = feedback.verdict ?? "";
+			professorComment = feedback.professorComment ?? "";
+			// Confirmed inline next to the save button (the page-level alert
+			// sits far above the form, out of view).
+			feedbackSaved = true;
+		} catch (error) {
+			errorMessage = error.message;
+		} finally {
+			feedbackSaving = false;
+		}
+	}
+
+    // Load course, activity and reference images, redirect exams to their own
+    // page, then pick the session to show: the one in ?session=, else the
+    // newest non-failed one. Settings (view, focus) are locked per session.
     async function loadWorkspace() {
         try {
             [course, activity, referenceImages] = await Promise.all([
@@ -99,6 +187,8 @@
         }
     }
 
+    // Poll every 5 s for as long as the page is open; the timer and every
+    // object URL created for image previews are released in onDestroy.
     onMount(async () => {
         await loadWorkspace();
         await refreshJobs();
@@ -124,6 +214,8 @@
         );
     }
 
+    // File input handler. Mirrors the server limits (image, max 12 MB) to
+    // fail fast, and swaps the preview object URL, revoking the old one.
     function selectImage(event) {
         const file = event.currentTarget.files?.[0];
         if (!file) return;
@@ -153,6 +245,9 @@
         };
     }
 
+    // Display data for a request: the persisted attempt when available,
+    // otherwise the latest polled job state (so results show up before the
+    // attempt row is reloaded).
     function requestDetails(request) {
         if (request?.response) return responseDetails(request.response);
         const job = request?.jobId ? jobStates[request.jobId] : null;
@@ -184,6 +279,9 @@
         return option ? $_(option.labelKey) : focusId;
     }
 
+    // Model output comes in two shapes: `general` jobs return
+    // { analyses: { camera, light, ... } }, single-topic jobs return
+    // { type, analysis }. Return the analysis block for one category.
     function analysisForCategory(details, categoryKey) {
         const result = details?.result || {};
         const nested = result.analyses?.[categoryKey] ?? result[categoryKey];
@@ -192,6 +290,8 @@
         return null;
     }
 
+    // Current prompt schemas use `changed_parameters`; `corrections` is the
+    // older field name, still found in stored results.
     function correctionsForAnalysis(analysis) {
         if (!analysis) return [];
         if (Array.isArray(analysis.changed_parameters))
@@ -227,6 +327,8 @@
         return String(value).replaceAll("_", " ");
     }
 
+    // Turn stored attempts into the chat-like request list. `response` is set
+    // only when the attempt already has a persisted result.
     function buildRequests(allAttempts) {
         return allAttempts.map((attempt) => ({
             id: attempt.id,
@@ -252,6 +354,9 @@
         }));
     }
 
+    // Restore the locked view and focus of a session into the form controls.
+    // Falls back to the first attempt's values when the session row has
+    // none; ids that are no longer available are ignored.
     function applyConversationSettings(session, sessionMessages) {
         const firstRequest = buildRequests(sessionMessages)[0];
         const referenceImageId =
@@ -268,6 +373,9 @@
             correctionFocus = analysisFocus;
     }
 
+    // Badge for a request. Precedence: cancelled (replaced) > persisted
+    // result > live polled status > status stored on the attempt.
+    // `label` is an i18n key.
     function requestStatus(request) {
         if (request.cancelledAt)
             return {
@@ -321,6 +429,9 @@
         return status === "queued" || status === "processing";
     }
 
+    // Values sent back with PATCH /api/tentativi-correzione/:id when a job
+    // finishes. The server ignores them (it persists results itself during
+    // the signed job poll); the PATCH only returns the fresh attempt row.
     function completedAttemptValues(job) {
         const result = job?.result || {};
         const firstError = Array.isArray(result.errors)
@@ -355,6 +466,10 @@
         return values;
     }
 
+    // Polling loop (every 5 s, see onMount): ask the portal for the state of
+    // each unfinished job in the active session. A job unknown to Python
+    // (e.g. after a worker restart) is shown as failed. Finished jobs trigger
+    // a reload of the attempt so the saved result is displayed.
     async function refreshJobs() {
         if (!activeSession) return;
         const pending = requests.filter(
@@ -440,6 +555,8 @@
 		successMessage = $_('correction.newConversationReady');
     }
 
+    // Form submit: if a job for the same view is still running, ask the user
+    // whether to replace it before submitting.
     async function sendCorrection(event) {
         event.preventDefault();
         if (!imageUrl || !imageFile) {
@@ -470,6 +587,13 @@
         await submitCorrection(replaced);
     }
 
+	function closeReplacementDialog() {
+		if (!sending) pendingReplacement = null;
+	}
+
+    // Create a session if needed, cancel the job being replaced, upload the
+    // image to start a new job, then register the attempt. On error, the new
+    // job and any session created for this request are rolled back.
     async function submitCorrection(replaced = null) {
         sending = true;
         errorMessage = "";
@@ -584,7 +708,7 @@
     }
 </script>
 
-<svelte:head><title>{$_('correction.imageCorrection')}</title></svelte:head>
+<svelte:head><title>{$_('correction.imageCorrection')} | {$_('site.name')}</title></svelte:head>
 <div class="page-content">
     <div class="container-fluid py-4">
         <PageHeader
@@ -721,11 +845,7 @@
                                                 />{:else}<div
                                                     class="upload-placeholder"
                                                 >
-                                                    <div class="upload-icon">
-                                                        <i
-                                                            class="ri-image-add-line"
-                                                        ></i>
-                                                    </div>
+                                                    <i class="ri-image-add-line upload-icon" aria-hidden="true"></i>
                                                     <strong
 												>{$_('correction.uploadView')}</strong
 											><span>{$_('correction.imageFormats')}</span
@@ -754,6 +874,7 @@
                                         <div class="image-stage has-image">
                                             <img
                                                 src={selectedReference?.storageKey}
+                                                decoding="async"
                                                 alt={selectedReference?.altText ||
                                                     selectedReference?.originalFilename ||
 													$_('correction.referenceImageAlt')}
@@ -767,8 +888,7 @@
                 <div class="col-xxl-4">
                     <div class="card border-0 shadow-sm h-100">
                         <div class="card-header bg-transparent p-4">
-							<span class="eyebrow">{$_('correction.currentAnalysis')}</span>
-							<h5 class="mb-1">{$_('correction.byCategory')}</h5>
+							<h2 class="h5 mb-1">{$_('correction.byCategory')}</h2>
 							<p class="text-muted mb-0">{$_('correction.detectedParameters')}</p>
                         </div>
                         <div class="card-body p-4 pt-0 correction-panel">
@@ -807,10 +927,8 @@
                                             {@const correctionIndex = Math.min(correctionIndexes[category.key] || 0, Math.max(corrections.length - 1, 0))}
                                             <section class="category-result" aria-labelledby={`category-${category.key}`}>
                                                 <div class="category-heading">
-                                                    <span class="category-icon"><i class={category.icon}></i></span>
                                                     <div>
-												<small>{$_('correction.category')}</small>
-												<h6 id={`category-${category.key}`}>{$_(category.label)}</h6>
+												<h3 class="h6" id={`category-${category.key}`}>{$_(category.label)}</h3>
                                                     </div>
                                                     {#if analysis?.summary?.overall_confidence}
                                                         <span class="confidence-badge">{displayValue(analysis.summary.overall_confidence)}</span>
@@ -892,7 +1010,46 @@
                     </div>
                 </div>
             </div>
-            <div class="submit-card">
+            {#if selectedRequest?.response}
+				<section class="feedback-card" aria-labelledby="feedback-title">
+					<div class="feedback-heading">
+						<div><h2 class="h4" id="feedback-title">{$_(course?.canManage ? 'feedback.professorTitle' : 'feedback.studentTitle')}</h2><p>{$_(course?.canManage ? 'feedback.professorHelp' : 'feedback.studentHelp')}</p></div>
+						{#if feedbackLoading}<span class="spinner-border spinner-border-sm text-primary" aria-label={$_('common.loading')}></span>{/if}
+					</div>
+					{#if !feedbackLoading}
+						{#if course?.canManage}
+							<div class="review-layout">
+								<div>
+									<span class="feedback-label">{$_('feedback.correctnessQuestion')}</span>
+									<div class="verdict-options" role="radiogroup" aria-label={$_('feedback.correctnessQuestion')}>
+										{#each [{ value: 'CORRECT', label: 'feedback.correct', icon: 'ri-checkbox-circle-line' }, { value: 'PARTIAL', label: 'feedback.partial', icon: 'ri-error-warning-line' }, { value: 'INCORRECT', label: 'feedback.incorrect', icon: 'ri-close-circle-line' }] as option}
+											<label class:checked={verdict === option.value} class={`verdict-${option.value.toLowerCase()}`}><input type="radio" name="verdict" value={option.value} bind:group={verdict} /><i class={option.icon}></i><span>{$_(option.label)}</span></label>
+										{/each}
+									</div>
+								</div>
+								<div class="student-signal">
+									<span>{$_('feedback.studentSignal')}</span>
+									<strong class:positive={feedback?.isUseful === true} class:negative={feedback?.isUseful === false}>{feedback?.isUseful == null ? $_('feedback.notProvided') : $_(feedback.isUseful ? 'feedback.useful' : 'feedback.notUseful')}</strong>
+									{#if feedback?.studentComment}<p>“{feedback.studentComment}”</p>{/if}
+								</div>
+							</div>
+							<label class="form-label" for="professor-comment">{$_('feedback.professorComment')}</label>
+							<textarea id="professor-comment" class="form-control" rows="3" maxlength="2000" bind:value={professorComment} placeholder={$_('feedback.professorPlaceholder')}></textarea>
+							<div class="feedback-actions">{#if professorFeedbackSaved}<span class="feedback-saved" role="status"><i class="ri-check-line"></i>{$_('feedback.saved')}</span>{/if}<button class="btn btn-primary" type="button" disabled={!verdict || feedbackSaving} on:click={saveProfessorReview}>{#if feedbackSaving}<span class="spinner-border spinner-border-sm me-2"></span>{/if}{$_(feedback?.reviewedAt ? 'feedback.updateReview' : 'feedback.saveReview')}</button></div>
+						{:else}
+							<span class="feedback-label">{$_('feedback.usefulnessQuestion')}</span>
+							<div class="usefulness-options">
+								<button class:active={isUseful === true} type="button" disabled={feedbackSaving} aria-pressed={isUseful === true} on:click={() => saveStudentFeedback(true)}><i class="ri-thumb-up-line"></i>{$_('feedback.yesUseful')}</button>
+								<button class:active={isUseful === false} type="button" disabled={feedbackSaving} aria-pressed={isUseful === false} on:click={() => saveStudentFeedback(false)}><i class="ri-thumb-down-line"></i>{$_('feedback.noUseful')}</button>
+							</div>
+							<label class="form-label" for="student-comment">{$_('feedback.studentComment')}</label>
+							<textarea id="student-comment" class="form-control" rows="3" maxlength="2000" bind:value={studentComment} placeholder={$_('feedback.studentPlaceholder')}></textarea>
+							<div class="feedback-actions">{#if studentFeedbackSaved}<span class="feedback-saved" role="status"><i class="ri-check-line"></i>{$_('feedback.saved')}</span>{/if}<span>{studentComment.length}/2000</span><button class="btn btn-outline-primary" type="button" disabled={isUseful === null || feedbackSaving} on:click={() => saveStudentFeedback(isUseful)}>{#if feedbackSaving}<span class="spinner-border spinner-border-sm me-2"></span>{/if}{$_('feedback.saveComment')}</button></div>
+						{/if}
+					{/if}
+				</section>
+			{/if}
+            {#if !course?.canManage}<div class="submit-card">
                 <div>
 					<strong>{$_('correction.ready')}</strong><span
 						>{$_('correction.readyHelp')}</span
@@ -919,14 +1076,13 @@
 							: $_('correction.start')}</button
                     >
                 </form>
-            </div>
+            </div>{/if}
             {#if requests.length > 0}<div class="card border-0 shadow-sm mt-4">
                     <div
                         class="card-header bg-transparent p-4 d-flex flex-wrap justify-content-between align-items-center gap-2"
                     >
                         <div>
-							<span class="eyebrow">{$_('correction.progress')}</span>
-							<h5 class="mb-1">{$_('correction.requestsHere')}</h5>
+							<h2 class="h5 mb-1">{$_('correction.requestsHere')}</h2>
 							<p class="text-muted mb-0">{$_('correction.requestsHelp')}</p>
                         </div>
                         <span class="request-count">{requests.length}</span>
@@ -947,6 +1103,8 @@
                                         >{#if request.imageUrl}<img
                                                 src={request.imageUrl}
                                                 alt={request.imageName}
+                                                loading="lazy"
+                                                decoding="async"
                                             />{:else}<i class="ri-image-line"
                                             ></i>{/if}</span
                                     ><span class="request-copy"
@@ -975,16 +1133,13 @@
 </div>
 
 {#if pendingReplacement}
-    <div class="dialog-backdrop" role="presentation">
-        <dialog
+	<dialog
             class="replace-dialog"
-            open
+			use:modalDialog={{ onCancel: closeReplacementDialog }}
+			aria-modal="true"
             aria-labelledby="replace-dialog-title"
         >
-            <div class="replace-dialog-icon">
-                <i class="ri-error-warning-line"></i>
-            </div>
-			<h3 id="replace-dialog-title">{$_('correction.replaceProcess')}</h3>
+			<h2 class="h3" id="replace-dialog-title">{$_('correction.replaceProcess')}</h2>
 			<p>{$_('correction.replaceProcessBody', { values: { view: pendingReplacement.viewLabel } })}</p>
             <div class="replacement-job">
 				<span>{$_('correction.selectedProcess')}</span><code
@@ -994,8 +1149,9 @@
             <div class="dialog-actions">
                 <button
                     class="btn btn-light"
+					data-dialog-initial
                     type="button"
-                    on:click={() => (pendingReplacement = null)}
+					on:click={closeReplacementDialog}
 					disabled={sending}>{$_('common.cancel')}</button
                 ><button
                     class="btn btn-danger"
@@ -1007,8 +1163,7 @@
 						></span>{/if}{$_('correction.interruptReplace')}</button
                 >
             </div>
-        </dialog>
-    </div>
+	</dialog>
 {/if}
 
 <style>
@@ -1019,15 +1174,9 @@
         gap: 1rem;
         margin-bottom: 1.5rem;
         padding: 1rem 1.15rem;
-        border: 1px solid
-            color-mix(in srgb, #405189 24%, var(--bs-border-color));
-        border-radius: 17px;
-        background: linear-gradient(
-            105deg,
-            color-mix(in srgb, #405189 8%, var(--bs-body-bg)),
-            var(--bs-body-bg)
-        );
-        box-shadow: 0 8px 24px rgba(31, 43, 79, 0.07);
+        border: 1px solid var(--portal-border);
+        border-radius: var(--portal-radius);
+        background: var(--portal-surface);
     }
     .context-course,
     .context-activity {
@@ -1035,11 +1184,11 @@
         display: flex;
         align-items: center;
         gap: 0.75rem;
-        color: var(--bs-body-color);
+        color: var(--portal-ink);
     }
     .context-course:hover,
     .context-activity:hover {
-        color: #405189;
+        color: var(--portal-brand-primary);
     }
     .context-course > span:last-child,
     .context-activity > span:last-child {
@@ -1047,11 +1196,9 @@
         display: grid;
     }
     .activity-context small {
-        color: var(--bs-secondary-color);
-        font-size: 0.72rem;
+        color: var(--portal-muted);
+        font-size: .75rem;
         font-weight: 700;
-        letter-spacing: 0.04em;
-        text-transform: uppercase;
     }
     .activity-context strong {
         overflow: hidden;
@@ -1059,72 +1206,9 @@
         text-overflow: ellipsis;
         white-space: nowrap;
     }
-    .context-icon {
-        width: 43px;
-        height: 43px;
-        display: grid;
-        place-items: center;
-        flex: 0 0 auto;
-        border-radius: 13px;
-        font-size: 1.15rem;
-    }
-    .course-icon {
-        color: #405189;
-        background: rgba(64, 81, 137, 0.12);
-    }
-    .activity-icon {
-        color: #087f70;
-        background: rgba(10, 179, 156, 0.12);
-    }
     .context-divider {
-        color: var(--bs-secondary-color);
+        color: var(--portal-muted);
         font-size: 1.35rem;
-    }
-    .context-current {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.4rem;
-        padding: 0.5rem 0.7rem;
-        color: #fff;
-        border-radius: 999px;
-        background: #405189;
-        font-size: 0.76rem;
-        font-weight: 700;
-        white-space: nowrap;
-    }
-    .workflow-heading {
-        display: flex;
-        justify-content: space-between;
-        align-items: end;
-        gap: 1rem;
-        margin-bottom: 1.25rem;
-    }
-    .workflow-heading h4 {
-        margin: 0.2rem 0 0.25rem;
-    }
-    .workflow-heading p {
-        margin: 0;
-        color: var(--bs-secondary-color);
-    }
-    .eyebrow {
-        color: #405189;
-        font-size: 0.72rem;
-        font-weight: 800;
-        letter-spacing: 0.09em;
-        text-transform: uppercase;
-    }
-    .session-pill {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.4rem;
-        padding: 0.55rem 0.8rem;
-        color: #0a806f;
-        border: 1px solid rgba(10, 179, 156, 0.2);
-        border-radius: 999px;
-        background: rgba(10, 179, 156, 0.08);
-        font-size: 0.83rem;
-        font-weight: 700;
-        white-space: nowrap;
     }
     .conversation-lock-alert {
         display: flex;
@@ -1146,6 +1230,7 @@
     .conversation-lock-alert strong {
         display: block;
     }
+	.conversation-lock-alert .btn { min-height: 44px; }
     .comparison-toolbar,
     .comparison-grid {
         display: grid;
@@ -1155,12 +1240,13 @@
     .comparison-toolbar {
         margin-bottom: 1rem;
     }
+	.comparison-toolbar .form-select { min-height: 44px; }
     .image-panel {
         min-width: 0;
         overflow: hidden;
-        border: 1px solid var(--bs-border-color);
-        border-radius: 16px;
-        background: var(--bs-tertiary-bg);
+        border: 1px solid var(--portal-border);
+        border-radius: var(--portal-radius);
+        background: var(--portal-surface-muted);
     }
     .image-panel-title {
         min-height: 55px;
@@ -1169,20 +1255,20 @@
         align-items: center;
         gap: 0.75rem;
         padding: 0.75rem 1rem;
-        background: var(--bs-body-bg);
-        border-bottom: 1px solid var(--bs-border-color);
+        background: var(--portal-surface);
+        border-bottom: 1px solid var(--portal-border);
     }
     .image-panel-title span {
         font-weight: 700;
     }
     .image-panel-title i {
-        color: #405189;
+        color: var(--portal-brand-primary);
         margin-right: 0.25rem;
     }
     .image-panel-title small {
         max-width: 45%;
         overflow: hidden;
-        color: var(--bs-secondary-color);
+        color: var(--portal-muted);
         text-overflow: ellipsis;
         white-space: nowrap;
     }
@@ -1192,11 +1278,7 @@
         place-items: center;
         cursor: pointer;
         overflow: hidden;
-        background: linear-gradient(
-            135deg,
-            var(--bs-tertiary-bg),
-            var(--bs-body-bg)
-        );
+        background: var(--portal-surface-muted);
     }
     .image-stage.has-image {
         background: #10131a;
@@ -1217,19 +1299,13 @@
     }
     .upload-placeholder > span:not(.btn) {
         margin-top: 0.3rem;
-        color: var(--bs-secondary-color);
+        color: var(--portal-muted);
         font-size: 0.82rem;
     }
     .upload-icon {
-        width: 66px;
-        height: 66px;
-        display: grid;
-        place-items: center;
-        margin-bottom: 0.8rem;
-        color: #405189;
-        border-radius: 18px;
-        background: rgba(64, 81, 137, 0.1);
-        font-size: 1.8rem;
+        margin-bottom: 0.6rem;
+        color: var(--portal-info-text);
+        font-size: 1.75rem;
     }
     .empty-reference {
         min-height: 260px;
@@ -1237,9 +1313,9 @@
         justify-content: center;
         align-items: center;
         gap: 1rem;
-        color: var(--bs-secondary-color);
-        border: 2px dashed var(--bs-border-color);
-        border-radius: 16px;
+        color: var(--portal-muted);
+        border: 2px dashed var(--portal-border);
+        border-radius: var(--portal-radius);
     }
     .empty-reference > i {
         font-size: 2rem;
@@ -1248,7 +1324,7 @@
         display: grid;
     }
     .empty-reference strong {
-        color: var(--bs-body-color);
+        color: var(--portal-ink);
     }
     .correction-panel {
         display: grid;
@@ -1266,18 +1342,18 @@
         justify-items: center;
         gap: 0.25rem;
         padding: 0.65rem 0.25rem;
-        color: var(--bs-secondary-color);
-        border: 1px solid var(--bs-border-color);
-        border-radius: 11px;
-        background: var(--bs-tertiary-bg);
-        font-size: 0.68rem;
+        color: var(--portal-muted);
+        border: 1px solid var(--portal-border);
+        border-radius: var(--portal-radius-sm);
+        background: var(--portal-surface-muted);
+        font-size: .75rem;
         font-weight: 700;
         opacity: 0.45;
     }
     .category-strip span.active {
-        color: #405189;
-        border-color: rgba(64, 81, 137, 0.28);
-        background: rgba(64, 81, 137, 0.09);
+        color: var(--portal-brand-primary);
+        border-color: rgba(var(--portal-brand-primary-rgb), 0.28);
+        background: rgba(var(--portal-brand-primary-rgb), 0.09);
         opacity: 1;
     }
     .category-strip i {
@@ -1289,84 +1365,69 @@
     }
     .category-result {
         overflow: hidden;
-        border: 1px solid var(--bs-border-color);
-        border-radius: 15px;
-        background: var(--bs-body-bg);
+        border: 1px solid var(--portal-border);
+        border-radius: var(--portal-radius);
+        background: var(--portal-surface);
     }
     .category-heading {
         display: flex;
         align-items: center;
         gap: 0.7rem;
         padding: 0.85rem 1rem;
-        border-bottom: 1px solid var(--bs-border-color);
-        background: var(--bs-tertiary-bg);
+        border-bottom: 1px solid var(--portal-border);
+        background: var(--portal-surface-muted);
     }
     .category-heading > div {
         min-width: 0;
         display: grid;
     }
-    .category-heading small,
     .parameter-title small {
-        color: var(--bs-secondary-color);
-        font-size: 0.64rem;
-        font-weight: 800;
-        letter-spacing: 0.07em;
-        text-transform: uppercase;
+        color: var(--portal-muted);
+        font-size: .75rem;
+        font-weight: 600;
     }
-    .category-heading h6 {
+    .category-heading h3 {
         margin: 0;
-    }
-    .category-icon {
-        width: 36px;
-        height: 36px;
-        display: grid;
-        place-items: center;
-        flex: 0 0 auto;
-        color: #405189;
-        border-radius: 10px;
-        background: rgba(64, 81, 137, 0.11);
-        font-size: 1rem;
     }
     .confidence-badge {
         margin-left: auto;
         padding: 0.3rem 0.48rem;
-        color: #087b6b;
-        border-radius: 999px;
-        background: rgba(10, 179, 156, 0.12);
-        font-size: 0.65rem;
-        font-weight: 800;
-        text-transform: uppercase;
+        color: var(--portal-positive-text);
+        border-radius: var(--portal-radius);
+        background: rgba(var(--portal-positive-rgb), 0.12);
+        font-size: .75rem;
+        font-weight: 600;
     }
     .general-description {
         margin: 0;
         padding: 1rem;
-        color: var(--bs-secondary-color);
+        color: var(--portal-muted);
         font-size: 0.82rem;
         line-height: 1.55;
     }
     .correction-navigation {
         display: grid;
-        grid-template-columns: 34px 1fr 34px;
+		grid-template-columns: 44px 1fr 44px;
         align-items: center;
         gap: 0.5rem;
         padding: 0 1rem 0.7rem;
     }
     .correction-navigation span {
         text-align: center;
-        color: var(--bs-secondary-color);
-        font-size: 0.72rem;
+        color: var(--portal-muted);
+        font-size: .75rem;
         font-weight: 700;
     }
     .correction-navigation button {
-        width: 34px;
-        height: 34px;
+		width: 44px;
+		height: 44px;
         display: grid;
         place-items: center;
         padding: 0;
-        color: #405189;
-        border: 1px solid rgba(64, 81, 137, 0.2);
-        border-radius: 10px;
-        background: rgba(64, 81, 137, 0.07);
+        color: var(--portal-brand-primary);
+        border: 1px solid rgba(var(--portal-brand-primary-rgb), 0.2);
+        border-radius: var(--portal-radius-sm);
+        background: rgba(var(--portal-brand-primary-rgb), 0.07);
         font-size: 1.1rem;
     }
     .correction-navigation button:disabled {
@@ -1376,9 +1437,9 @@
     .parameter-card {
         margin: 0 1rem 1rem;
         padding: 1rem;
-        border: 1px solid rgba(64, 81, 137, 0.16);
-        border-radius: 13px;
-        background: color-mix(in srgb, #405189 4%, var(--bs-body-bg));
+        border: 1px solid rgba(var(--portal-brand-primary-rgb), 0.16);
+        border-radius: var(--portal-radius);
+        background: color-mix(in srgb, var(--portal-brand-primary) 4%, var(--portal-surface));
     }
     .parameter-title {
         display: flex;
@@ -1391,25 +1452,24 @@
         display: grid;
     }
     .parameter-title strong {
-        color: #405189;
+        color: var(--portal-brand-primary);
         font-size: 1.08rem;
         text-transform: capitalize;
     }
     .confidence {
         padding: 0.25rem 0.45rem;
-        border-radius: 999px;
-        background: var(--bs-tertiary-bg);
-        font-size: 0.64rem;
-        font-weight: 800;
-        text-transform: uppercase;
+        border-radius: var(--portal-radius);
+        background: var(--portal-surface-muted);
+        font-size: .75rem;
+        font-weight: 600;
     }
     .confidence-high {
-        color: #087b6b;
-        background: rgba(10, 179, 156, 0.12);
+        color: var(--portal-positive-text);
+        background: rgba(var(--portal-positive-rgb), 0.12);
     }
     .confidence-medium {
-        color: #9a6500;
-        background: rgba(247, 184, 75, 0.16);
+        color: var(--portal-warning-text);
+        background: rgba(var(--portal-warning-rgb), 0.16);
     }
     .parameter-facts {
         display: grid;
@@ -1420,18 +1480,16 @@
     .parameter-facts > div {
         min-width: 0;
         padding: 0.65rem;
-        border-radius: 9px;
-        background: var(--bs-body-bg);
+        border-radius: var(--portal-radius-sm);
+        background: var(--portal-surface);
     }
     .parameter-facts .wide {
         grid-column: 1 / -1;
     }
     .parameter-facts dt {
         margin-bottom: 0.2rem;
-        color: var(--bs-secondary-color);
-        font-size: 0.62rem;
-        letter-spacing: 0.04em;
-        text-transform: uppercase;
+        color: var(--portal-muted);
+        font-size: .75rem;
     }
     .parameter-facts dd {
         margin: 0;
@@ -1448,12 +1506,12 @@
         align-items: center;
         margin-top: 0.75rem;
         padding-top: 0.75rem;
-        color: var(--bs-secondary-color);
-        border-top: 1px solid var(--bs-border-color);
+        color: var(--portal-muted);
+        border-top: 1px solid var(--portal-border);
         font-size: 0.75rem;
     }
     .correction-score strong {
-        color: #405189;
+        color: var(--portal-brand-primary);
         font-size: 1rem;
     }
     .analysis-summary {
@@ -1461,7 +1519,7 @@
         gap: 0.7rem;
         margin: 0 1rem 1rem;
         padding-top: 0.85rem;
-        border-top: 1px solid var(--bs-border-color);
+        border-top: 1px solid var(--portal-border);
     }
     .analysis-summary > strong {
         font-size: 0.78rem;
@@ -1469,10 +1527,9 @@
     .analysis-summary div span {
         display: block;
         margin-bottom: 0.15rem;
-        color: var(--bs-secondary-color);
-        font-size: 0.62rem;
-        font-weight: 800;
-        letter-spacing: 0.04em;
+        color: var(--portal-muted);
+        font-size: .75rem;
+        font-weight: 600;
         text-transform: capitalize;
     }
     .analysis-summary p {
@@ -1486,19 +1543,19 @@
         justify-items: center;
         gap: 0.35rem;
         padding: 1.25rem 1rem;
-        color: var(--bs-secondary-color);
+        color: var(--portal-muted);
         text-align: center;
         font-size: 0.78rem;
     }
     .category-empty i,
     .analysis-state > i {
-        color: #405189;
+        color: var(--portal-brand-primary);
         font-size: 1.35rem;
     }
     .analysis-state {
         padding: 2.25rem 1rem;
-        border: 1px dashed var(--bs-border-color);
-        border-radius: 14px;
+        border: 1px dashed var(--portal-border);
+        border-radius: var(--portal-radius);
     }
     .analysis-state p {
         margin: 0;
@@ -1511,8 +1568,8 @@
         animation: none;
     }
     .response-time {
-        color: var(--bs-secondary-color);
-        font-size: 0.72rem;
+        color: var(--portal-muted);
+        font-size: .75rem;
     }
     @keyframes spin {
         to { transform: rotate(360deg); }
@@ -1522,15 +1579,15 @@
         justify-items: center;
         padding: 3rem 1rem;
         text-align: center;
-        color: var(--bs-secondary-color);
+        color: var(--portal-muted);
     }
     .empty-evaluation > i {
         margin-bottom: 0.8rem;
-        color: #405189;
+        color: var(--portal-brand-primary);
         font-size: 2.4rem;
     }
     .empty-evaluation strong {
-        color: var(--bs-body-color);
+        color: var(--portal-ink);
     }
     .empty-evaluation p {
         margin: 0.35rem 0 0;
@@ -1542,16 +1599,15 @@
         gap: 1rem;
         margin-top: 1.5rem;
         padding: 1rem 1.15rem;
-        border: 1px solid var(--bs-border-color);
-        border-radius: 16px;
-        background: var(--bs-body-bg);
-        box-shadow: 0 8px 24px rgba(31, 43, 79, 0.06);
+        border: 1px solid var(--portal-border);
+        border-radius: var(--portal-radius);
+        background: var(--portal-surface);
     }
     .submit-card > div {
         display: grid;
     }
     .submit-card > div span {
-        color: var(--bs-secondary-color);
+        color: var(--portal-muted);
     }
     .submit-actions {
         display: flex;
@@ -1563,10 +1619,10 @@
         height: 34px;
         display: grid;
         place-items: center;
-        color: #405189;
-        border-radius: 10px;
-        background: rgba(64, 81, 137, 0.1);
-        font-weight: 800;
+        color: var(--portal-brand-primary);
+        border-radius: var(--portal-radius-sm);
+        background: rgba(var(--portal-brand-primary-rgb), 0.1);
+        font-weight: 600;
     }
     .request-list {
         display: grid;
@@ -1579,29 +1635,28 @@
         align-items: center;
         gap: 0.8rem;
         padding: 0.75rem;
-        color: var(--bs-body-color);
-        border: 1px solid var(--bs-border-color);
-        border-radius: 14px;
-        background: var(--bs-body-bg);
+        color: var(--portal-ink);
+        border: 1px solid var(--portal-border);
+        border-radius: var(--portal-radius);
+        background: var(--portal-surface);
         text-align: left;
         transition: 0.18s ease;
     }
     .request-row:hover,
     .request-row.selected {
-        border-color: rgba(64, 81, 137, 0.42);
-        background: rgba(64, 81, 137, 0.035);
-        transform: translateY(-1px);
+        border-color: rgba(var(--portal-brand-primary-rgb), 0.42);
+        background: rgba(var(--portal-brand-primary-rgb), 0.035);
     }
     .request-index {
         width: 28px;
         height: 28px;
         display: grid;
         place-items: center;
-        color: #405189;
-        border-radius: 9px;
-        background: rgba(64, 81, 137, 0.1);
+        color: var(--portal-brand-primary);
+        border-radius: var(--portal-radius-sm);
+        background: rgba(var(--portal-brand-primary-rgb), 0.1);
         font-size: 0.8rem;
-        font-weight: 800;
+        font-weight: 600;
     }
     .request-thumbnail {
         width: 54px;
@@ -1609,9 +1664,9 @@
         display: grid;
         place-items: center;
         overflow: hidden;
-        color: var(--bs-secondary-color);
-        border-radius: 10px;
-        background: var(--bs-tertiary-bg);
+        color: var(--portal-muted);
+        border-radius: var(--portal-radius-sm);
+        background: var(--portal-surface-muted);
         font-size: 1.25rem;
     }
     .request-thumbnail img {
@@ -1625,7 +1680,7 @@
     }
     .request-copy small {
         overflow: hidden;
-        color: var(--bs-secondary-color);
+        color: var(--portal-muted);
         font-size: 0.76rem;
         text-overflow: ellipsis;
         white-space: nowrap;
@@ -1635,88 +1690,68 @@
         align-items: center;
         gap: 0.3rem;
         padding: 0.35rem 0.55rem;
-        border-radius: 999px;
-        font-size: 0.72rem;
+        border-radius: var(--portal-radius);
+        font-size: .75rem;
         font-weight: 700;
         white-space: nowrap;
     }
     .status-completed {
-        color: #087b6b;
-        background: rgba(10, 179, 156, 0.12);
+        color: var(--portal-positive-text);
+        background: rgba(var(--portal-positive-rgb), 0.12);
     }
     .status-processing {
-        color: #9a6500;
-        background: rgba(247, 184, 75, 0.15);
+        color: var(--portal-warning-text);
+        background: rgba(var(--portal-warning-rgb), 0.15);
     }
     .status-queued {
-        color: #405189;
-        background: rgba(64, 81, 137, 0.1);
+        color: var(--portal-brand-primary);
+        background: rgba(var(--portal-brand-primary-rgb), 0.1);
     }
     .status-failed {
         color: #c13a3a;
-        background: rgba(220, 53, 69, 0.1);
+        background: rgba(var(--portal-danger-rgb), 0.1);
     }
     .status-cancelled {
-        color: var(--bs-secondary-color);
-        background: var(--bs-tertiary-bg);
+        color: var(--portal-muted);
+        background: var(--portal-surface-muted);
     }
     .request-arrow {
-        color: var(--bs-secondary-color);
+        color: var(--portal-muted);
         font-size: 1.2rem;
     }
-    .dialog-backdrop {
-        position: fixed;
-        z-index: 1080;
-        inset: 0;
-        display: grid;
-        place-items: center;
-        padding: 1.25rem;
-        background: rgba(17, 24, 39, 0.6);
-        backdrop-filter: blur(4px);
-    }
     .replace-dialog {
-        position: static;
-        width: min(100%, 520px);
-        margin: 0;
+		position: fixed;
+		inset: 0;
+		width: min(calc(100% - 2.5rem), 520px);
+		max-height: min(90vh, 720px);
+		margin: auto;
         padding: 1.6rem;
-        color: var(--bs-body-color);
-        border: 1px solid var(--bs-border-color);
-        border-radius: 20px;
-        background: var(--bs-body-bg);
-        box-shadow: 0 28px 80px rgba(0, 0, 0, 0.3);
+        color: var(--portal-ink);
+        border: 1px solid var(--portal-border);
+        border-radius: var(--portal-radius);
+        background: var(--portal-surface);
     }
-    .replace-dialog-icon {
-        width: 56px;
-        height: 56px;
-        display: grid;
-        place-items: center;
-        margin-bottom: 1rem;
-        color: #d99000;
-        border-radius: 17px;
-        background: rgba(247, 184, 75, 0.15);
-        font-size: 1.5rem;
-    }
-    .replace-dialog h3 {
+	.replace-dialog::backdrop { background: rgba(17, 24, 39, 0.6); }
+    .replace-dialog h2 {
         margin-bottom: 0.65rem;
         font-size: 1.35rem;
     }
     .replace-dialog > p {
-        color: var(--bs-secondary-color);
+        color: var(--portal-muted);
         line-height: 1.6;
     }
     .replacement-job {
         display: grid;
         gap: 0.25rem;
         padding: 0.8rem 0.9rem;
-        border: 1px solid var(--bs-border-color);
-        border-radius: 11px;
-        background: var(--bs-tertiary-bg);
+        border: 1px solid var(--portal-border);
+        border-radius: var(--portal-radius-sm);
+        background: var(--portal-surface-muted);
     }
     .replacement-job span {
-        color: var(--bs-secondary-color);
-        font-size: 0.72rem;
+        color: var(--portal-muted);
+        font-size: .75rem;
         font-weight: 700;
-        text-transform: uppercase;
     }
     .replacement-job code {
         overflow: hidden;
@@ -1728,6 +1763,36 @@
         gap: 0.65rem;
         margin-top: 1.35rem;
     }
+	.dialog-actions .btn { min-height: 44px; }
+	.feedback-card { margin-top: 1.5rem; padding: 1.35rem; border: 1px solid var(--portal-border); border-radius: var(--portal-radius); background: var(--portal-surface); }
+	.feedback-heading { display: flex; align-items: flex-start; gap: .85rem; margin-bottom: 1.2rem; }
+	.feedback-heading > div { flex: 1; }
+	.feedback-heading h2 { margin: 0 0 .2rem; font-size: 1.08rem; }
+	.feedback-heading p { margin: 0; color: var(--portal-muted); }
+	.feedback-label { display: block; margin-bottom: .65rem; font-weight: 650; }
+	.usefulness-options, .verdict-options { display: flex; flex-wrap: wrap; gap: .65rem; margin-bottom: 1rem; }
+	.usefulness-options button, .verdict-options label { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; gap: .45rem; padding: .65rem .9rem; color: var(--portal-ink); border: 1px solid var(--portal-border); border-radius: var(--portal-radius-sm); background: var(--portal-surface); font-weight: 600; cursor: pointer; }
+	.usefulness-options button:hover, .verdict-options label:hover { border-color: color-mix(in srgb, var(--portal-brand-primary) 48%, var(--portal-border)); }
+	.usefulness-options button.active { color: #fff; border-color: var(--portal-polito-blue); background: var(--portal-polito-blue); }
+	.verdict-options input { position: absolute; opacity: 0; pointer-events: none; }
+	.verdict-options label:focus-within { outline: 3px solid color-mix(in srgb, var(--portal-brand-primary) 28%, transparent); outline-offset: 2px; }
+	.verdict-options label.checked.verdict-correct { color: var(--portal-positive-text); border-color: rgba(var(--portal-positive-rgb),.42); background: rgba(var(--portal-positive-rgb),.1); }
+	.verdict-options label.checked.verdict-partial { color: var(--portal-warning-text); border-color: rgba(var(--portal-warning-rgb),.55); background: rgba(var(--portal-warning-rgb),.13); }
+	.verdict-options label.checked.verdict-incorrect { color: var(--portal-danger-text); border-color: rgba(var(--portal-danger-rgb),.45); background: rgba(var(--portal-danger-rgb),.1); }
+	.feedback-actions { display: flex; align-items: center; justify-content: flex-end; gap: 1rem; margin-top: .85rem; }
+	.feedback-actions > span { color: var(--portal-muted); font-size: .78rem; }
+	.feedback-actions > .feedback-saved { display: inline-flex; align-items: center; gap: .3rem; margin-right: auto; color: var(--portal-positive-text); font-weight: 600; }
+	.review-layout { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(220px, .6fr); gap: 1rem; }
+	.student-signal { align-self: start; padding: .9rem 1rem; border-radius: var(--portal-radius-sm); background: var(--portal-surface-muted); }
+	.student-signal span { display: block; margin-bottom: .25rem; color: var(--portal-muted); font-size: .76rem; }
+	.student-signal strong.positive { color: var(--portal-positive-text); }
+	.student-signal strong.negative { color: var(--portal-danger-text); }
+	.student-signal p { margin: .55rem 0 0; color: var(--portal-muted); font-size: .85rem; }
+	@media (prefers-reduced-motion: reduce) {
+		.analysis-state > i { animation: none; }
+		.request-row { transition: none; }
+		.request-row:hover, .request-row.selected { transform: none; }
+	}
     @media (max-width: 991px) {
         .comparison-grid {
             grid-template-columns: 1fr;
@@ -1737,10 +1802,6 @@
         }
         .activity-context {
             grid-template-columns: 1fr auto 1.2fr;
-        }
-        .context-current {
-            grid-column: 1/-1;
-            justify-self: start;
         }
         .context-divider {
             display: block;
@@ -1765,9 +1826,6 @@
         .context-divider {
             display: none;
         }
-        .context-current {
-            grid-column: auto;
-        }
         .request-row {
             grid-template-columns: auto 46px minmax(0, 1fr) auto;
         }
@@ -1783,5 +1841,8 @@
             grid-column: 4;
             grid-row: 1 / span 2;
         }
+		.review-layout { grid-template-columns: 1fr; }
+		.feedback-actions { align-items: stretch; flex-direction: column; }
+		.feedback-actions .btn { width: 100%; }
     }
 </style>

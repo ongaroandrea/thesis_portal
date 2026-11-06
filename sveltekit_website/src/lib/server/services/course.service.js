@@ -3,7 +3,7 @@ import { db } from '$lib/server/db';
 import { course, courseMember } from '$lib/server/db/schema';
 import { ApiError, dateValue, numericId, optionalText, paginated, paginationParams, requiredText, requireUser } from './api.service.js';
 
-const isDeveloper = (currentUser) => currentUser.role === 'developer';
+const isAdmin = (currentUser) => currentUser.role === 'admin';
 
 async function findCourse(id) {
 	const [record] = await db.select().from(course).where(eq(course.id, numericId(id, 'courseId'))).limit(1);
@@ -24,13 +24,25 @@ async function isAuthorizedMember(courseId, userId) {
 	return Boolean(await findActiveMembership(courseId, userId));
 }
 
+/**
+ * True if the user may manage the course: any admin, or a professor with an
+ * ACTIVE `PROFESSOR` course membership. Creating a course gives no rights of
+ * its own: the creator is managed like any other member through the
+ * membership the database trigger gives them, so suspending or removing it
+ * takes their rights away (the same rule as `managedCourseIds` in
+ * users.service.js).
+ */
 async function canManage(record, currentUser) {
-	if (isDeveloper(currentUser)) return true;
+	if (isAdmin(currentUser)) return true;
 	if (currentUser.role !== 'professor') return false;
 	const membership = await findActiveMembership(record.id, currentUser.id);
 	return membership?.role === 'PROFESSOR';
 }
 
+/**
+ * Allow managers, or ACTIVE members of an active course. Throws 403 otherwise.
+ * @returns {Promise<object>} the course row
+ */
 async function requireCourseAccess(courseId, currentUser) {
 	requireUser(currentUser);
 	const record = await findCourse(courseId);
@@ -41,11 +53,12 @@ async function requireCourseAccess(courseId, currentUser) {
 	return record;
 }
 
+/** Throw 403 unless `canManage` holds. Used by most write endpoints. */
 async function requireCourseManager(courseId, currentUser) {
 	requireUser(currentUser);
 	const record = await findCourse(courseId);
 	if (!(await canManage(record, currentUser))) {
-		throw new ApiError(403, 'Only an authorized course professor or a developer can perform this action.', 'COURSE_MANAGEMENT_DENIED');
+		throw new ApiError(403, 'Only an authorized course professor or an admin can perform this action.', 'COURSE_MANAGEMENT_DENIED');
 	}
 	return record;
 }
@@ -87,23 +100,30 @@ export const courseService = {
 	requireCourseAccess,
 	requireCourseManager,
 
+	/**
+	 * Paginated list of visible courses. Admins see all. Others see active
+	 * courses where they are ACTIVE members, plus courses where they hold an
+	 * ACTIVE `PROFESSOR` membership even if inactive. Each row carries
+	 * `canManage`, computed with the same rule as `canManage` above.
+	 */
 	async list(currentUser, searchParams) {
 		requireUser(currentUser);
 		const pagination = paginationParams(searchParams);
-		if (isDeveloper(currentUser)) {
+		if (isAdmin(currentUser)) {
 			const [records, [{ total }]] = await Promise.all([
 				db.select().from(course).orderBy(desc(course.createdAt), desc(course.id)).limit(pagination.pageSize).offset(pagination.offset),
 				db.select({ total: count() }).from(course)
 			]);
 			return paginated(records.map((record) => ({ ...record, membershipRole: null, canManage: true })), total, pagination);
 		}
+		const currentUserId = numericId(currentUser.id, 'userId');
 		const membershipCondition = and(
 			eq(courseMember.courseId, course.id),
-			eq(courseMember.userId, numericId(currentUser.id, 'userId')),
+			eq(courseMember.userId, currentUserId),
 			eq(courseMember.status, 'ACTIVE')
 		);
-		const visibilityCondition = or(
-			eq(course.isActive, true),
+		const membershipVisibility = or(
+			and(eq(course.isActive, true), eq(courseMember.status, 'ACTIVE')),
 			and(eq(courseMember.role, 'PROFESSOR'), eq(courseMember.status, 'ACTIVE'))
 		);
 		const selection = {
@@ -119,10 +139,10 @@ export const courseService = {
 			membershipRole: courseMember.role
 		};
 		const [records, [{ total }]] = await Promise.all([
-			db.select(selection).from(course).innerJoin(courseMember, membershipCondition)
-				.where(visibilityCondition).orderBy(desc(course.createdAt), desc(course.id))
+			db.select(selection).from(course).leftJoin(courseMember, membershipCondition)
+				.where(membershipVisibility).orderBy(desc(course.createdAt), desc(course.id))
 				.limit(pagination.pageSize).offset(pagination.offset),
-			db.select({ total: count() }).from(course).innerJoin(courseMember, membershipCondition).where(visibilityCondition)
+			db.select({ total: count() }).from(course).leftJoin(courseMember, membershipCondition).where(membershipVisibility)
 		]);
 		return paginated(records.map((record) => ({
 			...record,
@@ -132,7 +152,7 @@ export const courseService = {
 
 	async get(id, currentUser) {
 		const record = await requireCourseAccess(id, currentUser);
-		const membership = isDeveloper(currentUser) ? null : await findActiveMembership(record.id, currentUser.id);
+		const membership = isAdmin(currentUser) ? null : await findActiveMembership(record.id, currentUser.id);
 		return {
 			...record,
 			membershipRole: membership?.role ?? null,
@@ -142,16 +162,20 @@ export const courseService = {
 
 	async create(input, currentUser) {
 		requireUser(currentUser);
-		if (!isDeveloper(currentUser) && currentUser.role !== 'professor') {
-			throw new ApiError(403, 'Only a professor or developer can create a course.', 'COURSE_CREATE_DENIED');
+		if (!isAdmin(currentUser) && currentUser.role !== 'professor') {
+			throw new ApiError(403, 'Only a professor or admin can create a course.', 'COURSE_CREATE_DENIED');
 		}
 		const values = courseValues(input);
 		validateWindow(values);
-		const [created] = await db.insert(course).values({
-			...values,
-			createdByUserId: numericId(currentUser.id, 'userId')
-		}).returning();
-		return created;
+		const creatorId = numericId(currentUser.id, 'userId');
+		return db.transaction(async (tx) => {
+			const [created] = await tx.insert(course).values({
+				...values,
+				createdByUserId: creatorId
+			}).returning();
+			// The database trigger creates the creator's PROFESSOR membership.
+			return created;
+		});
 	},
 
 	async update(id, input, currentUser) {

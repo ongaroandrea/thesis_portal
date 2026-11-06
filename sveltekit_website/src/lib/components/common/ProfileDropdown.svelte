@@ -6,24 +6,24 @@
         DropdownItem,
         Spinner,
     } from "@sveltestrap/sveltestrap";
-    import { goto } from "$app/navigation";
-    import { invalidateAll } from "$app/navigation";
+    import { goto, invalidateAll } from "$app/navigation";
     import { authClient } from "$lib/client/auth/auth-client";
     import { formatNameForDisplay } from "$lib/utils/text.js";
     import { _ } from 'svelte-i18n';
 
     const session = authClient.useSession();
-    let isLoggingOut = false; // State variable
+    let isLoggingOut = false;
 
     const logout = async function () {
-        isLoggingOut = true; // 1. Start loading
+        if (isLoggingOut) return;
+        isLoggingOut = true;
         try {
-            await goto("/login"); // 3. Navigate away
             await authClient.signOut();
-            await invalidateAll(); // 2. Clear SvelteKit data
+            await invalidateAll();
+            await goto("/login");
         } catch (error) {
             console.error("Logout failed:", error);
-            isLoggingOut = false; // Reset if error occurs
+            isLoggingOut = false;
         }
     };
 </script>
@@ -32,8 +32,8 @@
     <DropdownToggle
         type="button"
         color=""
-        class="btn"
-        id="page-header-user-dropdown p-0"
+        class="btn p-0"
+        id="page-header-user-dropdown"
     >
         <span class="d-flex align-items-center">
             <img
@@ -53,11 +53,11 @@
                     <span
                         class="d-none d-xl-block ms-1 fs-12 user-name-sub-text"
                         >{#if $session.data}
-							{#if $session.data.user.role === "sviluppatore" || $session.data.user.role === 'developer'}
-								{$_('role.developer')}
-							{:else if $session.data.user.role === "professore" || $session.data.user.role === 'professor'}
+							{#if $session.data.user.role === 'admin'}
+								{$_('role.admin')}
+							{:else if $session.data.user.role === 'professor'}
 								{$_('role.professor')}
-							{:else if $session.data.user.role === "studente" || $session.data.user.role === 'student'}
+							{:else if $session.data.user.role === 'student'}
 								{$_('role.student')}
                             {/if}
                         {/if}</span
@@ -74,11 +74,11 @@
                 : '…' } })}
         </h6>
         <DropdownItem href="/profilo"
-            ><i class="mdi mdi-cog-outline text-muted fs-16 align-middle me-1"
+            ><i class="ri-settings-3-line text-muted fs-16 align-middle me-1"
             ></i> <span class="align-middle">{$_('profile.settings')}</span></DropdownItem
         >
-        <DropdownItem href={null} on:click={logout}
-            ><i class="mdi mdi-logout text-muted fs-16 align-middle me-1"></i>
+        <DropdownItem href={null} on:click={logout} disabled={isLoggingOut}
+            ><i class="ri-logout-box-r-line text-muted fs-16 align-middle me-1"></i>
             <span class="align-middle" data-key="t-logout">{$_('profile.logout')}</span>
             {#if isLoggingOut}
                 <Spinner size="sm" class="ms-2" />

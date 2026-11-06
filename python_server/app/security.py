@@ -22,6 +22,12 @@ def canonical_request(
     nonce: str,
     body: bytes,
 ) -> bytes:
+    """Build the exact byte string that is signed.
+
+    Format: METHOD, path+query, timestamp, nonce and the SHA-256 hex digest of
+    the raw body, joined by newlines. The SvelteKit client must build the same
+    string byte for byte, otherwise every signature check fails.
+    """
     body_hash = hashlib.sha256(body).hexdigest()
     return "\n".join(
         (method.upper(), path_with_query, timestamp, nonce, body_hash)
@@ -36,6 +42,7 @@ def create_signature(
     nonce: str,
     body: bytes,
 ) -> str:
+    """Return the ``v1=<hex HMAC-SHA256>`` value expected in the signature header."""
     digest = hmac.new(
         secret.encode("utf-8"),
         canonical_request(method, path_with_query, timestamp, nonce, body),
@@ -54,6 +61,14 @@ class HmacVerifier:
         self._nonce_lock = asyncio.Lock()
 
     async def verify(self, request: Request) -> None:
+        """Authenticate a request or raise ``HTTPException``.
+
+        Checks, in order: required headers present and plausibly sized,
+        timestamp within ``hmac_max_age_seconds`` of now, signature matches
+        (constant-time compare), and nonce not seen within the window
+        (409 on replay). Relies on ``BodyCachingRoute`` so the raw body is
+        still readable after multipart parsing.
+        """
         timestamp = request.headers.get(TIMESTAMP_HEADER, "")
         nonce = request.headers.get(NONCE_HEADER, "")
         provided = request.headers.get(SIGNATURE_HEADER, "")
@@ -62,6 +77,12 @@ class HmacVerifier:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Permission denied"
+            )
+
+        if len(timestamp) > 20 or len(nonce) > 128 or len(provided) != 67:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid authentication headers",
             )
 
         try:
@@ -108,6 +129,7 @@ class HmacVerifier:
             self._seen_nonces[nonce] = now
 
     def _remove_expired_nonces(self, now: int) -> None:
+        """Forget nonces older than the timestamp window (oldest first)."""
         cutoff = now - self._max_age
         while self._seen_nonces:
             _, seen_at = next(iter(self._seen_nonces.items()))

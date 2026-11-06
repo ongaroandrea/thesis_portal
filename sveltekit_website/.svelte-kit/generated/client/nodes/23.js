@@ -1,1 +1,1 @@
-export { default as component } from "../../../../src/routes/(public)/password-dimenticata/+page.svelte";
+export { default as component } from "../../../../src/routes/(protected)/prompt/+page.svelte";

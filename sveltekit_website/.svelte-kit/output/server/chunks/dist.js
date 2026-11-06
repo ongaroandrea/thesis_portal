@@ -1,6 +1,6 @@
 import { A as escape_html, E as setContext, F as writable, O as attr, Rt as fallback, d as sanitize_slots, f as slot, g as unsubscribe_stores, i as bind_props, k as clsx, l as rest_props, m as store_get, o as ensure_array_like, p as spread_props, r as attributes, t as attr_class, u as sanitize_props, w as getContext } from "./server.js";
-import "./index-server.js";
 import { r as onDestroy, t as createEventDispatcher } from "./index-server2.js";
+import "./index-server.js";
 import { createPopper } from "@popperjs/core";
 function isObject(value) {
 	const type = typeof value;
@@ -30,8 +30,7 @@ function uuid() {
 		return (c === "x" ? r : r & 3 | 8).toString(16);
 	});
 }
-//#endregion
-//#region node_modules/@sveltestrap/sveltestrap/dist/Alert/Alert.svelte
+// node_modules/@sveltestrap/sveltestrap/dist/Alert/Alert.svelte
 function Alert($$renderer, $$props) {
 	const $$slots = sanitize_slots($$props);
 	const $$sanitized_props = sanitize_props($$props);
@@ -107,8 +106,7 @@ function Alert($$renderer, $$props) {
 		});
 	});
 }
-//#endregion
-//#region node_modules/@sveltestrap/sveltestrap/dist/Button/Button.svelte
+// node_modules/@sveltestrap/sveltestrap/dist/Button/Button.svelte
 function Button($$renderer, $$props) {
 	const $$sanitized_props = sanitize_props($$props);
 	const $$restProps = rest_props($$sanitized_props, [
@@ -192,8 +190,7 @@ function Button($$renderer, $$props) {
 		});
 	});
 }
-//#endregion
-//#region node_modules/@sveltestrap/sveltestrap/dist/popper.js
+// node_modules/@sveltestrap/sveltestrap/dist/popper.js
 function createPopperActions(initOptions) {
 	let contentNode;
 	let options = initOptions;
@@ -235,11 +232,9 @@ function createPopperActions(initOptions) {
 		() => popperInstance
 	];
 }
-//#endregion
-//#region node_modules/@sveltestrap/sveltestrap/dist/Dropdown/DropdownContext.js
+// node_modules/@sveltestrap/sveltestrap/dist/Dropdown/DropdownContext.js
 var createContext = () => writable({});
-//#endregion
-//#region node_modules/@sveltestrap/sveltestrap/dist/Dropdown/Dropdown.svelte
+// node_modules/@sveltestrap/sveltestrap/dist/Dropdown/Dropdown.svelte
 function Dropdown($$renderer, $$props) {
 	const $$sanitized_props = sanitize_props($$props);
 	const $$restProps = rest_props($$sanitized_props, [
@@ -369,8 +364,7 @@ function Dropdown($$renderer, $$props) {
 		});
 	});
 }
-//#endregion
-//#region node_modules/@sveltestrap/sveltestrap/dist/Card/Card.svelte
+// node_modules/@sveltestrap/sveltestrap/dist/Card/Card.svelte
 function Card($$renderer, $$props) {
 	const $$sanitized_props = sanitize_props($$props);
 	const $$restProps = rest_props($$sanitized_props, [
@@ -407,8 +401,7 @@ function Card($$renderer, $$props) {
 		});
 	});
 }
-//#endregion
-//#region node_modules/@sveltestrap/sveltestrap/dist/CardBody/CardBody.svelte
+// node_modules/@sveltestrap/sveltestrap/dist/CardBody/CardBody.svelte
 function CardBody($$renderer, $$props) {
 	const $$sanitized_props = sanitize_props($$props);
 	const $$restProps = rest_props($$sanitized_props, ["class"]);
@@ -425,8 +418,7 @@ function CardBody($$renderer, $$props) {
 		bind_props($$props, { class: className });
 	});
 }
-//#endregion
-//#region node_modules/@sveltestrap/sveltestrap/dist/CardHeader/CardHeader.svelte
+// node_modules/@sveltestrap/sveltestrap/dist/CardHeader/CardHeader.svelte
 function CardHeader($$renderer, $$props) {
 	const $$sanitized_props = sanitize_props($$props);
 	const $$restProps = rest_props($$sanitized_props, ["class", "tag"]);
@@ -457,26 +449,7 @@ function CardHeader($$renderer, $$props) {
 		});
 	});
 }
-//#endregion
-//#region node_modules/@sveltestrap/sveltestrap/dist/CardTitle/CardTitle.svelte
-function CardTitle($$renderer, $$props) {
-	const $$sanitized_props = sanitize_props($$props);
-	const $$restProps = rest_props($$sanitized_props, ["class"]);
-	$$renderer.component(($$renderer) => {
-		let classes;
-		let className = fallback($$props["class"], "");
-		$: classes = classnames(className, "card-title");
-		$$renderer.push(`<h5${attributes({
-			...$$restProps,
-			class: clsx(classes)
-		})}><!--[-->`);
-		slot($$renderer, $$props, "default", {}, null);
-		$$renderer.push(`<!--]--></h5>`);
-		bind_props($$props, { class: className });
-	});
-}
-//#endregion
-//#region node_modules/@sveltestrap/sveltestrap/dist/Col/Col.svelte
+// node_modules/@sveltestrap/sveltestrap/dist/Col/Col.svelte
 function Col($$renderer, $$props) {
 	const $$sanitized_props = sanitize_props($$props);
 	const $$restProps = rest_props($$sanitized_props, [
@@ -538,8 +511,7 @@ function Col($$renderer, $$props) {
 		});
 	});
 }
-//#endregion
-//#region node_modules/@sveltestrap/sveltestrap/dist/Container/Container.svelte
+// node_modules/@sveltestrap/sveltestrap/dist/Container/Container.svelte
 function Container($$renderer, $$props) {
 	const $$sanitized_props = sanitize_props($$props);
 	const $$restProps = rest_props($$sanitized_props, [
@@ -586,8 +558,7 @@ function Container($$renderer, $$props) {
 		});
 	});
 }
-//#endregion
-//#region node_modules/@sveltestrap/sveltestrap/dist/DropdownItem/DropdownItem.svelte
+// node_modules/@sveltestrap/sveltestrap/dist/DropdownItem/DropdownItem.svelte
 function DropdownItem($$renderer, $$props) {
 	const $$sanitized_props = sanitize_props($$props);
 	const $$restProps = rest_props($$sanitized_props, [
@@ -663,8 +634,7 @@ function DropdownItem($$renderer, $$props) {
 		});
 	});
 }
-//#endregion
-//#region node_modules/@sveltestrap/sveltestrap/dist/DropdownMenu/DropdownMenu.svelte
+// node_modules/@sveltestrap/sveltestrap/dist/DropdownMenu/DropdownMenu.svelte
 function DropdownMenu($$renderer, $$props) {
 	const $$sanitized_props = sanitize_props($$props);
 	const $$restProps = rest_props($$sanitized_props, [
@@ -705,8 +675,7 @@ function DropdownMenu($$renderer, $$props) {
 		});
 	});
 }
-//#endregion
-//#region node_modules/@sveltestrap/sveltestrap/dist/DropdownToggle/DropdownToggle.svelte
+// node_modules/@sveltestrap/sveltestrap/dist/DropdownToggle/DropdownToggle.svelte
 function DropdownToggle($$renderer, $$props) {
 	const $$sanitized_props = sanitize_props($$props);
 	const $$restProps = rest_props($$sanitized_props, [
@@ -810,39 +779,7 @@ function DropdownToggle($$renderer, $$props) {
 		});
 	});
 }
-//#endregion
-//#region node_modules/@sveltestrap/sveltestrap/dist/Form/Form.svelte
-function Form($$renderer, $$props) {
-	const $$sanitized_props = sanitize_props($$props);
-	const $$restProps = rest_props($$sanitized_props, [
-		"class",
-		"inline",
-		"validated"
-	]);
-	$$renderer.component(($$renderer) => {
-		let classes;
-		let className = fallback($$props["class"], "");
-		let inline = fallback($$props["inline"], false);
-		let validated = fallback($$props["validated"], false);
-		$: classes = classnames(className, {
-			"form-inline": inline,
-			"was-validated": validated
-		});
-		$$renderer.push(`<form${attributes({
-			...$$restProps,
-			class: clsx(classes)
-		})}><!--[-->`);
-		slot($$renderer, $$props, "default", {}, null);
-		$$renderer.push(`<!--]--></form>`);
-		bind_props($$props, {
-			class: className,
-			inline,
-			validated
-		});
-	});
-}
-//#endregion
-//#region node_modules/@sveltestrap/sveltestrap/dist/FormCheck/FormCheck.svelte
+// node_modules/@sveltestrap/sveltestrap/dist/FormCheck/FormCheck.svelte
 function FormCheck($$renderer, $$props) {
 	const $$sanitized_props = sanitize_props($$props);
 	const $$restProps = rest_props($$sanitized_props, [
@@ -949,8 +886,7 @@ function FormCheck($$renderer, $$props) {
 		});
 	});
 }
-//#endregion
-//#region node_modules/@sveltestrap/sveltestrap/dist/FormFeedback/FormFeedback.svelte
+// node_modules/@sveltestrap/sveltestrap/dist/FormFeedback/FormFeedback.svelte
 function FormFeedback($$renderer, $$props) {
 	const $$sanitized_props = sanitize_props($$props);
 	const $$restProps = rest_props($$sanitized_props, [
@@ -980,8 +916,7 @@ function FormFeedback($$renderer, $$props) {
 		});
 	});
 }
-//#endregion
-//#region node_modules/@sveltestrap/sveltestrap/dist/FormGroup/FormGroup.svelte
+// node_modules/@sveltestrap/sveltestrap/dist/FormGroup/FormGroup.svelte
 function FormGroup($$renderer, $$props) {
 	const $$slots = sanitize_slots($$props);
 	const $$sanitized_props = sanitize_props($$props);
@@ -1055,15 +990,13 @@ function FormGroup($$renderer, $$props) {
 		});
 	});
 }
-//#endregion
-//#region node_modules/@sveltestrap/sveltestrap/dist/InlineContainer/InlineContainer.svelte
+// node_modules/@sveltestrap/sveltestrap/dist/InlineContainer/InlineContainer.svelte
 function InlineContainer($$renderer, $$props) {
 	$$renderer.push(`<div><!--[-->`);
 	slot($$renderer, $$props, "default", {}, null);
 	$$renderer.push(`<!--]--></div>`);
 }
-//#endregion
-//#region node_modules/@sveltestrap/sveltestrap/dist/Input/Input.svelte
+// node_modules/@sveltestrap/sveltestrap/dist/Input/Input.svelte
 function Input($$renderer, $$props) {
 	const $$sanitized_props = sanitize_props($$props);
 	const $$restProps = rest_props($$sanitized_props, [
@@ -1540,8 +1473,7 @@ function Input($$renderer, $$props) {
 		});
 	});
 }
-//#endregion
-//#region node_modules/@sveltestrap/sveltestrap/dist/Label/Label.svelte
+// node_modules/@sveltestrap/sveltestrap/dist/Label/Label.svelte
 function Label($$renderer, $$props) {
 	const $$sanitized_props = sanitize_props($$props);
 	const $$restProps = rest_props($$sanitized_props, [
@@ -1623,8 +1555,7 @@ function Label($$renderer, $$props) {
 		});
 	});
 }
-//#endregion
-//#region node_modules/@sveltestrap/sveltestrap/dist/ModalBackdrop/ModalBackdrop.svelte
+// node_modules/@sveltestrap/sveltestrap/dist/ModalBackdrop/ModalBackdrop.svelte
 function ModalBackdrop($$renderer, $$props) {
 	const $$sanitized_props = sanitize_props($$props);
 	rest_props($$sanitized_props, [
@@ -1646,8 +1577,7 @@ function ModalBackdrop($$renderer, $$props) {
 		});
 	});
 }
-//#endregion
-//#region node_modules/@sveltestrap/sveltestrap/dist/ModalBody/ModalBody.svelte
+// node_modules/@sveltestrap/sveltestrap/dist/ModalBody/ModalBody.svelte
 function ModalBody($$renderer, $$props) {
 	const $$sanitized_props = sanitize_props($$props);
 	const $$restProps = rest_props($$sanitized_props, ["class"]);
@@ -1664,8 +1594,7 @@ function ModalBody($$renderer, $$props) {
 		bind_props($$props, { class: className });
 	});
 }
-//#endregion
-//#region node_modules/@sveltestrap/sveltestrap/dist/ModalHeader/ModalHeader.svelte
+// node_modules/@sveltestrap/sveltestrap/dist/ModalHeader/ModalHeader.svelte
 function ModalHeader($$renderer, $$props) {
 	const $$sanitized_props = sanitize_props($$props);
 	const $$restProps = rest_props($$sanitized_props, [
@@ -1709,8 +1638,7 @@ function ModalHeader($$renderer, $$props) {
 		});
 	});
 }
-//#endregion
-//#region node_modules/@sveltestrap/sveltestrap/dist/Portal/Portal.svelte
+// node_modules/@sveltestrap/sveltestrap/dist/Portal/Portal.svelte
 function Portal($$renderer, $$props) {
 	const $$sanitized_props = sanitize_props($$props);
 	const $$restProps = rest_props($$sanitized_props, []);
@@ -1845,8 +1773,7 @@ function Modal($$renderer, $$props) {
 		});
 	});
 }
-//#endregion
-//#region node_modules/@sveltestrap/sveltestrap/dist/ModalFooter/ModalFooter.svelte
+// node_modules/@sveltestrap/sveltestrap/dist/ModalFooter/ModalFooter.svelte
 function ModalFooter($$renderer, $$props) {
 	const $$sanitized_props = sanitize_props($$props);
 	const $$restProps = rest_props($$sanitized_props, ["class"]);
@@ -1863,8 +1790,7 @@ function ModalFooter($$renderer, $$props) {
 		bind_props($$props, { class: className });
 	});
 }
-//#endregion
-//#region node_modules/@sveltestrap/sveltestrap/dist/Row/Row.svelte
+// node_modules/@sveltestrap/sveltestrap/dist/Row/Row.svelte
 function Row($$renderer, $$props) {
 	const $$sanitized_props = sanitize_props($$props);
 	const $$restProps = rest_props($$sanitized_props, [
@@ -1915,8 +1841,7 @@ function Row($$renderer, $$props) {
 		});
 	});
 }
-//#endregion
-//#region node_modules/@sveltestrap/sveltestrap/dist/Spinner/Spinner.svelte
+// node_modules/@sveltestrap/sveltestrap/dist/Spinner/Spinner.svelte
 function Spinner($$renderer, $$props) {
 	const $$sanitized_props = sanitize_props($$props);
 	const $$restProps = rest_props($$sanitized_props, [
@@ -1949,8 +1874,7 @@ function Spinner($$renderer, $$props) {
 		});
 	});
 }
-//#endregion
-//#region node_modules/@sveltestrap/sveltestrap/dist/Theme/helpers.js
+// node_modules/@sveltestrap/sveltestrap/dist/Theme/helpers.js
 var colorMode = writable(getInitialColorMode());
 colorMode.subscribe((mode) => useColorMode(mode));
 function getInitialColorMode() {
@@ -1968,5 +1892,4 @@ function useColorMode(element, mode) {
 	}
 	target.setAttribute("data-bs-theme", mode);
 }
-//#endregion
-export { Alert as S, CardHeader as _, ModalHeader as a, Dropdown as b, Input as c, DropdownToggle as d, DropdownMenu as f, CardTitle as g, Col as h, Modal as i, FormGroup as l, Container as m, Row as n, ModalBody as o, DropdownItem as p, ModalFooter as r, Label as s, Spinner as t, Form as u, CardBody as v, Button as x, Card as y };
+export { Card as _, ModalHeader as a, Alert as b, Input as c, DropdownMenu as d, DropdownItem as f, CardBody as g, CardHeader as h, Modal as i, FormGroup as l, Col as m, Row as n, ModalBody as o, Container as p, ModalFooter as r, Label as s, Spinner as t, DropdownToggle as u, Dropdown as v, Button as y };

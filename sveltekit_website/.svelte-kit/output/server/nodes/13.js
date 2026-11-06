@@ -3,6 +3,6 @@
 export const index = 13;
 let component_cache;
 export const component = async () => component_cache ??= (await import('../entries/pages/(protected)/corsi/_id_/esercitazioni/_page.svelte.js')).default;
-export const imports = ["_app/immutable/nodes/13.pMJymxgw.js","_app/immutable/chunks/CLKU1sNR.js","_app/immutable/chunks/xihTtKlq.js","_app/immutable/chunks/DAVU2sXb.js","_app/immutable/chunks/CtaBhaFl.js","_app/immutable/chunks/8vhSUXJm.js","_app/immutable/chunks/BCnK7eWa.js","_app/immutable/chunks/R-xf7ibW.js","_app/immutable/chunks/Dzbhjyb_.js","_app/immutable/chunks/Mb-R8yhp.js"];
+export const imports = ["_app/immutable/nodes/13.CIppwol1.js","_app/immutable/chunks/xihTtKlq.js","_app/immutable/chunks/Bkx_ML_s.js","_app/immutable/chunks/xpPworqp.js","_app/immutable/chunks/Bw7NJ2q8.js","_app/immutable/chunks/DQOf03GT.js","_app/immutable/chunks/BVpGFOjf.js","_app/immutable/chunks/Dv9-orXY.js","_app/immutable/chunks/BznIrGAg.js","_app/immutable/chunks/CpFuMLmZ.js","_app/immutable/chunks/BFNiEiIE.js"];
 export const stylesheets = [];
 export const fonts = [];

@@ -1,3 +1,4 @@
+/** Error carrying an HTTP status and a stable machine-readable code. */
 export class ApiError extends Error {
 	constructor(status, message, code = 'API_ERROR') {
 		super(message);
@@ -52,6 +53,7 @@ export function dateValue(value, name) {
 const DEFAULT_PAGE_SIZE = 25;
 const MAX_PAGE_SIZE = 100;
 
+/** Parse `page`/`pageSize` (default 25, max 100) into limit/offset values. */
 export function paginationParams(searchParams) {
 	const pageValue = searchParams?.get?.('page') ?? 1;
 	const pageSizeValue = searchParams?.get?.('pageSize') ?? DEFAULT_PAGE_SIZE;

@@ -1,14 +1,33 @@
-import { a as numericId, c as paginationParams, i as dateValue, l as requireUser, o as optionalText, r as ApiError, s as paginated, u as requiredText } from "./handler.js";
 import { n as activity, t as db } from "./db.js";
+import { a as paginated, c as requiredText, i as optionalText, n as dateValue, o as paginationParams, r as numericId, s as requireUser, t as ApiError } from "./api.service.js";
 import { t as courseService } from "./course.service.js";
 import { r as DEFAULT_CORRECTION_FOCUS_IDS, t as CORRECTION_FOCUS_IDS } from "./correction-focus.js";
 import { and, asc, count, eq, gte, isNull, lte, or } from "drizzle-orm";
-//#region src/lib/server/services/activity.service.js
+// src/lib/server/services/activity.service.js
 async function findActivity(id) {
 	const [record] = await db.select().from(activity).where(eq(activity.id, numericId(id, "activityId"))).limit(1);
 	if (!record) throw new ApiError(404, "Activity not found.", "ACTIVITY_NOT_FOUND");
 	return record;
 }
+var publicActivitySelection = {
+	id: activity.id,
+	courseId: activity.courseId,
+	createdByUserId: activity.createdByUserId,
+	kind: activity.kind,
+	status: activity.status,
+	title: activity.title,
+	description: activity.description,
+	objective: activity.objective,
+	durationMinutes: activity.durationMinutes,
+	maxCorrectionsPerStudent: activity.maxCorrectionsPerStudent,
+	allowedCorrectionFocuses: activity.allowedCorrectionFocuses,
+	availableFrom: activity.availableFrom,
+	availableUntil: activity.availableUntil,
+	resultsReleasedAt: activity.resultsReleasedAt,
+	displayOrder: activity.displayOrder,
+	createdAt: activity.createdAt,
+	updatedAt: activity.updatedAt
+};
 var isAvailable = (record, now = /* @__PURE__ */ new Date()) => record.status === "PUBLISHED" && (!record.availableFrom || record.availableFrom <= now) && (record.kind === "EXAM" || !record.availableUntil || record.availableUntil >= now);
 function nullableDate(input, field) {
 	if (input[field] === void 0) return void 0;
@@ -27,6 +46,8 @@ function activityValues(input, partial = false) {
 	if (!partial || input.objective !== void 0) values.objective = requiredText(input.objective, "objective", 1e4);
 	const description = optionalText(input.description, "description", 2e4);
 	if (description !== void 0) values.description = description;
+	const promptAddendum = optionalText(input.promptAddendum, "promptAddendum", 8e3);
+	if (promptAddendum !== void 0) values.promptAddendum = promptAddendum;
 	if (!partial || input.kind !== void 0) {
 		if (!["LESSON", "EXAM"].includes(input.kind)) throw new ApiError(400, "kind must be LESSON or EXAM.", "VALIDATION_ERROR");
 		values.kind = input.kind;
@@ -104,10 +125,21 @@ var activityService = {
 		await courseService.requireCourseAccess(id, currentUser);
 		const now = /* @__PURE__ */ new Date();
 		const condition = and(eq(activity.courseId, id), eq(activity.status, "PUBLISHED"), or(isNull(activity.availableFrom), lte(activity.availableFrom, now)), or(eq(activity.kind, "EXAM"), isNull(activity.availableUntil), gte(activity.availableUntil, now)));
-		const [items, [{ total }]] = await Promise.all([db.select().from(activity).where(condition).orderBy(asc(activity.displayOrder), asc(activity.id)).limit(pagination.pageSize).offset(pagination.offset), db.select({ total: count() }).from(activity).where(condition)]);
+		const [items, [{ total }]] = await Promise.all([db.select(publicActivitySelection).from(activity).where(condition).orderBy(asc(activity.displayOrder), asc(activity.id)).limit(pagination.pageSize).offset(pagination.offset), db.select({ total: count() }).from(activity).where(condition)]);
 		return paginated(items, total, pagination);
 	},
-	get: requireActivityAccess,
+	async get(id, currentUser) {
+		const record = await findActivity(id);
+		try {
+			await courseService.requireCourseManager(record.courseId, currentUser);
+			return record;
+		} catch (error) {
+			if (!(error instanceof ApiError) || error.status !== 403) throw error;
+		}
+		await requireActivityAccess(id, currentUser);
+		const [visible] = await db.select(publicActivitySelection).from(activity).where(eq(activity.id, record.id)).limit(1);
+		return visible;
+	},
 	async create(input, currentUser) {
 		const courseId = numericId(input.courseId, "courseId");
 		await courseService.requireCourseManager(courseId, currentUser);
@@ -124,6 +156,12 @@ var activityService = {
 		const record = await findActivity(id);
 		await courseService.requireCourseManager(record.courseId, currentUser);
 		const values = activityValues(input, true);
+		if (values.promptAddendum !== void 0 && values.promptAddendum !== record.promptAddendum) {
+			const now = /* @__PURE__ */ new Date();
+			const examAlreadyStarted = record.kind === "EXAM" && record.availableFrom && record.availableFrom <= now;
+			if (record.promptFrozenAt || examAlreadyStarted) throw new ApiError(409, "The exam prompt is frozen and can no longer be changed.", "EXAM_PROMPT_FROZEN");
+			values.promptRevision = record.promptRevision + 1;
+		}
 		validateActivity(values, record);
 		const [updated] = await db.update(activity).set({
 			...values,
@@ -138,5 +176,4 @@ var activityService = {
 		return { id: record.id };
 	}
 };
-//#endregion
 export { activityService as t };

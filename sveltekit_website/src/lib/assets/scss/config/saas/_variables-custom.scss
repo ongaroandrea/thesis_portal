@@ -102,7 +102,7 @@ $dark-header-bg:                                  #38454a;
 $dark-header-border:                              #38454a;
 $dark-header-item-color:                          rgba($white, .85);
 $dark-header-item-bg:                             #435258;
-$dark-header-item-sub-color:                      #9ea9ad; 
+$dark-header-item-sub-color:                      #cdd5d8; // 6.5:1 on #38454a (was 3.3:1) 
 $dark-topbar-user-bg:                             #455358;
 $dark-topbar-search-bg:                           rgba($white, .05);
 $dark-topbar-search-color:                        $white;
@@ -137,7 +137,7 @@ $boxed-body-bg:                                   darken($body-bg, 4%);
 // Footer
 $footer-height:                                   60px;
 $footer-bg:                                       $white;
-$footer-color:                                    #98a6ad;
+$footer-color:                                    #5b6b80; // 5.6:1 on white (was 2.5:1)
 
 // Chat
 $chat-primary-bg:                                 var(--#{$prefix}light);
@@ -146,9 +146,6 @@ $chat-secondary-color:                            var(--#{$prefix}primary);
 
 // Timeline
 $timeline-color:                                  var(--#{$prefix}secondary-bg);     
-
-//auth pages
-$auth-bg-cover:                                   linear-gradient(-45deg, $primary 50%, $success);
 
 $input-bg-custom:                                 $body-secondary-bg;
 $input-border-custom:                             $border-color-translucent;

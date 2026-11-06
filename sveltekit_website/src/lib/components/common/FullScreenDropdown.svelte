@@ -1,36 +1,28 @@
 <script>
-	let isFullScreenMode = true;
-	import { browser } from '$app/environment';
+	import { onMount } from 'svelte';
 	import { _ } from 'svelte-i18n';
 
-	function toggleFullscreen() {
-		if (browser) {
-			if (
-				!document.fullscreenElement &&
-				/* alternative standard method */ !document.mozFullScreenElement &&
-				!document.webkitFullscreenElement
-			) {
-				// current working methods
-				isFullScreenMode = false;
-				if (document.documentElement.requestFullscreen) {
-					document.documentElement.requestFullscreen();
-				} else if (document.documentElement.mozRequestFullScreen) {
-					document.documentElement.mozRequestFullScreen();
-				} else if (document.documentElement.webkitRequestFullscreen) {
-					document.documentElement.webkitRequestFullscreen(
-						Element.ALLOW_KEYBOARD_INPUT
-					);
-				}
+	let isFullscreen = false;
+
+	onMount(() => {
+		const syncFullscreenState = () => {
+			isFullscreen = Boolean(document.fullscreenElement);
+		};
+
+		syncFullscreenState();
+		document.addEventListener('fullscreenchange', syncFullscreenState);
+		return () => document.removeEventListener('fullscreenchange', syncFullscreenState);
+	});
+
+	async function toggleFullscreen() {
+		try {
+			if (document.fullscreenElement) {
+				await document.exitFullscreen();
 			} else {
-				isFullScreenMode = true;
-				if (document.cancelFullScreen) {
-					document.cancelFullScreen();
-				} else if (document.mozCancelFullScreen) {
-					document.mozCancelFullScreen();
-				} else if (document.webkitCancelFullScreen) {
-					document.webkitCancelFullScreen();
-				}
+				await document.documentElement.requestFullscreen();
 			}
+		} catch {
+			// Fullscreen can be rejected by browser or user policy.
 		}
 	}
 </script>
@@ -40,12 +32,13 @@
 		on:click={toggleFullscreen}
 		type="button"
 		class="btn btn-icon btn-topbar btn-ghost-secondary rounded-circle"
-		aria-label={$_(isFullScreenMode ? 'common.exitFullscreen' : 'common.enterFullscreen')}
+		aria-label={$_(isFullscreen ? 'common.exitFullscreen' : 'common.enterFullscreen')}
 	>
 		<i
-			class={isFullScreenMode
-				? "bx bx-fullscreen fs-22"
-				: "bx bx-exit-fullscreen fs-22"}
+			class={isFullscreen
+				? 'ri-fullscreen-exit-line fs-22'
+				: 'ri-fullscreen-line fs-22'}
+			aria-hidden="true"
 		></i>
 	</button>
 </div>

@@ -1,13 +1,13 @@
-import { A as escape_html, O as attr, Rt as fallback, f as slot, g as unsubscribe_stores, i as bind_props, k as clsx, m as store_get, o as ensure_array_like, s as head, t as attr_class } from "../../../chunks/server.js";
-import "../../../chunks/index-server2.js";
-import { t as formatNameForDisplay } from "../../../chunks/text.js";
-import { t as $format } from "../../../chunks/runtime.js";
-import { b as Dropdown, c as Input, d as DropdownToggle, f as DropdownMenu, h as Col, m as Container, n as Row, p as DropdownItem, u as Form, x as Button } from "../../../chunks/dist.js";
-import { t as LanguageSwitcher } from "../../../chunks/LanguageSwitcher.js";
+import { A as escape_html, O as attr, Rt as fallback, f as slot, g as unsubscribe_stores, i as bind_props, k as clsx, m as store_get, o as ensure_array_like, t as attr_class } from "../../../chunks/server.js";
 import { n as page, t as navigating } from "../../../chunks/stores.js";
+import "../../../chunks/index-server2.js";
+import { t as $format } from "../../../chunks/runtime.js";
+import { d as DropdownMenu, f as DropdownItem, m as Col, n as Row, p as Container, u as DropdownToggle, v as Dropdown } from "../../../chunks/dist.js";
 import "../../../chunks/navigation.js";
 import { t as authClient } from "../../../chunks/auth-client.js";
-//#region src/lib/components/layouts/LayoutMenuData.js
+import { t as formatNameForDisplay } from "../../../chunks/text.js";
+import { t as LanguageSwitcher } from "../../../chunks/LanguageSwitcher.js";
+// src/lib/components/layouts/LayoutMenuData.js
 var MOCK_DATA = { Navdata: [
 	{
 		label: "Menu",
@@ -36,7 +36,7 @@ var MOCK_DATA = { Navdata: [
 		label: "Studenti",
 		icon: "ri-user-2-line",
 		link: "/studenti",
-		roles: ["developer", "professor"],
+		roles: ["admin", "professor"],
 		stateVariables: "isStudenti",
 		subItems: [{
 			id: "lista-studenti",
@@ -48,8 +48,15 @@ var MOCK_DATA = { Navdata: [
 			label: "Aggiungi studente",
 			link: "/studenti/aggiungi",
 			parentId: "studenti",
-			roles: ["developer"]
+			roles: ["admin"]
 		}]
+	},
+	{
+		id: "prompt",
+		label: "Prompt globali",
+		icon: "ri-terminal-box-line",
+		link: "/prompt",
+		roles: ["admin"]
 	},
 	{
 		id: "support",
@@ -71,8 +78,7 @@ var MOCK_DATA = { Navdata: [
 		}]
 	}
 ] };
-//#endregion
-//#region src/lib/components/layouts/HorizontalLayout.svelte
+// src/lib/components/layouts/HorizontalLayout.svelte
 function HorizontalLayout($$renderer, $$props) {
 	$$renderer.component(($$renderer) => {
 		var $$store_subs;
@@ -86,6 +92,7 @@ function HorizontalLayout($$renderer, $$props) {
 			studenti: "nav.students",
 			"lista-studenti": "nav.studentList",
 			"aggiungi-studente": "nav.addStudent",
+			prompt: "nav.prompts",
 			support: "nav.support",
 			"apri-ticket-supporto": "nav.openTicket",
 			"gestione-ticket-supporto": "nav.manageTickets"
@@ -105,7 +112,7 @@ function HorizontalLayout($$renderer, $$props) {
 		}
 		function canShow(item) {
 			if (item.roles && !item.roles.includes(user?.role)) return false;
-			return !item.adminOnly || user?.role === "developer";
+			return !item.adminOnly || user?.role === "admin";
 		}
 		$: currentPath = normalizePath(store_get($$store_subs ??= {}, "$page", page).url.pathname);
 		$$renderer.push(`<!--[-->`);
@@ -135,16 +142,11 @@ function HorizontalLayout($$renderer, $$props) {
 		bind_props($$props, { user });
 	});
 }
-//#endregion
-//#region src/lib/components/layouts/Sidebar.svelte
+// src/lib/components/layouts/Sidebar.svelte
 function Sidebar($$renderer, $$props) {
 	$$renderer.component(($$renderer) => {
 		var $$store_subs;
 		let user = fallback($$props["user"], null);
-		head("3hvs4c", $$renderer, ($$renderer) => {
-			$$renderer.push(`<script src="https://cdn.jsdelivr.net/npm/simplebar@latest/dist/simplebar.min.js"><\/script>`);
-			$$renderer.push(`<!---->`);
-		});
 		$$renderer.push(`<div class="app-menu navbar-menu"><div class="navbar-brand-box"><a href="/#" class="logo logo-dark"><span class="logo-sm"><img src="/images/favicon.ico"${attr("alt", store_get($$store_subs ??= {}, "$_", $format)("home.eyebrow"))} height="22"/></span> <span class="logo-lg"><img src="/images/polito_logo_desktop.svg" alt="Politecnico di Torino" height="42"/></span></a> <a href="/#" class="logo logo-light"><span class="logo-sm"><img src="/images/favicon.ico"${attr("alt", store_get($$store_subs ??= {}, "$_", $format)("home.eyebrow"))} height="22"/></span> <span class="logo-lg"><img src="/images/polito_logo_desktop_bianco.png" alt="Politecnico di Torino" height="42"/></span></a> <button type="button" class="btn btn-sm p-0 fs-20 header-item float-end btn-vertical-sm-hover" id="vertical-hover"${attr("aria-label", store_get($$store_subs ??= {}, "$_", $format)("common.resizeSidebar"))}><i class="ri-record-circle-line"></i></button></div> <div id="scrollbar"><div class="container-fluid"><div id="two-column-menu"></div> <ul class="navbar-nav" id="navbar-nav">`);
 		HorizontalLayout($$renderer, { user });
 		$$renderer.push(`<!----></ul></div></div> <div class="sidebar-background"></div></div>`);
@@ -152,29 +154,28 @@ function Sidebar($$renderer, $$props) {
 		bind_props($$props, { user });
 	});
 }
-//#endregion
-//#region src/lib/components/common/FullScreenDropdown.svelte
+// src/lib/components/common/FullScreenDropdown.svelte
 function FullScreenDropdown($$renderer, $$props) {
 	$$renderer.component(($$renderer) => {
 		var $$store_subs;
-		$$renderer.push(`<div class="ms-1 header-item d-none d-sm-flex"><button type="button" class="btn btn-icon btn-topbar btn-ghost-secondary rounded-circle"${attr("aria-label", store_get($$store_subs ??= {}, "$_", $format)("common.exitFullscreen"))}><i${attr_class(clsx("bx bx-fullscreen fs-22"))}></i></button></div>`);
+		$$renderer.push(`<div class="ms-1 header-item d-none d-sm-flex"><button type="button" class="btn btn-icon btn-topbar btn-ghost-secondary rounded-circle"${attr("aria-label", store_get($$store_subs ??= {}, "$_", $format)("common.enterFullscreen"))}><i${attr_class(clsx("ri-fullscreen-line fs-22"))} aria-hidden="true"></i></button></div>`);
 		if ($$store_subs) unsubscribe_stores($$store_subs);
 	});
 }
-//#endregion
-//#region src/lib/components/common/ProfileDropdown.svelte
+// src/lib/components/common/ProfileDropdown.svelte
 function ProfileDropdown($$renderer, $$props) {
 	$$renderer.component(($$renderer) => {
 		var $$store_subs;
 		const session = authClient.useSession();
+		let isLoggingOut = false;
 		Dropdown($$renderer, {
 			class: "ms-sm-3 header-item topbar-user",
 			children: ($$renderer) => {
 				DropdownToggle($$renderer, {
 					type: "button",
 					color: "",
-					class: "btn",
-					id: "page-header-user-dropdown p-0",
+					class: "btn p-0",
+					id: "page-header-user-dropdown",
 					children: ($$renderer) => {
 						$$renderer.push(`<span class="d-flex align-items-center"><img class="rounded-circle header-profile-user" src="/images/favicon.ico"${attr("alt", store_get($$store_subs ??= {}, "$_", $format)("users.profile"))}/> <span class="text-start ms-xl-2"><span class="d-none d-xl-inline-block ms-1 fw-medium user-name-text">`);
 						if (store_get($$store_subs ??= {}, "$session", session).data) $$renderer.push(`<!--[0-->${escape_html(formatNameForDisplay(store_get($$store_subs ??= {}, "$session", session).data.user.name))}`);
@@ -182,7 +183,7 @@ function ProfileDropdown($$renderer, $$props) {
 						$$renderer.push(`<!--]--> <span class="d-none d-xl-block ms-1 fs-12 user-name-sub-text">`);
 						if (store_get($$store_subs ??= {}, "$session", session).data) {
 							$$renderer.push("<!--[0-->");
-							if (store_get($$store_subs ??= {}, "$session", session).data.user.role === "sviluppatore" || store_get($$store_subs ??= {}, "$session", session).data.user.role === "developer") $$renderer.push(`<!--[0-->${escape_html(store_get($$store_subs ??= {}, "$_", $format)("role.developer"))}`);
+							if (store_get($$store_subs ??= {}, "$session", session).data.user.role === "admin") $$renderer.push(`<!--[0-->${escape_html(store_get($$store_subs ??= {}, "$_", $format)("role.admin"))}`);
 							else if (store_get($$store_subs ??= {}, "$session", session).data.user.role === "professore" || store_get($$store_subs ??= {}, "$session", session).data.user.role === "professor") $$renderer.push(`<!--[1-->${escape_html(store_get($$store_subs ??= {}, "$_", $format)("role.professor"))}`);
 							else if (store_get($$store_subs ??= {}, "$session", session).data.user.role === "studente" || store_get($$store_subs ??= {}, "$session", session).data.user.role === "student") $$renderer.push(`<!--[2-->${escape_html(store_get($$store_subs ??= {}, "$_", $format)("role.student"))}`);
 							else $$renderer.push("<!--[-1-->");
@@ -201,15 +202,16 @@ function ProfileDropdown($$renderer, $$props) {
 						DropdownItem($$renderer, {
 							href: "/profilo",
 							children: ($$renderer) => {
-								$$renderer.push(`<i class="mdi mdi-cog-outline text-muted fs-16 align-middle me-1"></i> <span class="align-middle">${escape_html(store_get($$store_subs ??= {}, "$_", $format)("profile.settings"))}</span>`);
+								$$renderer.push(`<i class="ri-settings-3-line text-muted fs-16 align-middle me-1"></i> <span class="align-middle">${escape_html(store_get($$store_subs ??= {}, "$_", $format)("profile.settings"))}</span>`);
 							},
 							$$slots: { default: true }
 						});
 						$$renderer.push(`<!----> `);
 						DropdownItem($$renderer, {
 							href: null,
+							disabled: isLoggingOut,
 							children: ($$renderer) => {
-								$$renderer.push(`<i class="mdi mdi-logout text-muted fs-16 align-middle me-1"></i> <span class="align-middle" data-key="t-logout">${escape_html(store_get($$store_subs ??= {}, "$_", $format)("profile.logout"))}</span> `);
+								$$renderer.push(`<i class="ri-logout-box-r-line text-muted fs-16 align-middle me-1"></i> <span class="align-middle" data-key="t-logout">${escape_html(store_get($$store_subs ??= {}, "$_", $format)("profile.logout"))}</span> `);
 								$$renderer.push("<!--[-1-->");
 								$$renderer.push(`<!--]-->`);
 							},
@@ -226,60 +228,21 @@ function ProfileDropdown($$renderer, $$props) {
 		if ($$store_subs) unsubscribe_stores($$store_subs);
 	});
 }
-//#endregion
-//#region src/lib/components/common/LightDark.svelte
+// src/lib/components/common/LightDark.svelte
 function LightDark($$renderer, $$props) {
 	$$renderer.component(($$renderer) => {
 		var $$store_subs;
-		$$renderer.push(`<div class="ms-1 header-item d-none d-sm-flex"><button type="button" class="btn btn-icon btn-topbar btn-ghost-secondary rounded-circle light-dark-mode"${attr("aria-label", store_get($$store_subs ??= {}, "$_", $format)("common.switchDark"))}${attr("title", store_get($$store_subs ??= {}, "$_", $format)("common.darkMode"))}><i${attr_class(`bx bx-moon fs-22`)}></i></button></div>`);
+		$$renderer.push(`<div class="ms-1 header-item d-none d-sm-flex"><button type="button" class="btn btn-icon btn-topbar btn-ghost-secondary rounded-circle light-dark-mode"${attr("aria-label", store_get($$store_subs ??= {}, "$_", $format)("common.switchDark"))}${attr("title", store_get($$store_subs ??= {}, "$_", $format)("common.darkMode"))}><i${attr_class(`ri-moon-line fs-22`)} aria-hidden="true"></i></button></div>`);
 		if ($$store_subs) unsubscribe_stores($$store_subs);
 	});
 }
-//#endregion
-//#region src/lib/components/layouts/Header.svelte
+// src/lib/components/layouts/Header.svelte
 function Header($$renderer, $$props) {
 	$$renderer.component(($$renderer) => {
 		var $$store_subs;
 		let headerClass = $$props["headerClass"];
-		$$renderer.push(`<header id="page-topbar"${attr_class(clsx(headerClass))}><div class="layout-width"><div class="navbar-header"><div class="d-flex"><div class="navbar-brand-box horizontal-logo"><a href="/corsi" class="logo logo-dark"><span class="logo-sm"><img src="/images/favicon.ico"${attr("alt", store_get($$store_subs ??= {}, "$_", $format)("home.eyebrow"))} height="22"/></span> <span class="logo-lg"><img src="/images/polito_logo_desktop.svg" alt="Politecnico di Torino" height="42"/></span></a> <a href="/corsi" class="logo logo-light"><span class="logo-sm"><img src="/images/favicon.ico"${attr("alt", store_get($$store_subs ??= {}, "$_", $format)("home.eyebrow"))} height="22"/></span> <span class="logo-lg"><img src="/images/polito_logo_desktop_bianco.png" alt="Politecnico di Torino" height="42"/></span></a></div> <button type="button" class="btn btn-sm px-3 fs-16 header-item vertical-menu-btn topnav-hamburger" id="topnav-hamburger-icon"${attr("aria-label", store_get($$store_subs ??= {}, "$_", $format)("header.menu"))}><span class="hamburger-icon"><span></span> <span></span> <span></span></span></button></div> <div class="d-flex align-items-center">`);
+		$$renderer.push(`<header id="page-topbar"${attr_class(clsx(headerClass))}><div class="layout-width"><div class="navbar-header"><div class="d-flex"><div class="navbar-brand-box horizontal-logo"><a href="/corsi" class="logo logo-dark"><span class="logo-sm"><img src="/images/favicon.ico"${attr("alt", store_get($$store_subs ??= {}, "$_", $format)("home.eyebrow"))} height="22"/></span> <span class="logo-lg"><img src="/images/polito_logo_desktop.svg" alt="Politecnico di Torino" height="42"/></span></a> <a href="/corsi" class="logo logo-light"><span class="logo-sm"><img src="/images/favicon.ico"${attr("alt", store_get($$store_subs ??= {}, "$_", $format)("home.eyebrow"))} height="22"/></span> <span class="logo-lg"><img src="/images/polito_logo_desktop_bianco.png" alt="Politecnico di Torino" height="42"/></span></a></div> <button type="button" class="btn btn-sm px-3 fs-16 header-item vertical-menu-btn topnav-hamburger" id="topnav-hamburger-icon"${attr("aria-label", store_get($$store_subs ??= {}, "$_", $format)("header.menu"))}><span class="hamburger-icon" aria-hidden="true"><span></span> <span></span> <span></span></span></button></div> <div class="d-flex align-items-center">`);
 		LanguageSwitcher($$renderer, {});
-		$$renderer.push(`<!----> `);
-		Dropdown($$renderer, {
-			class: "d-md-none topbar-head-dropdown header-item",
-			children: ($$renderer) => {
-				$$renderer.push(`<button type="button" class="btn btn-icon btn-topbar btn-ghost-secondary rounded-circle" id="page-header-search-dropdown"${attr("aria-label", store_get($$store_subs ??= {}, "$_", $format)("common.search"))}><i class="bx bx-search fs-22"></i></button> `);
-				DropdownMenu($$renderer, {
-					class: "dropdown-menu-lg dropdown-menu-end p-0",
-					children: ($$renderer) => {
-						Form($$renderer, {
-							class: "p-3",
-							children: ($$renderer) => {
-								$$renderer.push(`<div class="form-group m-0"><div class="input-group">`);
-								Input($$renderer, {
-									type: "text",
-									class: "form-control",
-									placeholder: store_get($$store_subs ??= {}, "$_", $format)("common.searchPlaceholder")
-								});
-								$$renderer.push(`<!----> `);
-								Button($$renderer, {
-									color: "primary",
-									type: "submit",
-									children: ($$renderer) => {
-										$$renderer.push(`<i class="mdi mdi-magnify"></i>`);
-									},
-									$$slots: { default: true }
-								});
-								$$renderer.push(`<!----></div></div>`);
-							},
-							$$slots: { default: true }
-						});
-					},
-					$$slots: { default: true }
-				});
-				$$renderer.push(`<!---->`);
-			},
-			$$slots: { default: true }
-		});
 		$$renderer.push(`<!----> `);
 		FullScreenDropdown($$renderer, {});
 		$$renderer.push(`<!----> `);
@@ -291,8 +254,7 @@ function Header($$renderer, $$props) {
 		bind_props($$props, { headerClass });
 	});
 }
-//#endregion
-//#region src/lib/components/layouts/Footer.svelte
+// src/lib/components/layouts/Footer.svelte
 function Footer($$renderer, $$props) {
 	$$renderer.component(($$renderer) => {
 		$$renderer.push(`<footer class="footer">`);
@@ -317,60 +279,37 @@ function Footer($$renderer, $$props) {
 		$$renderer.push(`<!----></footer>`);
 	});
 }
-//#endregion
-//#region src/lib/components/common/RightSidebar.svelte
+// src/lib/components/common/RightSidebar.svelte
 function RightSidebar($$renderer, $$props) {
 	$$renderer.component(($$renderer) => {
 		let layoutType = $$props["layoutType"];
 		bind_props($$props, { layoutType });
 	});
 }
-//#endregion
-//#region src/routes/(protected)/+layout.svelte
+// src/routes/(protected)/+layout.svelte
 function _layout($$renderer, $$props) {
 	$$renderer.component(($$renderer) => {
 		var $$store_subs;
 		let data = $$props["data"];
-		let open = false;
 		let headerClass = "";
 		let layoutType = "horizontal";
 		$: store_get($$store_subs ??= {}, "$navigating", navigating);
-		let $$settled = true;
-		let $$inner_renderer;
-		function $$render_inner($$renderer) {
-			$$renderer.push(`<div id="preloader"><div id="status"><div class="spinner-border text-primary avatar-sm" role="status"><span class="visually-hidden">${escape_html(store_get($$store_subs ??= {}, "$_", $format)("common.loading"))}</span></div></div></div> <div id="layout-wrapper">`);
-			Header($$renderer, { headerClass });
-			$$renderer.push(`<!----> `);
-			Sidebar($$renderer, {
-				layoutType,
-				user: data.user
-			});
-			$$renderer.push(`<!----> <div class="main-content" id="maincontent"><!--[-->`);
-			slot($$renderer, $$props, "default", {}, null);
-			$$renderer.push(`<!--]--> `);
-			Footer($$renderer, {});
-			$$renderer.push(`<!----></div> `);
-			RightSidebar($$renderer, {
-				layoutType,
-				get open() {
-					return open;
-				},
-				set open($$value) {
-					open = $$value;
-					$$settled = false;
-				}
-			});
-			$$renderer.push(`<!----></div>`);
-		}
-		do {
-			$$settled = true;
-			$$inner_renderer = $$renderer.copy();
-			$$render_inner($$inner_renderer);
-		} while (!$$settled);
-		$$renderer.subsume($$inner_renderer);
+		$$renderer.push(`<div id="preloader"><div id="status"><div class="spinner-border text-primary avatar-sm" role="status"><span class="visually-hidden">${escape_html(store_get($$store_subs ??= {}, "$_", $format)("common.loading"))}</span></div></div></div> <div id="layout-wrapper">`);
+		Header($$renderer, { headerClass });
+		$$renderer.push(`<!----> `);
+		Sidebar($$renderer, {
+			layoutType,
+			user: data.user
+		});
+		$$renderer.push(`<!----> <div class="main-content" id="main-content" tabindex="-1"><!--[-->`);
+		slot($$renderer, $$props, "default", {}, null);
+		$$renderer.push(`<!--]--> `);
+		Footer($$renderer, {});
+		$$renderer.push(`<!----></div> `);
+		RightSidebar($$renderer, { layoutType });
+		$$renderer.push(`<!----></div>`);
 		if ($$store_subs) unsubscribe_stores($$store_subs);
 		bind_props($$props, { data });
 	});
 }
-//#endregion
 export { _layout as default };

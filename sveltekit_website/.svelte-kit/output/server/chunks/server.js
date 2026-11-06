@@ -1,6 +1,6 @@
 import * as devalue from "devalue";
 import { clsx } from "clsx";
-//#region node_modules/svelte/src/internal/shared/utils.js
+// node_modules/svelte/src/internal/shared/utils.js
 var is_array = Array.isArray;
 var index_of = Array.prototype.indexOf;
 var includes = Array.prototype.includes;
@@ -49,8 +49,7 @@ function deferred() {
 function fallback(value, fallback, lazy = false) {
 	return value === void 0 ? lazy ? fallback() : fallback : value;
 }
-//#endregion
-//#region node_modules/svelte/src/internal/client/reactivity/equality.js
+// node_modules/svelte/src/internal/client/reactivity/equality.js
 /** @import { Equals } from '#client' */
 /** @type {Equals} */
 function equals(value) {
@@ -108,8 +107,7 @@ var STALE_REACTION = new class StaleReactionError extends Error {
 	message = "The reaction that called `getAbortSignal()` was re-run or destroyed";
 }();
 globalThis.document?.contentType;
-//#endregion
-//#region node_modules/svelte/src/constants.js
+// node_modules/svelte/src/constants.js
 var HYDRATION_ERROR = {};
 var UNINITIALIZED = Symbol("uninitialized");
 /**
@@ -137,8 +135,7 @@ function lifecycle_double_unmount() {
 function svelte_boundary_reset_noop() {
 	console.warn(`https://svelte.dev/e/svelte_boundary_reset_noop`);
 }
-//#endregion
-//#region node_modules/svelte/src/internal/client/dom/hydration.js
+// node_modules/svelte/src/internal/client/dom/hydration.js
 /** @import { TemplateNode } from '#client' */
 /**
 * Use this variable to guard everything related to hydration code so it can be treeshaken out
@@ -196,8 +193,7 @@ function skip_nodes(remove = true) {
 		node = next;
 	}
 }
-//#endregion
-//#region node_modules/svelte/src/internal/shared/errors.js
+// node_modules/svelte/src/internal/shared/errors.js
 /**
 * Cannot use `%name%(...)` unless the `experimental.async` compiler option is `true`
 * @param {string} name
@@ -263,8 +259,7 @@ function state_unsafe_mutation() {
 function svelte_boundary_reset_onerror() {
 	throw new Error(`https://svelte.dev/e/svelte_boundary_reset_onerror`);
 }
-//#endregion
-//#region node_modules/svelte/src/internal/flags/index.js
+// node_modules/svelte/src/internal/flags/index.js
 /** True if experimental.async=true */
 var async_mode_flag = false;
 /** True if we're not certain that we only have Svelte 5 code in the compilation */
@@ -307,8 +302,7 @@ function get_stack() {
 	}
 	return new_lines;
 }
-//#endregion
-//#region node_modules/svelte/src/internal/shared/context.js
+// node_modules/svelte/src/internal/shared/context.js
 /**
 * @template T
 * @param {(key: object) => T} get_context
@@ -348,8 +342,7 @@ function get_or_init_context_map(context, name) {
 	if (context === null) lifecycle_outside_component(name);
 	return context.c ??= new Map(get_parent_context(context) || void 0);
 }
-//#endregion
-//#region node_modules/svelte/src/internal/client/context.js
+// node_modules/svelte/src/internal/client/context.js
 /** @import { ComponentContext, DevStackEntry, Effect } from '#client' */
 /** @type {ComponentContext | null} */
 var component_context = null;
@@ -408,8 +401,7 @@ function mark_as_component(component = {}) {
 function is_runes() {
 	return !legacy_mode_flag || component_context !== null && component_context.l === null;
 }
-//#endregion
-//#region node_modules/svelte/src/internal/client/dom/task.js
+// node_modules/svelte/src/internal/client/dom/task.js
 /** @type {Array<() => void>} */
 var micro_tasks = [];
 function run_micro_tasks() {
@@ -435,8 +427,7 @@ function queue_micro_task(fn) {
 function flush_tasks() {
 	while (micro_tasks.length > 0) run_micro_tasks();
 }
-//#endregion
-//#region node_modules/svelte/src/internal/client/reactivity/status.js
+// node_modules/svelte/src/internal/client/reactivity/status.js
 /** @import { Derived, Signal } from '#client' */
 var STATUS_MASK = ~(DIRTY | MAYBE_DIRTY | CLEAN);
 /**
@@ -454,8 +445,7 @@ function update_derived_status(derived) {
 	if ((derived.f & 512) !== 0 || derived.deps === null) set_signal_status(derived, CLEAN);
 	else set_signal_status(derived, MAYBE_DIRTY);
 }
-//#endregion
-//#region node_modules/svelte/src/internal/client/reactivity/utils.js
+// node_modules/svelte/src/internal/client/reactivity/utils.js
 /** @import { Derived, Effect, Value } from '#client' */
 /**
 * @param {Value[] | null} deps
@@ -482,15 +472,13 @@ function defer_effect(effect, dirty_effects, maybe_dirty_effects) {
 	clear_marked(effect.deps);
 	set_signal_status(effect, CLEAN);
 }
-//#endregion
-//#region node_modules/svelte/src/internal/client/reactivity/store.js
+// node_modules/svelte/src/internal/client/reactivity/store.js
 /**
 * We set this to `true` when updating a store so that we correctly
 * schedule effects if the update takes place inside a `$:` effect
 */
 var legacy_is_updating_store = false;
-//#endregion
-//#region node_modules/svelte/src/internal/client/dom/elements/bindings/shared.js
+// node_modules/svelte/src/internal/client/dom/elements/bindings/shared.js
 /**
 * @template T
 * @param {() => T} fn
@@ -589,8 +577,7 @@ function unfreeze_derived_effects(derived) {
 	if (derived.effects === null) return;
 	for (const e of derived.effects) if (e.teardown && e.fn !== null) update_effect(e);
 }
-//#endregion
-//#region node_modules/svelte/src/internal/client/reactivity/batch.js
+// node_modules/svelte/src/internal/client/reactivity/batch.js
 /** @import { Fork } from 'svelte' */
 /** @import { Derived, Effect, Reaction, Source, Value } from '#client' */
 /** @type {Batch | null} */
@@ -1329,8 +1316,7 @@ function reset_all(effect) {
 		e = e.next;
 	}
 }
-//#endregion
-//#region node_modules/svelte/src/internal/client/reactivity/sources.js
+// node_modules/svelte/src/internal/client/reactivity/sources.js
 /** @import { Derived, Effect, Source, Value } from '#client' */
 /** @type {Set<Effect>} */
 var eager_effects = /* @__PURE__ */ new Set();
@@ -1628,8 +1614,7 @@ function proxy(value) {
 		}
 	});
 }
-//#endregion
-//#region node_modules/svelte/src/internal/client/dom/operations.js
+// node_modules/svelte/src/internal/client/dom/operations.js
 /** @type {Window} */
 var $window;
 /** @type {() => Node | null} */
@@ -1721,8 +1706,7 @@ function invoke_error_boundary(error, effect) {
 	}
 	throw error;
 }
-//#endregion
-//#region node_modules/svelte/src/internal/client/reactivity/effects.js
+// node_modules/svelte/src/internal/client/reactivity/effects.js
 /** @import { Blocker, ComponentContext, ComponentContextLegacy, Derived, Effect, TemplateNode, TransitionManager } from '#client' */
 /**
 * @param {Effect} effect
@@ -2010,15 +1994,13 @@ function move_effect(effect, fragment) {
 		node = next;
 	}
 }
-//#endregion
-//#region node_modules/svelte/src/internal/client/legacy.js
+// node_modules/svelte/src/internal/client/legacy.js
 /**
 * @type {Set<Value> | null}
 * @deprecated
 */
 var captured_signals = null;
-//#endregion
-//#region node_modules/svelte/src/internal/client/runtime.js
+// node_modules/svelte/src/internal/client/runtime.js
 /** @import { Derived, Effect, Reaction, Source, Value } from '#client' */
 /**
 * True if updating in an effect context that is reactive (i.e. not branch/root effects)
@@ -2375,8 +2357,7 @@ function untrack(fn) {
 		untracking = previous_untracking;
 	}
 }
-//#endregion
-//#region node_modules/svelte/src/store/utils.js
+// node_modules/svelte/src/store/utils.js
 /** @import { Readable } from './public' */
 /**
 * @template T
@@ -2394,8 +2375,7 @@ function subscribe_to_store(store, run, invalidate) {
 	const unsub = untrack(() => store.subscribe(run, invalidate));
 	return unsub.unsubscribe ? () => unsub.unsubscribe() : unsub;
 }
-//#endregion
-//#region node_modules/svelte/src/store/shared/index.js
+// node_modules/svelte/src/store/shared/index.js
 /** @import { Readable, StartStopNotifier, Subscriber, Unsubscriber, Updater, Writable } from '../public.js' */
 /** @import { Stores, StoresValues, SubscribeInvalidateTuple } from '../private.js' */
 /**
@@ -2557,8 +2537,7 @@ function get(store) {
 	subscribe_to_store(store, (_) => value = _)();
 	return value;
 }
-//#endregion
-//#region node_modules/svelte/src/utils.js
+// node_modules/svelte/src/utils.js
 /**
 * Attributes that are boolean, i.e. they are present or not present.
 */
@@ -2617,8 +2596,7 @@ var PASSIVE_EVENTS = ["touchstart", "touchmove"];
 function is_passive_event(name) {
 	return PASSIVE_EVENTS.includes(name);
 }
-//#endregion
-//#region node_modules/svelte/src/escaping.js
+// node_modules/svelte/src/escaping.js
 var ATTR_REGEX = /[&"<]/g;
 var CONTENT_REGEX = /[&<]/g;
 /**
@@ -2640,8 +2618,7 @@ function escape_html(value, is_attr) {
 	}
 	return escaped + str.substring(last);
 }
-//#endregion
-//#region node_modules/svelte/src/internal/shared/attributes.js
+// node_modules/svelte/src/internal/shared/attributes.js
 /**
 * `<div translate={false}>` should be rendered as `<div translate="no">` and _not_
 * `<div translate="false">`, which is equivalent to `<div translate="yes">`. There
@@ -2779,13 +2756,11 @@ function to_style(value, styles) {
 	}
 	return value == null ? null : String(value);
 }
-//#endregion
-//#region node_modules/svelte/src/internal/server/hydration.js
+// node_modules/svelte/src/internal/server/hydration.js
 var BLOCK_OPEN = `<!--[-->`;
 var BLOCK_CLOSE = `<!--]-->`;
 var EMPTY_COMMENT = `<!---->`;
-//#endregion
-//#region node_modules/svelte/src/internal/server/context.js
+// node_modules/svelte/src/internal/server/context.js
 /** @import { SSRContext } from '#server' */
 /** @type {SSRContext | null} */
 var ssr_context = null;
@@ -2843,8 +2818,7 @@ function push(fn) {
 function pop() {
 	ssr_context = ssr_context.p;
 }
-//#endregion
-//#region node_modules/svelte/src/internal/server/errors.js
+// node_modules/svelte/src/internal/server/errors.js
 /**
 * The node API `AsyncLocalStorage` is not available, but is required to use async server rendering.
 * @returns {never}
@@ -2956,8 +2930,7 @@ function server_context_required() {
 function unresolved_hydratable(key, stack) {
 	console.warn(`https://svelte.dev/e/unresolved_hydratable`);
 }
-//#endregion
-//#region node_modules/svelte/src/internal/server/render-context.js
+// node_modules/svelte/src/internal/server/render-context.js
 /** @import { AsyncLocalStorage } from 'node:async_hooks' */
 /** @import { RenderContext } from '#server' */
 /** @type {Promise<void> | null} */
@@ -3012,8 +2985,7 @@ function init_render_context() {
 function in_webcontainer() {
 	return !!globalThis.process?.versions?.webcontainer;
 }
-//#endregion
-//#region node_modules/svelte/src/internal/server/crypto.js
+// node_modules/svelte/src/internal/server/crypto.js
 var text_encoder;
 var crypto;
 /** @param {string} module_name */
@@ -3037,8 +3009,7 @@ function base64_encode(bytes) {
 	for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
 	return btoa(binary);
 }
-//#endregion
-//#region node_modules/svelte/src/internal/server/renderer.js
+// node_modules/svelte/src/internal/server/renderer.js
 /** @import { Component } from 'svelte' */
 /** @import { HydratableContext, SSRContext } from './types.js' */
 /** @import { Csp, RenderOutput, SyncRenderOutput, Sha256Source } from '../../server/public.js' */
@@ -3826,13 +3797,11 @@ var SSRState = class {
 		}
 	}
 };
-//#endregion
-//#region node_modules/svelte/src/internal/server/dev.js
+// node_modules/svelte/src/internal/server/dev.js
 function get_user_code_location() {
 	return get_stack().filter((line) => line.trim().startsWith("at ")).map((line) => line.replace(/\((.*):\d+:\d+\)$/, (_, file) => `(${file})`)).join("\n");
 }
-//#endregion
-//#region node_modules/svelte/src/internal/server/index.js
+// node_modules/svelte/src/internal/server/index.js
 var INVALID_ATTR_NAME_CHAR_REGEX = /[\s'">/=\u{FDD0}-\u{FDEF}\u{FFFE}\u{FFFF}\u{1FFFE}\u{1FFFF}\u{2FFFE}\u{2FFFF}\u{3FFFE}\u{3FFFF}\u{4FFFE}\u{4FFFF}\u{5FFFE}\u{5FFFF}\u{6FFFE}\u{6FFFF}\u{7FFFE}\u{7FFFF}\u{8FFFE}\u{8FFFF}\u{9FFFE}\u{9FFFF}\u{AFFFE}\u{AFFFF}\u{BFFFE}\u{BFFFF}\u{CFFFE}\u{CFFFF}\u{DFFFE}\u{DFFFF}\u{EFFFE}\u{EFFFF}\u{FFFFE}\u{FFFFF}\u{10FFFE}\u{10FFFF}]/u;
 /**
 * Only available on the server and when compiling with the `server` option.
@@ -4053,5 +4022,4 @@ function derived(fn) {
 		return updated_value;
 	};
 }
-//#endregion
 export { get_first_child as $, escape_html as A, lifecycle_double_unmount as At, set_active_reaction as B, run as Bt, getAllContexts as C, hydrate_node as Ct, ssr_context as D, set_hydrating as Dt, setContext as E, set_hydrate_node as Et, writable as F, LEGACY_PROPS as Ft, destroy_effect as G, block as H, active_effect as I, array_from as It, pause_effect as J, effect_tracking as K, active_reaction as L, define_property as Lt, derived$1 as M, HYDRATION_ERROR as Mt, get as N, EFFECT_PRESERVED as Nt, attr as O, skip_nodes as Ot, readable as P, EFFECT_TRANSPARENT as Pt, create_text as Q, get$1 as R, fallback as Rt, createContext as S, hydrate_next as St, hasContext as T, next as Tt, branch as U, untrack as V, component_root as W, invoke_error_boundary as X, render_effect as Y, clear_text_content as Z, get_user_code_location as _, tag as _t, derived as a, set as at, hydratable_serialization_failed as b, svelte_boundary_reset_onerror as bt, render as c, current_batch as ct, sanitize_slots as d, queue_micro_task as dt, get_next_sibling as et, slot as f, component_context as ft, unsubscribe_stores as g, set_component_context as gt, stringify as h, push$1 as ht, bind_props as i, mutable_source as it, is_passive_event as j, svelte_boundary_reset_noop as jt, clsx$1 as k, hydration_mismatch as kt, rest_props as l, flushSync as lt, store_get as m, pop$1 as mt, attr_style as n, increment as nt, ensure_array_like as o, source as ot, spread_props as p, mark_as_component as pt, move_effect as q, attributes as r, internal_set as rt, head as s, Batch as st, attr_class as t, init_operations as tt, sanitize_props as u, defer_effect as ut, get_render_context as v, async_mode_flag as vt, getContext as w, hydrating as wt, lifecycle_function_unavailable as x, experimental_async_required as xt, hydratable_clobbering as y, hydration_failed as yt, set_active_effect as z, noop as zt };

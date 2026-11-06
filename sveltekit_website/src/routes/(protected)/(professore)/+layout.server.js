@@ -5,7 +5,7 @@ export function load({ locals }) {
         throw redirect(302, "/login");
     }
 
-	const canAccessAdminGroup = ['developer', 'professor'].includes(locals.user.role);
+	const canAccessAdminGroup = ['admin', 'professor'].includes(locals.user.role);
 
     if (!canAccessAdminGroup) {
 		throw redirect(302, "/corsi");

@@ -2,7 +2,7 @@ import { F as writable, M as derived } from "./server.js";
 import "./index-server.js";
 import deepmerge from "deepmerge";
 import { IntlMessageFormat } from "intl-messageformat";
-//#region node_modules/svelte-i18n/dist/runtime.js
+// node_modules/svelte-i18n/dist/runtime.js
 function delve(obj, fullKey) {
 	if (fullKey == null) return void 0;
 	if (fullKey in obj) return obj[fullKey];
@@ -385,5 +385,4 @@ derived([$locale], () => formatTime);
 derived([$locale], () => formatDate);
 derived([$locale], () => formatNumber);
 derived([$locale, $dictionary], () => getJSON);
-//#endregion
 export { init as i, $locale as n, addMessages as r, $format as t };

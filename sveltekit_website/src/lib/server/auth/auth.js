@@ -5,38 +5,56 @@ import { sveltekitCookies } from "better-auth/svelte-kit";
 import { getRequestEvent } from "$app/server";
 import { db } from '$lib/server/db';
 import * as schema from "$lib/server/db/schema.js";
-import { admin } from "better-auth/plugins"
+import { admin as adminPlugin } from "better-auth/plugins"
 import { APIError } from "better-auth";
 import { createAuthMiddleware } from "better-auth/api";
 import { sendMail } from "../mail/mailer.js";
+import { renderMailTemplate } from "../mail/render-template.js";
 import { createAccessControl } from "better-auth/plugins/access";
 import { defaultStatements, adminAc } from "better-auth/plugins/admin/access";
 import { haveIBeenPwned } from "better-auth/plugins"
+import { isBlockedAuthEndpoint } from "./admin-endpoints.js";
 
-const statement = {
-    ...defaultStatements,
-    project: ["create", "share", "update", "delete"],
+// Better Auth access-control roles. Only the admin plugin reads them, to
+// decide which admin endpoints a session may call; the app's own
+// authorization lives in the services (`user.role` plus course memberships).
+// The statements are the plugin defaults; professors and students get none.
+const ac = createAccessControl(defaultStatements);
+
+/**
+ * Build the link sent in password-reset emails.
+ *
+ * Points at the app's own `/auth/verifica-password` page (not Better Auth's
+ * default callback) so the user picks the new password in the portal UI.
+ * Uses the public client URL because the server-side `BETTER_AUTH_URL` may
+ * be an internal address in Docker.
+ *
+ * @param {string} token - Reset token issued by Better Auth.
+ * @returns {string} Absolute URL with `token` and `callbackUrl` query params.
+ */
+function passwordResetUrl(token) {
+    const clientUrl = process.env.BETTER_AUTH_CLIENT_URL || process.env.BETTER_AUTH_URL || 'http://localhost:5173';
+    const target = new URL('/auth/verifica-password', clientUrl);
+    target.searchParams.set('token', token);
+    target.searchParams.set('callbackUrl', clientUrl);
+    return target.toString();
 }
 
-const ac = createAccessControl(statement);
-
-export const developer = ac.newRole({
-    project: ["create", "update", "delete", "share"],
-    ...adminAc.statements,
+// Admins get the plugin's admin permissions except impersonation, which the
+// portal does not offer (see also `isBlockedAuthEndpoint`).
+export const admin = ac.newRole({
+    user: adminAc.statements.user.filter((action) => action !== "impersonate"),
+    session: adminAc.statements.session,
 });
 
-export const professor = ac.newRole({
-    project: ["create", "update", "delete", "share"],
-});
+export const professor = ac.newRole({});
 
-const student = ac.newRole({
-    project: ["create", "update"],
-});
-
-
+const student = ac.newRole({});
 
 export const auth = betterAuth({
     appName: "Image Evaluator",
+    secret: process.env.BETTER_AUTH_SECRET,
+    baseURL: process.env.BETTER_AUTH_URL,
     trustedOrigins: [
         process.env.BETTER_AUTH_CLIENT_URL,
         process.env.PUBLIC_URL,
@@ -70,7 +88,7 @@ export const auth = betterAuth({
                 type: "string",
                 required: false,
                 defaultValue: "student",
-                input: true
+                input: false
             },
             first_access: {
                 type: "boolean",
@@ -82,54 +100,48 @@ export const auth = betterAuth({
     },
     emailAndPassword: {
         enabled: true,
+        // Accounts are created only by admins (`usersService.create` ->
+        // `auth.api.createUser`) or by `scripts/seed-initial-users.mjs`;
+        // neither goes through the public sign-up endpoint.
+        disableSignUp: true,
         requireEmailVerification: true,
-        emailVerification: {
-            required: true,
-            tokenExpiration: 60 * 60 * 24, // 24 hours
-        },
         minPasswordLength: 8, // minimum 8 characters (default)
         maxPasswordLength: 128, // maximum 128 characters (default)
-        sendResetPassword: async ({ user, url, token }) => {
-            const urlWithToken = process.env.BETTER_AUTH_URL + `/auth/verifica-password?token=${token}&callbackUrl=` + encodeURIComponent(process.env.BETTER_AUTH_CLIENT_URL || 'http://localhost:5173');
-            console.log(`Reset Password URL: ${urlWithToken}`);
-            console.log(user.email);
+        sendResetPassword: async ({ user, token }) => {
+            const urlWithToken = passwordResetUrl(token);
             const mail = renderMailTemplate('password-reset', {
                 name: user.name,
                 resetUrl: urlWithToken,
             });
             await sendMail(user.email, mail.subject, mail.html, { text: mail.text });
         },
-        resetPasswordTokenExpiresIn: 60 * 60 * 24, // 1 hour
-        sendResetPasswordEmail: async ({ user, url, token }, request) => {
-            if (process.env.NODE_ENV === "development") {
-                console.log(`Reset Password URL (dev mode): ${url}`);
-            } else {
-                const urlWithToken = process.env.BETTER_AUTH_URL + `/auth/verifica-password?token=${token}&callbackUrl=` + encodeURIComponent(process.env.BETTER_AUTH_CLIENT_URL || 'http://localhost:5173');
-                const mail = renderMailTemplate('password-reset', {
-                    name: user.name,
-                    resetUrl: urlWithToken,
-                });
-                await sendMail(user.email, mail.subject, mail.html, { text: mail.text });
-            }
-        },
-
+        resetPasswordTokenExpiresIn: 60 * 60 * 24, // 24 hours
     },
     session: {
         expiresIn: 60 * 60 * 24 * 30, // 30 days
         updateAge: 60 * 60 * 24 * 7, // Update session after 7 days
     },
     emailVerification: {
-        sendVerificationEmail: async ({ user, url, token }, request) => {
-            const urlWithToken = process.env.BETTER_AUTH_URL + `/auth/verifica-email?token=${token}&callbackUrl=` + encodeURIComponent(process.env.BETTER_AUTH_CLIENT_URL || 'http://localhost:5173');
+        expiresIn: 60 * 60 * 24, // 24 hours
+        sendVerificationEmail: async ({ user, url }) => {
             const mail = renderMailTemplate('email-verification', {
                 name: user.name,
-                verificationUrl: urlWithToken,
+                verificationUrl: url,
             });
             await sendMail(user.email, mail.subject, mail.html, { text: mail.text });
         },
     },
     hooks: {
+        // Keep the admin plugin endpoints server-only, and refuse
+        // password-reset emails for banned accounts.
         before: createAuthMiddleware(async (ctx) => {
+            if (isBlockedAuthEndpoint(ctx.path, Boolean(ctx.request))) {
+                throw new APIError("FORBIDDEN", {
+                    message: "This endpoint is not available.",
+                    code: "FORBIDDEN",
+                });
+            }
+
             if (ctx.path === "/request-password-reset") {
                 const email = typeof ctx.body?.email === "string"
                     ? ctx.body.email.trim().toLowerCase()
@@ -151,6 +163,7 @@ export const auth = betterAuth({
                 }
             }
         }),
+        // Replace Better Auth's English error messages with Italian ones.
         after: createAuthMiddleware(async (ctx) => {
             // Check if the operation returned an error
             const error = ctx.context.returned;
@@ -174,14 +187,14 @@ export const auth = betterAuth({
         }),
     },
     plugins: [
-        admin({
+        adminPlugin({
             ac,
             roles: {
-                developer,
+                admin,
                 professor,
                 student,
             },
-            adminRoles: ["developer"],
+            adminRoles: ["admin"],
             defaultRole: "student",
         }),
         haveIBeenPwned({
@@ -194,11 +207,12 @@ export const auth = betterAuth({
             generateId: "serial",
         },
         cookiePrefix: "polito_manuri_sanna_auth_",
-        secret: process.env.BETTER_AUTH_SECRET,
-        baseURL: process.env.BETTER_AUTH_URL,
     },
 });
 
+// Keyed by Better Auth error code (or raw message as fallback). Declared after
+// `auth` on purpose: it is only read inside the `after` hook at request time,
+// so the temporal dead zone is never hit.
 const AUTH_ERROR_TRANSLATE = {
     // Sign Up / Registration
     "USER_ALREADY_EXISTS": "Esiste già un utente con questa email.",

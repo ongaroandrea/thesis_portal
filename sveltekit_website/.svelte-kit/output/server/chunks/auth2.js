@@ -1,2 +1,1 @@
-import { t as auth } from "./auth.js";
-export { auth };
+export { n as auth } from "./auth.js";

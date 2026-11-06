@@ -14,4 +14,33 @@ File: Custom Bootstrap Css File
 @import "variables";
 @import "variables-dark";
 @import "../../components/utilities";
-@import "bootstrap/scss/bootstrap";
+// Bootstrap, minus components no portal page renders (accordion, pagination,
+// list-group, toasts, tooltip, popover, carousel, offcanvas, placeholders).
+// Re-add the matching import here before using one of them.
+@import "bootstrap/scss/maps";
+@import "bootstrap/scss/mixins";
+@import "bootstrap/scss/utilities";
+@import "bootstrap/scss/root";
+@import "bootstrap/scss/reboot";
+@import "bootstrap/scss/type";
+@import "bootstrap/scss/images";
+@import "bootstrap/scss/containers";
+@import "bootstrap/scss/grid";
+@import "bootstrap/scss/tables";
+@import "bootstrap/scss/forms";
+@import "bootstrap/scss/buttons";
+@import "bootstrap/scss/transitions";
+@import "bootstrap/scss/dropdown";
+@import "bootstrap/scss/button-group";
+@import "bootstrap/scss/nav";
+@import "bootstrap/scss/navbar";
+@import "bootstrap/scss/card";
+@import "bootstrap/scss/breadcrumb";
+@import "bootstrap/scss/badge";
+@import "bootstrap/scss/alert";
+@import "bootstrap/scss/progress";
+@import "bootstrap/scss/close";
+@import "bootstrap/scss/modal";
+@import "bootstrap/scss/spinners";
+@import "bootstrap/scss/helpers";
+@import "bootstrap/scss/utilities/api";

@@ -105,7 +105,7 @@ $accordion-button-active-icon-dark:                                 url("data:im
 
 // Horizontal Menu
 $topnav-bg-dark:                                                    #272b30;
-$topnav-item-color-dark:                                            #878a99;
+$topnav-item-color-dark:                                            #a9adbb; // 6:1 on the dark menu (was 4.15:1)
 $topnav-item-active-color-dark:                                     $white;
 
 // Topbar
@@ -123,12 +123,12 @@ $page-title-border-dark:                                            none;
 $page-title-box-shadow-dark:                                        0 1px 2px rgba(56,65,74,0.15);
 
 // Topbar - dark
-$dark-header-bg-dark:                                               $primary;
+$dark-header-bg-dark:                                               #00607e; // darker than $primary so white header text reaches 7:1
 $dark-header-border-dark:                                           $primary;
-$dark-header-item-color-dark:                                       rgba($white, .85);
+$dark-header-item-color-dark:                                       $white; // 85% white was 4.1:1 on the primary header
 $dark-header-item-bg-dark:                                          #7399e5;
-$dark-header-item-sub-color-dark:                                   rgba($white, .6); 
-$dark-topbar-user-bg-dark:                                          lighten($primary, 3%);
+$dark-header-item-sub-color-dark:                                   rgba($white, .85); // 60% white was 2.6:1 
+$dark-topbar-user-bg-dark:                                          #006a8a;
 $dark-topbar-search-bg-dark:                                        rgba($white, .05);
 $dark-topbar-search-color-dark:                                     $white;
 
@@ -140,7 +140,7 @@ $boxed-body-bg-dark:                                                darken($body
 
 // Footer
 $footer-bg-dark:                                                    #212529;
-$footer-color-dark:                                                 #878a99;
+$footer-color-dark:                                                 #a9adbb;
 
 //sidebar light 
 $vertical-menu-bg-dark:                                             $white;

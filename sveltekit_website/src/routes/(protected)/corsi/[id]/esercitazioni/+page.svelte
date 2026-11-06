@@ -8,6 +8,7 @@
     } from "$lib/client/api.js";
     import PageHeader from "$lib/components/portal/PageHeader.svelte";
     import { _ } from 'svelte-i18n';
+    import { tableScrollHint } from '$lib/client/table-scroll-hint.js';
     let course;
     let activities = [];
     let loading = true;
@@ -31,7 +32,7 @@
     });
 </script>
 
-<svelte:head><title>{$_('activity.courseActivities')}</title></svelte:head>
+<svelte:head><title>{$_('activity.courseActivities')} | {$_('site.name')}</title></svelte:head>
 <div class="page-content">
     <div class="container-fluid py-4">
         <PageHeader
@@ -76,10 +77,12 @@
                 {#if loading}<div class="text-center py-5">
                         <div class="spinner-border text-primary"></div>
                     </div>{:else if filtered.length === 0}<div
-                        class="text-center text-muted py-5"
+                        class="text-muted p-4"
                     >
-                        {$_('activity.noneAvailable')}
-                    </div>{:else}<div class="table-responsive">
+                        {#if activities.length > 0}{$_('activity.noneForFilter')}
+                        {:else if course?.canManage}{$_('activity.noneYetStaffHelp')}
+                        {:else}{$_('activity.noneYetStudentHelp')}{/if}
+                    </div>{:else}<div class="table-responsive" use:tableScrollHint={$_('common.scrollTable')}>
                         <table class="table table-hover align-middle mb-0">
                             <thead class="table-light"
                                 ><tr

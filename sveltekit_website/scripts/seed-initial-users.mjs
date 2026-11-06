@@ -13,10 +13,10 @@ const initialUsers = [
 		surname: process.env.INITIAL_PROFESSOR_SURNAME || 'Professor'
 	},
 	{
-		role: 'developer',
-		email: process.env.INITIAL_DEVELOPER_EMAIL,
-		name: process.env.INITIAL_DEVELOPER_NAME || 'Initial',
-		surname: process.env.INITIAL_DEVELOPER_SURNAME || 'Developer'
+		role: 'admin',
+		email: process.env.INITIAL_ADMIN_EMAIL,
+		name: process.env.INITIAL_ADMIN_NAME || 'Initial',
+		surname: process.env.INITIAL_ADMIN_SURNAME || 'Admin'
   },
   {
 		role: 'student',
@@ -44,11 +44,17 @@ for (const initialUser of initialUsers) {
 }
 
 if (initialUsers[0].email === initialUsers[1].email) {
-	fail('Professor and developer must use different email addresses.');
+	fail('Professor and admin must use different email addresses.');
 }
 
 const sql = postgres(databaseUrl, { prepare: false, max: 1 });
 
+/**
+ * Create or update one bootstrap account directly in the Better Auth tables,
+ * bypassing the sign-up flow: the user is marked verified and unbanned, and
+ * its `credential` account row gets the new password hash. Matching is by
+ * lower-cased email, so rerunning the script never creates duplicates.
+ */
 async function upsertCredentialUser(transaction, initialUser, passwordHash) {
 	const existing = await transaction`
 		SELECT "id"

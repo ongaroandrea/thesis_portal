@@ -1,20 +1,16 @@
 <script>
-	import {
-		Container,
-		Row,
-		Col,
-		Card,
-		CardBody,
-		Label,
-	} from "@sveltestrap/sveltestrap";
+	import { Label } from "@sveltestrap/sveltestrap";
 	import Link from "svelte-link";
 	import ParticlesAuth from '$lib/components/layouts/ParticlesAuth.svelte';
 	import { authClient } from "$lib/client/auth/auth-client";
+	import { authErrorMessage } from "$lib/client/auth/auth-errors.js";
 	import { goto } from "$app/navigation";
 	import { _ } from 'svelte-i18n';
 	let email = $state("");
 	let password = $state("");
 	let displayPassword = $state(false);
+	// Better Auth keeps the session after the browser closes unless rememberMe is false.
+	let rememberMe = $state(true);
 	let loading = $state(false);
 	let errorMessage = $state("");
 
@@ -41,12 +37,11 @@
 				{
 					email,
 					password,
-					//callbackURL: "/dashboard", // Redirect after success
+					rememberMe,
 				},
 				{
 					onError: (ctx) => {
-						// show error message
-						errorMessage = ctx.error.message;
+						errorMessage = authErrorMessage(ctx.error);
 						console.error("Login error:", ctx.error);
 					},
 					onSuccess: async (ctx) => {
@@ -64,135 +59,81 @@
 </script>
 
 <svelte:head>
-	<title>{$_('login')} | {$_('home.eyebrow')}</title>
+	<title>{$_('login')} | {$_('site.name')}</title>
 </svelte:head>
 <ParticlesAuth>
-	<div class="auth-page-content">
-		<Container>
-			<Row>
-				<Col lg={12}>
-					<div class="text-center mt-sm-5 mb-4 text-white-50">
-						<a href="/" class="d-inline-block auth-logo">
-							<img src="/images/polito_logo_desktop.svg" alt="Politecnico di Torino" height="76" />
-						</a>
-					</div>
-				</Col>
-			</Row>
-			<!-- end row -->
+	<h1>{$_('auth.title')}</h1>
+	<p class="auth-lead">{$_('auth.subtitle')}</p>
 
-			<Row class="justify-content-center">
-				<Col md={8} lg={6} xl={5}>
-					<Card class="mt-4">
-						<CardBody class="p-4">
-							<div class="text-center mt-2">
-								<h5 class="text-primary">{$_('auth.welcome')}</h5>
-								<p class="text-muted">{$_('auth.subtitle')}</p>
-							</div>
-							<div class="p-2 mt-4">
-								{#if errorMessage}
-									<div
-										class="alert alert-danger"
-										role="alert"
-									>
-										{errorMessage}
-									</div>
-								{/if}
-									<form class="form" onsubmit={(event) => { event.preventDefault(); onSubmit(); }}>
-									<div class="mb-3">
-										<Label for="email" class="form-label"
-											>Email</Label
-										>
-										<input
-											type="email"
-											class="form-control"
-											id="email"
-											placeholder={$_('auth.emailPlaceholder')}
-											bind:value={email}
-										/>
-									</div>
+	{#if errorMessage}
+		<div class="alert alert-danger" role="alert" aria-live="polite">{errorMessage}</div>
+	{/if}
 
-									<div class="mb-3">
-										<div class="float-end">
-											<Link
-												href="/password-dimenticata"
-												class="text-muted"
-												>{$_('auth.forgotPassword')}</Link
-											>
-										</div>
-										<Label
-											class="form-label"
-											for="password-input">Password</Label
-										>
-										<div
-											class="position-relative auth-pass-inputgroup mb-3"
-										>
-											{#if displayPassword}
-												<input
-													type="text"
-													class="form-control pe-5"
-													placeholder={$_('auth.passwordPlaceholder')}
-													id="password-input"
-													bind:value={password}
-												/>
-											{:else}
-												<input
-													type="password"
-													class="form-control pe-5"
-													placeholder={$_('auth.passwordPlaceholder')}
-													id="password-input"
-													bind:value={password}
-												/>
-											{/if}
-											<button
-												class="btn btn-link position-absolute end-0 top-0 text-decoration-none text-muted"
-												type="button"
-												id="password-addon"
-												onclick={() => (displayPassword = !displayPassword)}
-												aria-label={$_(displayPassword ? 'auth.hidePassword' : 'auth.showPassword')}
-												><i class="ri-eye-fill align-middle"></i></button
-											>
-										</div>
-									</div>
+	<form class="form" onsubmit={(event) => { event.preventDefault(); onSubmit(); }}>
+		<div class="mb-3">
+			<Label for="email" class="form-label">Email</Label>
+			<input
+				type="email"
+				class="form-control"
+				id="email"
+				name="email"
+				autocomplete="email"
+				required
+				placeholder={$_('auth.emailPlaceholder')}
+				bind:value={email}
+			/>
+		</div>
 
-									<div class="form-check">
-										<input
-											class="form-check-input"
-											type="checkbox"
-											value=""
-											id="auth-remember-check"
-										/>
-										<Label
-											class="form-check-label"
-											for="auth-remember-check"
-											>{$_('auth.remember')}</Label
-										>
-									</div>
+		<div class="mb-3">
+			<div class="d-flex justify-content-between align-items-baseline gap-2">
+				<Label class="form-label" for="password-input">Password</Label>
+				<Link href="/password-dimenticata" class="small">{$_('auth.forgotPassword')}</Link>
+			</div>
+			<div class="position-relative auth-pass-inputgroup">
+				{#if displayPassword}
+					<input
+						type="text"
+						class="form-control pe-5"
+						placeholder={$_('auth.passwordPlaceholder')}
+						id="password-input"
+						name="password"
+						autocomplete="current-password"
+						required
+						bind:value={password}
+					/>
+				{:else}
+					<input
+						type="password"
+						class="form-control pe-5"
+						placeholder={$_('auth.passwordPlaceholder')}
+						id="password-input"
+						name="password"
+						autocomplete="current-password"
+						required
+						bind:value={password}
+					/>
+				{/if}
+				<button
+					class="btn btn-link position-absolute end-0 top-0 text-decoration-none text-muted"
+					type="button"
+					id="password-addon"
+					onclick={() => (displayPassword = !displayPassword)}
+					aria-label={$_(displayPassword ? 'auth.hidePassword' : 'auth.showPassword')}
+					><i class="ri-eye-fill align-middle" aria-hidden="true"></i></button
+				>
+			</div>
+		</div>
 
-									<div class="mt-4">
-										<button
-												class="btn btn-primary w-100"
-											type="submit"
-											disabled={loading}
-										>
-											{loading ? $_('auth.loading') : $_('login')}
-										</button>
-									</div>
-								</form>
-							</div>
-						</CardBody>
-						<!-- end card body -->
-					</Card>
-					<!-- end card -->
+		<div class="form-check">
+			<input class="form-check-input" type="checkbox" id="auth-remember-check" bind:checked={rememberMe} />
+			<Label class="form-check-label" for="auth-remember-check">{$_('auth.remember')}</Label>
+			<div class="form-text mt-0">{$_('auth.rememberHelp')}</div>
+		</div>
 
-				</Col>
-			</Row>
-			<!-- end row -->
-		</Container>
-		<!-- end container -->
-	</div>
+		<button class="btn btn-primary w-100 mt-4" type="submit" disabled={loading}>
+			{loading ? $_('auth.loading') : $_('login')}
+		</button>
+	</form>
+
+	<p class="auth-secondary">{$_('auth.accountHelp')}</p>
 </ParticlesAuth>
-
-<style>
-	.auth-logo img { width: 148px; height: auto; padding: 0.55rem; border-radius: 6px; background: #ffffff; }
-	.alpha-label { margin-left: 0.35rem; padding: 0.2rem 0.45rem; border: 1px solid rgba(255,255,255,.4); border-radius: 999px; font-size: .65rem; letter-spacing: .08em; text-transform: uppercase; }
-</style>

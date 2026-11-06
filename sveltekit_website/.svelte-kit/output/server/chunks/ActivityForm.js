@@ -1,8 +1,8 @@
 import { A as escape_html, O as attr, Rt as fallback, g as unsubscribe_stores, i as bind_props, k as clsx, m as store_get, o as ensure_array_like, t as attr_class } from "./server.js";
+import { o as toDateTimeLocal } from "./api.js";
 import { n as CORRECTION_FOCUS_OPTIONS, r as DEFAULT_CORRECTION_FOCUS_IDS } from "./correction-focus.js";
 import { t as $format } from "./runtime.js";
-import { o as toDateTimeLocal } from "./api.js";
-//#region src/lib/components/portal/ActivityForm.svelte
+// src/lib/components/portal/ActivityForm.svelte
 function ActivityForm($$renderer, $$props) {
 	$$renderer.component(($$renderer) => {
 		var $$store_subs;
@@ -18,6 +18,7 @@ function ActivityForm($$renderer, $$props) {
 		let title = initial.title ?? "";
 		let description = initial.description ?? "";
 		let objective = initial.objective ?? "";
+		let promptAddendum = initial.promptAddendum ?? "";
 		let kind = initial.kind ?? "LESSON";
 		let status = initial.status ?? "DRAFT";
 		let availableFrom = toDateTimeLocal(initial.availableFrom);
@@ -65,7 +66,7 @@ function ActivityForm($$renderer, $$props) {
 			GENERAL: "ri-focus-3-line"
 		};
 		$: allTopicsSelected = allowedCorrectionFocuses.length === CORRECTION_FOCUS_OPTIONS.length;
-		$$renderer.push(`<form><div class="form-section-heading svelte-hhdbb8"><span class="svelte-hhdbb8">1</span><div><h5 class="svelte-hhdbb8">${escape_html(store_get($$store_subs ??= {}, "$_", $format)("activity.details"))}</h5><p class="svelte-hhdbb8">${escape_html(store_get($$store_subs ??= {}, "$_", $format)("activity.detailsHelp"))}</p></div></div> <div class="row g-3"><div class="col-md-8"><label class="form-label fw-semibold" for="activity-title">${escape_html(store_get($$store_subs ??= {}, "$_", $format)("common.title"))}</label> <input id="activity-title" class="form-control form-control-lg"${attr("value", title)} maxlength="200" required=""/></div> <div class="col-md-4"><label class="form-label fw-semibold" for="activity-kind">${escape_html(store_get($$store_subs ??= {}, "$_", $format)("activity.kind"))}</label> `);
+		$$renderer.push(`<form><div class="form-section-heading svelte-hhdbb8"><span class="svelte-hhdbb8">1</span><div><h2 class="h5 svelte-hhdbb8">${escape_html(store_get($$store_subs ??= {}, "$_", $format)("activity.details"))}</h2><p class="svelte-hhdbb8">${escape_html(store_get($$store_subs ??= {}, "$_", $format)("activity.detailsHelp"))}</p></div></div> <div class="row g-3"><div class="col-md-8"><label class="form-label fw-semibold" for="activity-title">${escape_html(store_get($$store_subs ??= {}, "$_", $format)("common.title"))}</label> <input id="activity-title" class="form-control form-control-lg"${attr("value", title)} maxlength="200" required=""/></div> <div class="col-md-4"><label class="form-label fw-semibold" for="activity-kind">${escape_html(store_get($$store_subs ??= {}, "$_", $format)("activity.kind"))}</label> `);
 		$$renderer.select({
 			id: "activity-kind",
 			class: "form-select form-select-lg",
@@ -84,7 +85,10 @@ function ActivityForm($$renderer, $$props) {
 		$$renderer.push(`</textarea></div> <div class="col-12"><label class="form-label fw-semibold" for="activity-description">${escape_html(store_get($$store_subs ??= {}, "$_", $format)("activity.instructions"))}</label> <textarea id="activity-description" class="form-control" rows="5"${attr("placeholder", store_get($$store_subs ??= {}, "$_", $format)("activity.instructionsPlaceholder"))}>`);
 		const $$body_1 = escape_html(description);
 		if ($$body_1) $$renderer.push(`${$$body_1}`);
-		$$renderer.push(`</textarea></div> <div class="col-md-6"><label class="form-label fw-semibold" for="activity-from">${escape_html(store_get($$store_subs ??= {}, "$_", $format)("activity.availableFrom"))}</label> <input id="activity-from" type="datetime-local" class="form-control"${attr("value", availableFrom)}/></div> <div class="col-md-6"><label class="form-label fw-semibold" for="activity-until">${escape_html(store_get($$store_subs ??= {}, "$_", $format)("activity.availableUntil"))}</label> <input id="activity-until" type="datetime-local" class="form-control"${attr("value", availableUntil)}${attr("required", kind === "EXAM", true)}/></div> `);
+		$$renderer.push(`</textarea></div> <div class="col-12"><label class="form-label fw-semibold" for="activity-prompt-addendum">${escape_html(store_get($$store_subs ??= {}, "$_", $format)("activity.promptAddendum"))}</label> <textarea id="activity-prompt-addendum" class="form-control" rows="5" maxlength="8000"${attr("disabled", Boolean(initial.promptFrozenAt), true)}${attr("placeholder", store_get($$store_subs ??= {}, "$_", $format)("activity.promptAddendumPlaceholder"))}>`);
+		const $$body_2 = escape_html(promptAddendum);
+		if ($$body_2) $$renderer.push(`${$$body_2}`);
+		$$renderer.push(`</textarea> <div class="form-text">${escape_html(store_get($$store_subs ??= {}, "$_", $format)(initial.promptFrozenAt ? "activity.promptFrozenHelp" : "activity.promptAddendumHelp"))}</div></div> <div class="col-md-6"><label class="form-label fw-semibold" for="activity-from">${escape_html(store_get($$store_subs ??= {}, "$_", $format)("activity.availableFrom"))}</label> <input id="activity-from" type="datetime-local" class="form-control"${attr("value", availableFrom)}/></div> <div class="col-md-6"><label class="form-label fw-semibold" for="activity-until">${escape_html(store_get($$store_subs ??= {}, "$_", $format)("activity.availableUntil"))}</label> <input id="activity-until" type="datetime-local" class="form-control"${attr("value", availableUntil)}${attr("required", kind === "EXAM", true)}/></div> `);
 		if (kind === "EXAM") $$renderer.push(`<!--[0--><div class="col-12"><label class="form-label fw-semibold" for="activity-results-release">${escape_html(store_get($$store_subs ??= {}, "$_", $format)("exam.resultsRelease"))}</label> <input id="activity-results-release" type="datetime-local" class="form-control"${attr("value", resultsReleasedAt)}/> <div class="form-text">${escape_html(store_get($$store_subs ??= {}, "$_", $format)("exam.resultsReleaseHelp"))}</div></div>`);
 		else $$renderer.push("<!--[-1-->");
 		$$renderer.push(`<!--]--> <div class="col-md-3"><label class="form-label fw-semibold" for="activity-duration">${escape_html(store_get($$store_subs ??= {}, "$_", $format)("activity.durationMinutes"))}</label> <input id="activity-duration" type="number" min="1" class="form-control"${attr("value", durationMinutes)}/></div> `);
@@ -108,7 +112,7 @@ function ActivityForm($$renderer, $$props) {
 		});
 		$$renderer.push(`</div></div> `);
 		if (kind !== "EXAM") {
-			$$renderer.push(`<!--[0--><div class="form-section-heading mt-5 svelte-hhdbb8"><span class="svelte-hhdbb8">2</span><div><h5 class="svelte-hhdbb8">${escape_html(store_get($$store_subs ??= {}, "$_", $format)("activity.correctionTopics"))}</h5><p class="svelte-hhdbb8">${escape_html(store_get($$store_subs ??= {}, "$_", $format)("activity.correctionTopicsHelp"))}</p></div></div> <div${attr_class("topic-selector svelte-hhdbb8", void 0, { "invalid": allowedCorrectionFocuses.length === 0 })}><label${attr_class("topic-option topic-all svelte-hhdbb8", void 0, { "selected": allTopicsSelected })}><input type="checkbox"${attr("checked", allTopicsSelected, true)} class="svelte-hhdbb8"/> <span class="topic-icon svelte-hhdbb8"><i class="ri-apps-2-line"></i></span> <span class="svelte-hhdbb8"><strong>${escape_html(store_get($$store_subs ??= {}, "$_", $format)("activity.allTopics"))}</strong><small class="svelte-hhdbb8">${escape_html(store_get($$store_subs ??= {}, "$_", $format)("activity.allTopicsHelp"))}</small></span></label> <div class="topic-grid svelte-hhdbb8"><!--[-->`);
+			$$renderer.push(`<!--[0--><div class="form-section-heading mt-5 svelte-hhdbb8"><span class="svelte-hhdbb8">2</span><div><h2 class="h5 svelte-hhdbb8">${escape_html(store_get($$store_subs ??= {}, "$_", $format)("activity.correctionTopics"))}</h2><p class="svelte-hhdbb8">${escape_html(store_get($$store_subs ??= {}, "$_", $format)("activity.correctionTopicsHelp"))}</p></div></div> <div${attr_class("topic-selector svelte-hhdbb8", void 0, { "invalid": allowedCorrectionFocuses.length === 0 })}><label${attr_class("topic-option topic-all svelte-hhdbb8", void 0, { "selected": allTopicsSelected })}><input type="checkbox"${attr("checked", allTopicsSelected, true)} class="svelte-hhdbb8"/> <span class="topic-icon svelte-hhdbb8"><i class="ri-apps-2-line"></i></span> <span class="svelte-hhdbb8"><strong>${escape_html(store_get($$store_subs ??= {}, "$_", $format)("activity.allTopics"))}</strong><small class="svelte-hhdbb8">${escape_html(store_get($$store_subs ??= {}, "$_", $format)("activity.allTopicsHelp"))}</small></span></label> <div class="topic-grid svelte-hhdbb8"><!--[-->`);
 			const each_array = ensure_array_like(CORRECTION_FOCUS_OPTIONS);
 			for (let $$index = 0, $$length = each_array.length; $$index < $$length; $$index++) {
 				let option = each_array[$$index];
@@ -121,7 +125,7 @@ function ActivityForm($$renderer, $$props) {
 		} else $$renderer.push("<!--[-1-->");
 		$$renderer.push(`<!--]--> `);
 		if (enableReferenceImages) {
-			$$renderer.push(`<!--[0--><div class="form-section-heading mt-5 svelte-hhdbb8"><span class="svelte-hhdbb8">${escape_html(kind === "EXAM" ? 2 : 3)}</span><div><h5 class="svelte-hhdbb8">${escape_html(store_get($$store_subs ??= {}, "$_", $format)("activity.referenceImages"))}</h5><p class="svelte-hhdbb8">${escape_html(store_get($$store_subs ??= {}, "$_", $format)("activity.referenceImagesHelp"))}</p></div></div> <div class="reference-upload svelte-hhdbb8"><input class="visually-hidden" id="activity-reference-images" type="file" accept="image/jpeg,image/png,image/webp,image/avif" multiple=""/> <button class="upload-button svelte-hhdbb8" type="button"${attr("disabled", referenceImages.length >= 6, true)}><span class="upload-button-icon svelte-hhdbb8"><i class="ri-image-add-line"></i></span> <span class="svelte-hhdbb8"><strong>${escape_html(store_get($$store_subs ??= {}, "$_", $format)("activity.chooseImages"))}</strong><small class="svelte-hhdbb8">${escape_html(store_get($$store_subs ??= {}, "$_", $format)("activity.imageFormats"))}</small></span></button> `);
+			$$renderer.push(`<!--[0--><div class="form-section-heading mt-5 svelte-hhdbb8"><span class="svelte-hhdbb8">${escape_html(kind === "EXAM" ? 2 : 3)}</span><div><h2 class="h5 svelte-hhdbb8">${escape_html(store_get($$store_subs ??= {}, "$_", $format)("activity.referenceImages"))}</h2><p class="svelte-hhdbb8">${escape_html(store_get($$store_subs ??= {}, "$_", $format)("activity.referenceImagesHelp"))}</p></div></div> <div class="reference-upload svelte-hhdbb8"><input class="visually-hidden" id="activity-reference-images" type="file" accept="image/jpeg,image/png,image/webp" multiple=""/> <button class="upload-button svelte-hhdbb8" type="button"${attr("disabled", referenceImages.length >= 6, true)}><span class="upload-button-icon svelte-hhdbb8"><i class="ri-image-add-line"></i></span> <span class="svelte-hhdbb8"><strong>${escape_html(store_get($$store_subs ??= {}, "$_", $format)("activity.chooseImages"))}</strong><small class="svelte-hhdbb8">${escape_html(store_get($$store_subs ??= {}, "$_", $format)("activity.imageFormats"))}</small></span></button> `);
 			$$renderer.push("<!--[-1-->");
 			$$renderer.push(`<!--]--></div> `);
 			if (referenceImages.length > 0) {
@@ -129,7 +133,7 @@ function ActivityForm($$renderer, $$props) {
 				const each_array_1 = ensure_array_like(referenceImages);
 				for (let index = 0, $$length = each_array_1.length; index < $$length; index++) {
 					let image = each_array_1[index];
-					$$renderer.push(`<article class="reference-card svelte-hhdbb8"><div class="reference-preview svelte-hhdbb8"><img${attr("src", image.dataUrl)}${attr("alt", image.altText || image.originalFilename)} class="svelte-hhdbb8"/> <span class="svelte-hhdbb8">${escape_html(index + 1)}</span> <button type="button"${attr("aria-label", store_get($$store_subs ??= {}, "$_", $format)("activity.removeImage", { values: { name: image.originalFilename } }))} class="svelte-hhdbb8"><i class="ri-close-line"></i></button></div> <div class="p-3"><div class="filename svelte-hhdbb8"${attr("title", image.originalFilename)}>${escape_html(image.originalFilename)}</div> <label class="form-label small fw-semibold mt-3"${attr("for", `image-view-${image.key}`)}>${escape_html(store_get($$store_subs ??= {}, "$_", $format)("activity.viewType"))}</label> `);
+					$$renderer.push(`<article class="reference-card svelte-hhdbb8"><div class="reference-preview svelte-hhdbb8"><img${attr("src", image.dataUrl)}${attr("alt", image.altText || image.originalFilename)} decoding="async" class="svelte-hhdbb8"/> <span class="svelte-hhdbb8">${escape_html(index + 1)}</span> <button type="button"${attr("aria-label", store_get($$store_subs ??= {}, "$_", $format)("activity.removeImage", { values: { name: image.originalFilename } }))} class="svelte-hhdbb8"><i class="ri-close-line"></i></button></div> <div class="p-3"><div class="filename svelte-hhdbb8"${attr("title", image.originalFilename)}>${escape_html(image.originalFilename)}</div> <label class="form-label small fw-semibold mt-3"${attr("for", `image-view-${image.key}`)}>${escape_html(store_get($$store_subs ??= {}, "$_", $format)("activity.viewType"))}</label> `);
 					$$renderer.select({
 						class: "form-select",
 						id: `image-view-${image.key}`,
@@ -174,5 +178,4 @@ function ActivityForm($$renderer, $$props) {
 		});
 	});
 }
-//#endregion
 export { ActivityForm as t };

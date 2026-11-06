@@ -1,7 +1,7 @@
 // Variables
 
-// Google Fonts: Roboto for body copy, Poppins for headings and UI emphasis.
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Roboto:wght@300;400;500;700&display=swap');
+// IBM Plex Sans is the single typeface: body at 400/500, headings and UI emphasis at 600/700.
+// Self-hosted through @fontsource (imported in src/routes/+layout.svelte), latin + latin-ext only.
 
 //
 // custom-variables
@@ -13,13 +13,13 @@ $variable-prefix:             vz-; // Deprecated in v5.2.0 for the shorter `$pre
 $prefix:                      $variable-prefix;
 
 // Font Family
-$font-family-primary:                             'Roboto', sans-serif;
-$font-family-secondary:                           'Poppins', sans-serif;
+$font-family-primary:                             'IBM Plex Sans', sans-serif;
+$font-family-secondary:                           'IBM Plex Sans', sans-serif;
 
 //custom variables managed by
 //light mode
 $sidebar-mode:                                    true;
-$sidebar-gradient-mode:                           true;
+$sidebar-gradient-mode:                           false; // Velzon gradient sidebars are not used
 $sidebar-img:                                     true;
 
 //dark mode
@@ -642,7 +642,7 @@ $font-family-code:            var(--#{$prefix}font-monospace);
 // $font-size-base affects the font size of the body text
 $font-size-root:              null;
 $font-size-base:              0.825rem; // Assumes the browser default, typically `16px`
-$font-size-sm:                $font-size-base * .875;
+$font-size-sm:                .75rem; // 12px floor (base * .875 rendered at 11.5px)
 $font-size-lg:                $font-size-base * 1.25;
 
 $font-weight-lighter:         lighter;
@@ -728,7 +728,7 @@ $font-size-custom: (
 $lead-font-size:              $font-size-base * 1.25;
 $lead-font-weight:            300;
 
-$small-font-size:             .875em;
+$small-font-size:             max(.875em, .75rem); // never below 12px
 
 $sub-sup-font-size:           .75em;
 
@@ -1526,7 +1526,7 @@ $toast-header-border-color:         $toast-border-color;
 // Badges
 
 // scss-docs-start badge-variables
-$badge-font-size:                   .75em;
+$badge-font-size:                   .75rem; // 12px floor; .75em of the 13.2px base rendered at 9.9px
 $badge-font-weight:                 $font-weight-semibold;
 $badge-color:                       $white;
 $badge-padding-y:                   .35em;
@@ -1679,7 +1679,7 @@ $breadcrumb-margin-bottom:          1rem;
 $breadcrumb-bg:                     null;
 $breadcrumb-divider-color:          var(--#{$prefix}secondary-color);
 $breadcrumb-active-color:           var(--#{$prefix}secondary-color);
-$breadcrumb-divider:                quote("\F0142");
+$breadcrumb-divider:                quote("\ea6e"); // remixicon arrow-right-s-line
 $breadcrumb-divider-flipped:        $breadcrumb-divider;
 $breadcrumb-border-radius:          null;
 // scss-docs-end breadcrumb-variables

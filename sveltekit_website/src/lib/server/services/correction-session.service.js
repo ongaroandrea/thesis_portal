@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, inArray, sql } from 'drizzle-orm';
+import { and, count, desc, eq, inArray, sql } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { activity, activityReferenceImage, correctionAttempt, correctionSession, user } from '$lib/server/db/schema';
 import { ApiError, numericId, paginated, paginationParams, requiredText, requireUser } from './api.service.js';
@@ -6,9 +6,18 @@ import { activityService } from './activity.service.js';
 import { courseService } from './course.service.js';
 import { CORRECTION_FOCUS_IDS } from '$lib/correction-focus.js';
 
+/**
+ * Session status is not stored; it is derived from the newest non-cancelled
+ * attempt's job status: none -> OPEN, queued/processing -> PROCESSING,
+ * completed -> ANSWERED, failed/unavailable -> FAILED.
+ */
 export function derivedSessionStatus(attempts) {
-	const latest = [...attempts].filter((attempt) => !attempt.cancelledAt)
-		.sort((left, right) => left.attemptNumber - right.attemptNumber).at(-1);
+	let latest = null;
+	for (const attempt of attempts) {
+		if (!attempt.cancelledAt && (!latest || attempt.attemptNumber > latest.attemptNumber)) {
+			latest = attempt;
+		}
+	}
 	if (!latest?.jobStatus) return 'OPEN';
 	if (['queued', 'processing'].includes(latest.jobStatus)) return 'PROCESSING';
 	if (latest.jobStatus === 'completed') return 'ANSWERED';
@@ -23,8 +32,7 @@ async function attemptsBySessionIds(sessionIds) {
 		attemptNumber: correctionAttempt.attemptNumber,
 		jobStatus: correctionAttempt.jobStatus,
 		cancelledAt: correctionAttempt.cancelledAt
-	}).from(correctionAttempt).where(inArray(correctionAttempt.sessionId, sessionIds))
-		.orderBy(asc(correctionAttempt.attemptNumber));
+	}).from(correctionAttempt).where(inArray(correctionAttempt.sessionId, sessionIds));
 	const grouped = new Map(sessionIds.map((sessionId) => [sessionId, []]));
 	for (const attempt of attempts) grouped.get(attempt.sessionId)?.push(attempt);
 	return grouped;
@@ -61,6 +69,12 @@ async function countStudentCorrections(executor, activityId, studentUserId) {
 	return Number(total);
 }
 
+/**
+ * Enforce `maxCorrectionsPerStudent` (null = unlimited) by counting all of
+ * the student's attempts on the activity. With `lock`, a transaction-scoped
+ * advisory lock on (activity, student) prevents two parallel requests from
+ * both passing the check. The same lock key is used in correction-attempt.
+ */
 async function assertCorrectionAvailable(executor, activityId, studentUserId, limit, lock = false) {
 	if (limit == null) return;
 	if (lock) {
@@ -82,6 +96,10 @@ async function isCourseManager(courseId, currentUser) {
 	}
 }
 
+/**
+ * Hide the student's identity from course staff when the session was opened
+ * anonymously. The owner always sees their own data.
+ */
 function visibleSession(record, currentUser, manager) {
 	const hideIdentity = manager && record.isAnonymous && record.studentUserId !== numericId(currentUser.id, 'userId');
 	const studentDisplayName = hideIdentity
@@ -97,12 +115,29 @@ function visibleSession(record, currentUser, manager) {
 	};
 }
 
+async function hasCourseAccess(courseId, currentUser) {
+	try {
+		await courseService.requireCourseAccess(courseId, currentUser);
+		return true;
+	} catch (error) {
+		if (error instanceof ApiError && error.status === 403) return false;
+		throw error;
+	}
+}
+
+/**
+ * Only the session owner, while still an active member of the (active)
+ * course, or a manager of the session's course may access it. Managers get
+ * the anonymized view; the owner always sees their own data.
+ */
 async function requireSessionAccess(id, currentUser) {
 	requireUser(currentUser);
 	const record = await findSession(id);
-	if (record.studentUserId === numericId(currentUser.id, 'userId')) return record;
-	const manager = await isCourseManager(record.courseId, currentUser);
-	if (manager) return visibleSession(record, currentUser, true);
+	if (record.studentUserId === numericId(currentUser.id, 'userId')) {
+		if (await hasCourseAccess(record.courseId, currentUser)) return record;
+	} else if (await isCourseManager(record.courseId, currentUser)) {
+		return visibleSession(record, currentUser, true);
+	}
 	throw new ApiError(403, 'You cannot access this correction session.', 'CORRECTION_SESSION_ACCESS_DENIED');
 }
 
@@ -152,13 +187,28 @@ export const correctionSessionService = {
 
 	get: requireSessionAccess,
 
+	/**
+	 * Open a new correction session (a "conversation") for the current user.
+	 *
+	 * The reference image (point of view) and analysis focus chosen here are
+	 * locked for the whole session; changing them requires a new session.
+	 * Exam activities are rejected because they use exam submissions instead.
+	 * The correction limit is checked inside a transaction with the advisory
+	 * lock so concurrent creates cannot exceed `maxCorrectionsPerStudent`.
+	 *
+	 * @param {{activityId: unknown, referenceImageId: unknown, analysisFocus: unknown, isAnonymous?: unknown}} input
+	 * @param {object} currentUser - `locals.user`.
+	 * @returns {Promise<object>} The inserted row with `status: 'OPEN'`.
+	 * @throws {ApiError} 400 for invalid view/focus or exam activities, 403 for
+	 *   non-authorized members, 409 when the correction limit is reached.
+	 */
 	async create(input, currentUser) {
 		requireUser(currentUser);
 		const activityRecord = await activityService.requireActivityAccess(input.activityId, currentUser);
 		if (activityRecord.kind === 'EXAM') {
 			throw new ApiError(400, 'Exam activities use the dedicated submission workflow.', 'EXAM_USES_SUBMISSIONS');
 		}
-		const membership = currentUser.role === 'developer'
+		const membership = currentUser.role === 'admin'
 			? true
 			: await courseService.isAuthorizedMember(activityRecord.courseId, currentUser.id);
 		if (!membership) throw new ApiError(403, 'Only an authorized course member can create a correction session.', 'MEMBER_NOT_AUTHORIZED');
@@ -196,6 +246,12 @@ export const correctionSessionService = {
 		});
 	},
 
+	/**
+	 * Load a session the current user owns and confirm another correction is
+	 * still allowed. Managers cannot submit on a student's behalf. This check
+	 * is unlocked (fast pre-check before calling Python); the locked re-check
+	 * happens when the attempt row is inserted.
+	 */
 	async requireCorrectionAvailable(id, currentUser) {
 		const record = await requireSessionAccess(id, currentUser);
 		if (record.studentUserId !== numericId(currentUser.id, 'userId')) {
@@ -205,12 +261,22 @@ export const correctionSessionService = {
 		return record;
 	},
 
+	/**
+	 * Delete a session and, through the cascade, its attempts and feedback.
+	 * Course managers (admins included) can delete any session. The owner
+	 * can only delete a session that has no attempts yet, which is how the
+	 * correction page rolls back a session whose first job failed to start:
+	 * an empty session never counted toward `maxCorrectionsPerStudent`, so
+	 * deleting it cannot lower the used corrections.
+	 */
 	async remove(id, currentUser) {
-		requireUser(currentUser);
-		const record = await findSession(id);
-		const isOwner = record.studentUserId === numericId(currentUser.id, 'userId');
-		if (!isOwner && !(await isCourseManager(record.courseId, currentUser))) {
-			throw new ApiError(403, 'You cannot delete this correction session.', 'CORRECTION_SESSION_EDIT_DENIED');
+		const record = await requireSessionAccess(id, currentUser);
+		if (!(await isCourseManager(record.courseId, currentUser))) {
+			const [{ total }] = await db.select({ total: count() }).from(correctionAttempt)
+				.where(eq(correctionAttempt.sessionId, record.id));
+			if (Number(total) > 0) {
+				throw new ApiError(403, 'Only a course professor or an admin can delete a correction session with attempts.', 'CORRECTION_SESSION_EDIT_DENIED');
+			}
 		}
 		await db.delete(correctionSession).where(eq(correctionSession.id, record.id));
 		return { id: record.id };

@@ -15,6 +15,7 @@
 	let title = initial.title ?? '';
 	let description = initial.description ?? '';
 	let objective = initial.objective ?? '';
+	let promptAddendum = initial.promptAddendum ?? '';
 	let kind = initial.kind ?? 'LESSON';
 	let status = initial.status ?? 'DRAFT';
 	let availableFrom = toDateTimeLocal(initial.availableFrom);
@@ -44,10 +45,6 @@
 		{ value: 'ANGLED', key: 'view.angled' },
 		{ value: 'OTHER', key: 'view.other' }
 	];
-	const topicIcons = {
-		LIGHT: 'ri-sun-line', CAMERA: 'ri-camera-lens-line', MATERIAL: 'ri-shapes-line',
-		TEXTURE: 'ri-grid-line', GENERAL: 'ri-focus-3-line'
-	};
 	$: allTopicsSelected = allowedCorrectionFocuses.length === CORRECTION_FOCUS_OPTIONS.length;
 
 	function toggleAllTopics() {
@@ -64,8 +61,19 @@
 		return Math.floor((dataUrl.split(',')[1]?.length ?? 0) * 3 / 4);
 	}
 
+	/**
+	 * Re-encode a reference image in the browser so it fits the server's
+	 * 350 KB limit for reference images.
+	 * Downscales to at most 1600 px on the long side, then tries up to five
+	 * WEBP encodes, lowering quality (0.84 -> 0.5) and shrinking the size by
+	 * 22% after each attempt that is still too big.
+	 * @param {File} file - JPEG, PNG or WEBP, max 12 MB.
+	 * @returns {Promise<string>} A `data:image/webp;base64,...` URL.
+	 * @throws {Error} Localized message when the type, size or final result
+	 *   is not acceptable.
+	 */
 	async function optimizeImage(file) {
-		if (!['image/jpeg', 'image/png', 'image/webp', 'image/avif'].includes(file.type)) {
+		if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
 			throw new Error($_('activity.imageTypeError', { values: { name: file.name } }));
 		}
 		if (file.size > 12 * 1024 * 1024) throw new Error($_('activity.imageSizeError', { values: { name: file.name } }));
@@ -86,6 +94,10 @@
 		return dataUrl;
 	}
 
+	// Add picked files to the reference set (max 6 in total). Files are only
+	// optimized here; they are uploaded with the form on submit. The first
+	// image defaults to the FRONT view, later ones to SIDE. The input is
+	// cleared so the same file can be picked again.
 	async function selectReferenceImages(event) {
 		imageError = '';
 		const files = Array.from(event.currentTarget.files ?? []);
@@ -130,6 +142,7 @@
 			title,
 			description,
 			objective,
+			promptAddendum,
 			kind,
 			status,
 			availableFrom: availableFrom ? new Date(availableFrom).toISOString() : null,
@@ -155,7 +168,7 @@
 
 <form on:submit={submit}>
 	<div class="form-section-heading">
-		<span>1</span><div><h5>{$_('activity.details')}</h5><p>{$_('activity.detailsHelp')}</p></div>
+		<div><h2 class="h5">{$_('activity.details')}</h2><p>{$_('activity.detailsHelp')}</p></div>
 	</div>
 	<div class="row g-3">
 		<div class="col-md-8">
@@ -176,6 +189,11 @@
 		<div class="col-12">
 			<label class="form-label fw-semibold" for="activity-description">{$_('activity.instructions')}</label>
 			<textarea id="activity-description" class="form-control" rows="5" bind:value={description} placeholder={$_('activity.instructionsPlaceholder')}></textarea>
+		</div>
+		<div class="col-12">
+			<label class="form-label fw-semibold" for="activity-prompt-addendum">{$_('activity.promptAddendum')}</label>
+			<textarea id="activity-prompt-addendum" class="form-control" rows="5" maxlength="8000" bind:value={promptAddendum} disabled={Boolean(initial.promptFrozenAt)} placeholder={$_('activity.promptAddendumPlaceholder')}></textarea>
+			<div class="form-text">{$_(initial.promptFrozenAt ? 'activity.promptFrozenHelp' : 'activity.promptAddendumHelp')}</div>
 		</div>
 		<div class="col-md-6">
 			<label class="form-label fw-semibold" for="activity-from">{$_('activity.availableFrom')}</label>
@@ -217,19 +235,19 @@
 	</div>
 	{#if kind !== 'EXAM'}
 		<div class="form-section-heading mt-5">
-			<span>2</span><div><h5>{$_('activity.correctionTopics')}</h5><p>{$_('activity.correctionTopicsHelp')}</p></div>
+			<div><h2 class="h5">{$_('activity.correctionTopics')}</h2><p>{$_('activity.correctionTopicsHelp')}</p></div>
 		</div>
 		<div class="topic-selector" class:invalid={allowedCorrectionFocuses.length === 0}>
 		<label class="topic-option topic-all" class:selected={allTopicsSelected}>
 			<input type="checkbox" checked={allTopicsSelected} on:change={toggleAllTopics} />
-			<span class="topic-icon"><i class="ri-apps-2-line"></i></span>
+			
 			<span><strong>{$_('activity.allTopics')}</strong><small>{$_('activity.allTopicsHelp')}</small></span>
 		</label>
 		<div class="topic-grid">
 			{#each CORRECTION_FOCUS_OPTIONS as option}
 				<label class="topic-option" class:selected={allowedCorrectionFocuses.includes(option.id)}>
 					<input type="checkbox" checked={allowedCorrectionFocuses.includes(option.id)} on:change={() => toggleTopic(option.id)} />
-					<span class="topic-icon"><i class={topicIcons[option.id]}></i></span>
+					
 					<span><strong>{$_(option.labelKey)}</strong><small>{$_(`activity.topicHelp.${option.id.toLowerCase()}`)}</small></span>
 				</label>
 			{/each}
@@ -239,12 +257,12 @@
 	{/if}
 	{#if enableReferenceImages}
 		<div class="form-section-heading mt-5">
-			<span>{kind === 'EXAM' ? 2 : 3}</span><div><h5>{$_('activity.referenceImages')}</h5><p>{$_('activity.referenceImagesHelp')}</p></div>
+			<div><h2 class="h5">{$_('activity.referenceImages')}</h2><p>{$_('activity.referenceImagesHelp')}</p></div>
 		</div>
 		<div class="reference-upload">
-			<input bind:this={imageInput} class="visually-hidden" id="activity-reference-images" type="file" accept="image/jpeg,image/png,image/webp,image/avif" multiple on:change={selectReferenceImages} />
+			<input bind:this={imageInput} class="visually-hidden" id="activity-reference-images" type="file" accept="image/jpeg,image/png,image/webp" multiple on:change={selectReferenceImages} />
 			<button class="upload-button" type="button" on:click={() => imageInput?.click()} disabled={referenceImages.length >= 6}>
-				<span class="upload-button-icon"><i class="ri-image-add-line"></i></span>
+				<i class="ri-image-add-line upload-button-icon" aria-hidden="true"></i>
 				<span><strong>{$_('activity.chooseImages')}</strong><small>{$_('activity.imageFormats')}</small></span>
 			</button>
 			{#if imageError}<div class="alert alert-danger mt-3 mb-0">{imageError}</div>{/if}
@@ -254,7 +272,7 @@
 				{#each referenceImages as image, index (image.key)}
 					<article class="reference-card">
 						<div class="reference-preview">
-							<img src={image.dataUrl} alt={image.altText || image.originalFilename} />
+							<img src={image.dataUrl} alt={image.altText || image.originalFilename} decoding="async" />
 							<span>{index + 1}</span>
 							<button type="button" on:click={() => removeReferenceImage(image.key)} aria-label={$_('activity.removeImage', { values: { name: image.originalFilename } })}><i class="ri-close-line"></i></button>
 						</div>
@@ -289,36 +307,35 @@
 </form>
 
 <style>
-	.form-section-heading { display: flex; align-items: center; gap: .85rem; padding-bottom: 1rem; margin-bottom: 1.25rem; border-bottom: 1px solid var(--bs-border-color); }
-	.form-section-heading > span { width: 34px; height: 34px; display: grid; place-items: center; flex: 0 0 auto; border-radius: 11px; color: #fff; background: #405189; font-weight: 700; }
-	.form-section-heading h5 { margin: 0 0 .15rem; }
-	.form-section-heading p { margin: 0; color: var(--bs-secondary-color); }
+	.form-section-heading { display: flex; align-items: center; gap: .85rem; padding-bottom: 1rem; margin-bottom: 1.25rem; border-bottom: 1px solid var(--portal-border); }
+	.form-section-heading h2 { margin: 0 0 .15rem; }
+	.form-section-heading p { margin: 0; color: var(--portal-muted); }
 	.topic-selector { display: grid; gap: 1rem; }
 	.topic-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: .8rem; }
-	.topic-option { min-width: 0; display: flex; align-items: center; gap: .8rem; padding: .9rem; border: 1px solid var(--bs-border-color); border-radius: 14px; background: var(--bs-body-bg); cursor: pointer; transition: border-color .16s ease, background .16s ease, transform .16s ease; }
-	.topic-option:hover { border-color: color-mix(in srgb, #405189 45%, var(--bs-border-color)); transform: translateY(-1px); }
-	.topic-option.selected { border-color: rgba(64,81,137,.5); background: color-mix(in srgb, #405189 7%, var(--bs-body-bg)); box-shadow: inset 0 0 0 1px rgba(64,81,137,.08); }
-	.topic-option input { width: 1.05rem; height: 1.05rem; flex: 0 0 auto; accent-color: #405189; }
+	.topic-option { min-width: 0; display: flex; align-items: center; gap: .8rem; padding: .9rem; border: 1px solid var(--portal-border); border-radius: var(--portal-radius); background: var(--portal-surface); cursor: pointer; transition: border-color .16s ease-out, background-color .16s ease-out; }
+	.topic-option:hover { border-color: color-mix(in srgb, var(--portal-brand-primary) 45%, var(--portal-border)); }
+	.topic-option.selected { border-color: rgba(var(--portal-brand-primary-rgb),.5); background: color-mix(in srgb, var(--portal-brand-primary) 7%, var(--portal-surface)); box-shadow: inset 0 0 0 1px rgba(var(--portal-brand-primary-rgb),.08); }
+	.topic-option input { width: 1.05rem; height: 1.05rem; flex: 0 0 auto; accent-color: var(--portal-brand-primary); }
 	.topic-option > span:last-child { min-width: 0; display: grid; }
-	.topic-option small { margin-top: .1rem; color: var(--bs-secondary-color); font-size: .76rem; }
-	.topic-icon { width: 38px; height: 38px; display: grid; place-items: center; flex: 0 0 auto; border-radius: 11px; color: #405189; background: rgba(64,81,137,.1); font-size: 1.05rem; }
+	.topic-option small { margin-top: .1rem; color: var(--portal-muted); font-size: .76rem; }
 	.topic-all { border-style: dashed; }
 	.topic-all.selected { border-style: solid; }
-	.topic-error { display: flex; align-items: center; gap: .4rem; color: #dc3545; font-size: .85rem; }
-	.reference-upload { padding: 1rem; border: 1px dashed color-mix(in srgb, #405189 45%, var(--bs-border-color)); border-radius: 16px; background: color-mix(in srgb, #405189 4%, var(--bs-body-bg)); }
-	.upload-button { width: 100%; display: flex; align-items: center; justify-content: center; gap: .9rem; border: 0; color: var(--bs-body-color); background: transparent; padding: .65rem; }
+	.topic-error { display: flex; align-items: center; gap: .4rem; color: var(--portal-danger-text); font-size: .85rem; }
+	.reference-upload { padding: 1rem; border: 1px dashed color-mix(in srgb, var(--portal-brand-primary) 45%, var(--portal-border)); border-radius: var(--portal-radius); background: color-mix(in srgb, var(--portal-brand-primary) 4%, var(--portal-surface)); }
+	.upload-button { width: 100%; display: flex; align-items: center; justify-content: center; gap: .9rem; border: 0; color: var(--portal-ink); background: transparent; padding: .65rem; }
 	.upload-button:disabled { opacity: .55; }
 	.upload-button span:last-child { display: grid; text-align: left; }
-	.upload-button small { color: var(--bs-secondary-color); margin-top: .15rem; }
-	.upload-button-icon { width: 46px; height: 46px; display: grid; place-items: center; border-radius: 14px; color: #405189; background: rgba(64,81,137,.12); font-size: 1.35rem; }
+	.upload-button small { color: var(--portal-muted); margin-top: .15rem; }
+	.upload-button-icon { color: var(--portal-info-text); font-size: 1.5rem; }
 	.reference-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 280px)); justify-content: start; gap: 1rem; }
-	.reference-card { overflow: hidden; border: 1px solid var(--bs-border-color); border-radius: 16px; background: var(--bs-body-bg); }
+	.reference-card { overflow: hidden; border: 1px solid var(--portal-border); border-radius: var(--portal-radius); background: var(--portal-surface); }
 	.reference-preview { position: relative; aspect-ratio: 1; background: #111827; }
 	.reference-preview img { width: 100%; height: 100%; object-fit: contain; }
-	.reference-preview > span { position: absolute; left: .7rem; top: .7rem; width: 28px; height: 28px; display: grid; place-items: center; border-radius: 9px; color: #fff; background: rgba(17,24,39,.78); font-weight: 700; }
-	.reference-preview button { position: absolute; right: .7rem; top: .7rem; width: 32px; height: 32px; display: grid; place-items: center; border: 0; border-radius: 10px; color: #fff; background: rgba(220,53,69,.9); font-size: 1.1rem; }
+	.reference-preview > span { position: absolute; left: .7rem; top: .7rem; width: 28px; height: 28px; display: grid; place-items: center; border-radius: var(--portal-radius-sm); color: #fff; background: rgba(17,24,39,.78); font-weight: 700; }
+	.reference-preview button { position: absolute; right: .7rem; top: .7rem; width: 36px; height: 36px; display: grid; place-items: center; border: 0; border-radius: var(--portal-radius-sm); color: #fff; background: rgba(var(--portal-danger-rgb),.9); font-size: 1.1rem; }
 	.filename { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
 	@media (max-width: 575.98px) {
 		.reference-grid { grid-template-columns: minmax(0, 1fr); }
 	}
+	@media (pointer: coarse) { .reference-preview button { width: 44px; height: 44px; } }
 </style>

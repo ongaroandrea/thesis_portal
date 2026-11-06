@@ -1,10 +1,10 @@
 import { A as escape_html, g as unsubscribe_stores, m as store_get, s as head, t as attr_class } from "../../../../../../chunks/server.js";
 import "../../../../../../chunks/index-server2.js";
-import { t as $format } from "../../../../../../chunks/runtime.js";
 import { n as page } from "../../../../../../chunks/stores.js";
 import "../../../../../../chunks/api.js";
 import { t as PageHeader } from "../../../../../../chunks/PageHeader.js";
-//#region src/routes/(protected)/corsi/[id]/esercitazioni/+page.svelte
+import { t as $format } from "../../../../../../chunks/runtime.js";
+// src/routes/(protected)/corsi/[id]/esercitazioni/+page.svelte
 function _page($$renderer, $$props) {
 	$$renderer.component(($$renderer) => {
 		var $$store_subs;
@@ -34,5 +34,4 @@ function _page($$renderer, $$props) {
 		if ($$store_subs) unsubscribe_stores($$store_subs);
 	});
 }
-//#endregion
 export { _page as default };

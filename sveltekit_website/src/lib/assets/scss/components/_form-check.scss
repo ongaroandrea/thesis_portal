@@ -97,8 +97,8 @@ $value in $theme-colors {
             background-image: none;
 
             &::before {
-                content: "\F012C";
-                font-family: "Material Design Icons";
+                content: "\eb7b";
+                font-family: "remixicon";
                 top: -2px;
                 position: absolute;
                 font-weight: 700;
@@ -135,8 +135,8 @@ $value in $theme-colors {
             background-image: none;
 
             &::before {
-                content: "\F0765";
-                font-family: "Material Design Icons";
+                content: "\f3c1";
+                font-family: "remixicon";
                 top: 0px;
                 position: absolute;
                 font-size: 8px;
@@ -218,8 +218,8 @@ $value in $theme-colors {
         background-image: none;
 
         &::before {
-            content: "\F0765";
-            font-family: "Material Design Icons";
+            content: "\f3c1";
+            font-family: "remixicon";
             top: -9px;
             position: absolute;
             font-size: 20px;

@@ -1,15 +1,21 @@
 {
 	"/(public)": [
-		"src/routes/(public)/+layout.server.js"
+		"src/routes/(public)/+layout.server.js",
+		"src/routes/+layout.server.js"
 	],
 	"/(protected)/(professore)": [
 		"src/routes/(protected)/(professore)/+layout.server.js",
-		"src/routes/(protected)/+layout.server.js"
+		"src/routes/(protected)/+layout.server.js",
+		"src/routes/+layout.server.js"
 	],
 	"/(protected)": [
-		"src/routes/(protected)/+layout.server.js"
+		"src/routes/(protected)/+layout.server.js",
+		"src/routes/+layout.server.js"
 	],
-	"/": [],
+	"/": [
+		"src/routes/+layout.server.js",
+		"src/routes/+layout.server.js"
+	],
 	"/api/consegne-esame": [
 		"src/routes/api/consegne-esame/+server.js"
 	],
@@ -37,11 +43,20 @@
 	"/api/esercitazioni/[id]/immagini/[imageId]": [
 		"src/routes/api/esercitazioni/[id]/immagini/[imageId]/+server.js"
 	],
+	"/api/feedback-correzione": [
+		"src/routes/api/feedback-correzione/+server.js"
+	],
+	"/api/feedback-correzione/statistiche": [
+		"src/routes/api/feedback-correzione/statistiche/+server.js"
+	],
 	"/api/membri": [
 		"src/routes/api/membri/+server.js"
 	],
 	"/api/membri/[id]": [
 		"src/routes/api/membri/[id]/+server.js"
+	],
+	"/api/prompt-template": [
+		"src/routes/api/prompt-template/+server.js"
 	],
 	"/api/risultati": [
 		"src/routes/api/risultati/+server.js"
@@ -58,6 +73,15 @@
 	"/api/sessioni-correzione/[id]/job": [
 		"src/routes/api/sessioni-correzione/[id]/job/+server.js"
 	],
+	"/api/storage/[...key]": [
+		"src/routes/api/storage/[...key]/+server.js"
+	],
+	"/api/supporto": [
+		"src/routes/api/supporto/+server.js"
+	],
+	"/api/supporto/[id]": [
+		"src/routes/api/supporto/[id]/+server.js"
+	],
 	"/api/tentativi-correzione": [
 		"src/routes/api/tentativi-correzione/+server.js"
 	],
@@ -71,63 +95,103 @@
 		"src/routes/api/utenti/[id]/+server.js"
 	],
 	"/auth": [
-		"src/routes/auth/+layout.server.js"
+		"src/routes/auth/+layout.server.js",
+		"src/routes/+layout.server.js"
 	],
 	"/auth/verifica-password": [
-		"src/routes/auth/+layout.server.js"
+		"src/routes/auth/+layout.server.js",
+		"src/routes/+layout.server.js"
 	],
 	"/(protected)/corsi": [
-		"src/routes/(protected)/+layout.server.js"
+		"src/routes/(protected)/+layout.server.js",
+		"src/routes/+layout.server.js"
 	],
 	"/(protected)/corsi/aggiungi": [
-		"src/routes/(protected)/+layout.server.js"
+		"src/routes/(protected)/corsi/aggiungi/+page.server.js",
+		"src/routes/(protected)/+layout.server.js",
+		"src/routes/+layout.server.js"
 	],
 	"/(protected)/corsi/[id]": [
-		"src/routes/(protected)/+layout.server.js"
+		"src/routes/(protected)/+layout.server.js",
+		"src/routes/+layout.server.js"
 	],
 	"/(protected)/corsi/[id]/esercitazioni": [
-		"src/routes/(protected)/+layout.server.js"
+		"src/routes/(protected)/+layout.server.js",
+		"src/routes/+layout.server.js"
 	],
 	"/(protected)/corsi/[id]/esercitazioni/aggiungi": [
-		"src/routes/(protected)/+layout.server.js"
+		"src/routes/(protected)/+layout.server.js",
+		"src/routes/+layout.server.js"
 	],
 	"/(protected)/corsi/[id]/esercitazioni/[activityId]": [
-		"src/routes/(protected)/+layout.server.js"
+		"src/routes/(protected)/+layout.server.js",
+		"src/routes/+layout.server.js"
 	],
 	"/(protected)/corsi/[id]/esercitazioni/[activityId]/correzione": [
-		"src/routes/(protected)/+layout.server.js"
+		"src/routes/(protected)/+layout.server.js",
+		"src/routes/+layout.server.js"
 	],
 	"/(protected)/corsi/[id]/esercitazioni/[activityId]/modifica": [
-		"src/routes/(protected)/+layout.server.js"
+		"src/routes/(protected)/+layout.server.js",
+		"src/routes/+layout.server.js"
 	],
 	"/(protected)/corsi/[id]/modifica": [
-		"src/routes/(protected)/+layout.server.js"
+		"src/routes/(protected)/+layout.server.js",
+		"src/routes/+layout.server.js"
+	],
+	"/(protected)/corsi/[id]/prompt": [
+		"src/routes/(protected)/corsi/[id]/prompt/+page.server.js",
+		"src/routes/(protected)/+layout.server.js",
+		"src/routes/+layout.server.js"
 	],
 	"/(protected)/corsi/[id]/statistiche": [
-		"src/routes/(protected)/+layout.server.js"
+		"src/routes/(protected)/+layout.server.js",
+		"src/routes/+layout.server.js"
 	],
 	"/(public)/login": [
 		"src/routes/(public)/login/+layout.server.js",
 		"src/routes/(public)/+layout.server.js",
+		"src/routes/+layout.server.js",
 		"src/routes/(public)/login/+layout.server.js",
-		"src/routes/(public)/+layout.server.js"
+		"src/routes/(public)/+layout.server.js",
+		"src/routes/+layout.server.js"
 	],
 	"/(public)/password-dimenticata": [
-		"src/routes/(public)/+layout.server.js"
+		"src/routes/(public)/+layout.server.js",
+		"src/routes/+layout.server.js"
 	],
 	"/(protected)/profilo": [
-		"src/routes/(protected)/+layout.server.js"
+		"src/routes/(protected)/+layout.server.js",
+		"src/routes/+layout.server.js"
+	],
+	"/(protected)/prompt": [
+		"src/routes/(protected)/prompt/+page.server.js",
+		"src/routes/(protected)/+layout.server.js",
+		"src/routes/+layout.server.js"
 	],
 	"/(protected)/(professore)/studenti": [
 		"src/routes/(protected)/(professore)/+layout.server.js",
-		"src/routes/(protected)/+layout.server.js"
+		"src/routes/(protected)/+layout.server.js",
+		"src/routes/+layout.server.js"
 	],
 	"/(protected)/(professore)/studenti/aggiungi": [
+		"src/routes/(protected)/(professore)/studenti/aggiungi/+page.server.js",
 		"src/routes/(protected)/(professore)/+layout.server.js",
-		"src/routes/(protected)/+layout.server.js"
+		"src/routes/(protected)/+layout.server.js",
+		"src/routes/+layout.server.js"
 	],
 	"/(protected)/(professore)/studenti/[id]": [
 		"src/routes/(protected)/(professore)/+layout.server.js",
-		"src/routes/(protected)/+layout.server.js"
+		"src/routes/(protected)/+layout.server.js",
+		"src/routes/+layout.server.js"
+	],
+	"/(protected)/supporto": [
+		"src/routes/(protected)/+layout.server.js",
+		"src/routes/+layout.server.js"
+	],
+	"/(protected)/supporto/gestione": [
+		"src/routes/(protected)/supporto/gestione/+page.server.js",
+		"src/routes/(protected)/+layout.server.js",
+		"src/routes/+layout.server.js"
 	]
 }

@@ -15,7 +15,20 @@ class QueueFullError(Exception):
 
 
 class SerialJobQueue:
-    """A bounded FIFO work list consumed by exactly one background task."""
+    """A bounded FIFO work list consumed by exactly one background task.
+
+    Only one job is processed at a time because the target machine has a
+    single GPU. All state (pending ids, jobs, results) lives in memory, so a
+    process restart loses every job. Finished jobs, including their image
+    bytes, are kept until ``completed_job_limit`` is exceeded, then the oldest
+    terminal jobs are pruned.
+
+    Args:
+        processor: async callable that turns an ``ImageJobRequest`` into a
+            result dict; exceptions it raises mark the job as failed.
+        max_size: maximum number of *pending* jobs (the active one excluded).
+        completed_job_limit: how many completed/failed jobs to retain.
+    """
 
     def __init__(
         self,
@@ -36,6 +49,7 @@ class SerialJobQueue:
         self.processing_job_id: UUID | None = None
 
     async def start(self) -> None:
+        """Start the single consumer task. Calling it twice is a no-op."""
         if self._consumer is None:
             self._stopping = False
             self._consumer = asyncio.create_task(
@@ -43,15 +57,28 @@ class SerialJobQueue:
             )
 
     async def stop(self) -> None:
+        """Drop pending jobs and wait for the active job (if any) to finish."""
         self._stopping = True
         async with self._condition:
+            # Queued work is ephemeral and must not make application shutdown
+            # drain a potentially hours-long backlog.
+            while self._pending:
+                self._jobs.pop(self._pending.popleft(), None)
             self._condition.notify_all()
         if self._consumer is not None:
             await self._consumer
             self._consumer = None
 
     async def submit(self, request: ImageJobRequest) -> tuple[Job, int]:
+        """Enqueue a request.
+
+        Returns a deep copy of the new job and its 1-based queue position.
+        Raises ``QueueFullError`` when ``max_size`` pending jobs already exist
+        and ``RuntimeError`` while the queue is shutting down.
+        """
         async with self._condition:
+            if self._stopping:
+                raise RuntimeError("The job queue is stopping")
             if len(self._pending) >= self._max_size:
                 raise QueueFullError
             job = Job(id=uuid4(), status=JobStatus.QUEUED, request=request)
@@ -62,6 +89,7 @@ class SerialJobQueue:
             return job.model_copy(deep=True), position
 
     async def get(self, job_id: UUID) -> Job | None:
+        """Return a copy of the job (so callers cannot mutate queue state)."""
         async with self._condition:
             job = self._jobs.get(job_id)
             return job.model_copy(deep=True) if job else None
@@ -71,8 +99,13 @@ class SerialJobQueue:
             return [job.model_copy(deep=True) for job in self._jobs.values()]
 
     async def destroy(self, job_id: UUID) -> bool:
-        """Remove a queued job or cancel and remove the active job."""
-        processor: asyncio.Task[dict] | None = None
+        """Remove a job and discard an active job's result when it finishes.
+
+        The production processor uses ``asyncio.to_thread``. Cancelling its
+        asyncio task does not stop the underlying thread and would let the
+        consumer start another GPU job concurrently. Active work is therefore
+        hidden immediately but allowed to finish before the FIFO advances.
+        """
         async with self._condition:
             job = self._jobs.get(job_id)
             if job is None:
@@ -83,13 +116,10 @@ class SerialJobQueue:
                 return True
             if self.processing_job_id == job_id:
                 self._destroy_requested.add(job_id)
-                processor = self._active_processor
+                del self._jobs[job_id]
             else:
                 del self._jobs[job_id]
-                return True
-        if processor is not None:
-            processor.cancel()
-        return True
+            return True
 
     @property
     def queued_count(self) -> int:
@@ -100,6 +130,13 @@ class SerialJobQueue:
         return self._max_size
 
     async def _consume(self) -> None:
+        """Consumer loop: take the oldest pending job, run it, store the outcome.
+
+        The condition lock is held only while mutating shared state, never
+        while the processor runs, so status/submit calls stay responsive.
+        A job destroyed while active has its result discarded here instead of
+        being cancelled (see ``destroy``).
+        """
         while True:
             async with self._condition:
                 await self._condition.wait_for(
@@ -147,6 +184,11 @@ class SerialJobQueue:
                     self._prune_completed()
 
     def _prune_completed(self) -> None:
+        """Keep only the newest ``completed_job_limit`` completed/failed jobs.
+
+        ``_jobs`` is insertion ordered, so slicing off the tail keeps the most
+        recently submitted terminal jobs. Must be called with the lock held.
+        """
         terminal_ids = [
             job_id
             for job_id, job in self._jobs.items()

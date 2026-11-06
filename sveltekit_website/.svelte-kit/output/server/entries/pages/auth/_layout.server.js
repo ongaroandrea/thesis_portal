@@ -1,7 +1,6 @@
 import { redirect } from "@sveltejs/kit";
-//#region src/routes/auth/+layout.server.js
+// src/routes/auth/+layout.server.js
 function load({ locals }) {
-	if (locals.user) throw redirect(302, "");
+	if (locals.user) redirect(302, "/corsi");
 }
-//#endregion
 export { load };

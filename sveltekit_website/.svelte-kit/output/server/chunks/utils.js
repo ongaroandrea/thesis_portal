@@ -4,7 +4,7 @@ import { HttpError, SvelteKitError } from "@sveltejs/kit/internal";
 import { with_request_store } from "@sveltejs/kit/internal/server";
 import * as set_cookie_parser from "set-cookie-parser";
 import * as devalue from "devalue";
-//#region node_modules/@sveltejs/kit/src/constants.js
+// node_modules/@sveltejs/kit/src/constants.js
 /**
 * A fake asset path used in `vite dev` and `vite preview`, so that we can
 * serve local assets while verifying that requests are correctly prefixed
@@ -30,8 +30,7 @@ var PAGE_METHODS = [
 	"POST",
 	"HEAD"
 ];
-//#endregion
-//#region node_modules/@sveltejs/kit/src/runtime/form-utils.js
+// node_modules/@sveltejs/kit/src/runtime/form-utils.js
 /** @import { RemoteForm } from '@sveltejs/kit' */
 /** @import { BinaryFormMeta, InternalRemoteFormIssue } from 'types' */
 /** @import { StandardSchemaV1 } from '@standard-schema/spec' */
@@ -627,8 +626,7 @@ function throw_on_old_property_access(instance) {
 		} });
 	} });
 }
-//#endregion
-//#region node_modules/@sveltejs/kit/src/utils/http.js
+// node_modules/@sveltejs/kit/src/utils/http.js
 /**
 * Given an Accept header and a list of possible content types, pick
 * the most suitable one to respond with
@@ -699,8 +697,7 @@ function is_content_type(request, ...types) {
 function is_form_content_type(request) {
 	return is_content_type(request, "application/x-www-form-urlencoded", "multipart/form-data", "text/plain", BINARY_FORM_CONTENT_TYPE);
 }
-//#endregion
-//#region node_modules/@sveltejs/kit/src/utils/escape.js
+// node_modules/@sveltejs/kit/src/utils/escape.js
 /**
 * When inside a double-quoted attribute value, only `&` and `"` hold special meaning.
 * @see https://html.spec.whatwg.org/multipage/parsing.html#attribute-value-(double-quoted)-state
@@ -735,8 +732,7 @@ function escape_html(str, is_attr) {
 		return dict[match] ?? `&#${match.charCodeAt(0)};`;
 	});
 }
-//#endregion
-//#region node_modules/@sveltejs/kit/src/runtime/server/utils.js
+// node_modules/@sveltejs/kit/src/runtime/server/utils.js
 /** @import { ServerHooks } from 'types' */
 /**
 * @param {Partial<Record<import('types').HttpMethod, any>>} mod
@@ -900,5 +896,4 @@ function create_replacer(transport) {
 	};
 	return replacer;
 }
-//#endregion
 export { set_nested_value as C, PAGE_METHODS as D, MUTATIVE_METHODS as E, SVELTE_KIT_ASSETS as O, normalize_issue as S, ENDPOINT_METHODS as T, negotiate as _, get_global_name as a, deserialize_binary_form as b, handle_fatal_error as c, redirect_response as d, serialize_uses as f, is_form_content_type as g, get_set_cookies as h, format_server_error as i, has_prerendered_path as l, escape_html as m, count_non_ssi_comments as n, get_node_type as o, static_error_page as p, create_replacer as r, handle_error_and_jsonify as s, clarify_devalue_error as t, method_not_allowed as u, create_field_proxy as v, throw_on_old_property_access as w, flatten_issues as x, deep_set as y };

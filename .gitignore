@@ -5,8 +5,9 @@ node_modules
 .vercel
 .netlify
 .wrangler
-/.svelte-kit
-/build
+sveltekit_website/.svelte-kit/
+build/
+sveltekit_website/storage/
 
 # OS
 .DS_Store
@@ -16,7 +17,9 @@ Thumbs.db
 .env
 .env.*
 !.env.example
+!.env.sample
 !.env.test
+docker.env
 
 # Vite
 vite.config.js.timestamp-*
@@ -56,3 +59,5 @@ archive.zip
 .DS_Store
 
 .codspeed
+
+.claude

@@ -1,4 +1,4 @@
-//#region \0rolldown/runtime.js
+// \0rolldown/runtime.js
 var __defProp = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
 var __getOwnPropNames = Object.getOwnPropertyNames;
@@ -23,5 +23,4 @@ var __copyProps = (to, from, except, desc) => {
 	return to;
 };
 var __reExport = (target, mod, secondTarget) => (__copyProps(target, mod, "default"), secondTarget && __copyProps(secondTarget, mod, "default"));
-//#endregion
 export { __reExport as n, __exportAll as t };

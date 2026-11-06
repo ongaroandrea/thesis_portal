@@ -1,9 +1,10 @@
-import { a as numericId, c as paginationParams, l as requireUser, r as ApiError, s as paginated, u as requiredText } from "./handler.js";
-import { d as examSubmission, f as examSubmissionFile, h as user, r as activityReferenceImage, t as db } from "./db.js";
-import { t as courseService } from "./course.service.js";
+import { b as user, m as examSubmissionFile, p as examSubmission, r as activityReferenceImage, t as db } from "./db.js";
+import { a as paginated, c as requiredText, o as paginationParams, r as numericId, s as requireUser, t as ApiError } from "./api.service.js";
 import { t as activityService } from "./activity.service.js";
+import { t as courseService } from "./course.service.js";
+import { t as localStorageService } from "./local-storage.service.js";
 import { and, asc, count, desc, eq, inArray, max, sql } from "drizzle-orm";
-//#region src/lib/server/services/exam-submission.service.js
+// src/lib/server/services/exam-submission.service.js
 var IMAGE_TYPES = /* @__PURE__ */ new Set([
 	"image/jpeg",
 	"image/png",
@@ -46,14 +47,13 @@ function fileValues(input) {
 	const originalFilename = requiredText(input.originalFilename, "originalFilename", 255);
 	const mimeType = requiredText(input.mimeType, "mimeType", 100);
 	if (!IMAGE_TYPES.has(mimeType)) throw new ApiError(400, "Only JPG, PNG, WEBP and AVIF images are supported.", "INVALID_EXAM_FILE");
-	const storageKey = requiredText(input.dataUrl, "dataUrl", 6e6);
-	const match = storageKey.match(DATA_URL_PATTERN);
+	const match = requiredText(input.dataUrl, "dataUrl", 6e6).match(DATA_URL_PATTERN);
 	if (!match || match[1] !== mimeType) throw new ApiError(400, "The uploaded image data is invalid.", "INVALID_EXAM_FILE");
 	if (Math.floor(match[2].length * 3 / 4) > MAX_FILE_BYTES) throw new ApiError(413, "Each exam image must be 4 MB or smaller.", "EXAM_FILE_TOO_LARGE");
 	return {
 		originalFilename,
 		mimeType,
-		storageKey
+		base64: match[2]
 	};
 }
 async function filesForSubmissions(submissionIds) {
@@ -106,40 +106,64 @@ var examSubmissionService = {
 		if (manager || currentUser.role !== "student") throw new ApiError(403, "Only students can upload exam files.", "EXAM_SUBMISSION_DENIED");
 		assertSubmissionWindow(record);
 		if (!Array.isArray(input.files) || input.files.length === 0 || input.files.length > MAX_FILES_PER_REQUEST) throw new ApiError(400, `Upload between 1 and ${MAX_FILES_PER_REQUEST} images.`, "VALIDATION_ERROR");
-		const prepared = input.files.map((file) => ({
+		const validated = input.files.map((file) => ({
 			referenceImageId: numericId(file.referenceImageId, "referenceImageId"),
 			...fileValues(file)
 		}));
-		const referenceIds = [...new Set(prepared.map((file) => file.referenceImageId))];
-		if (referenceIds.length !== prepared.length) throw new ApiError(400, "Only one image per view can be uploaded at a time.", "DUPLICATE_EXAM_VIEW");
+		const referenceIds = [...new Set(validated.map((file) => file.referenceImageId))];
+		if (referenceIds.length !== validated.length) throw new ApiError(400, "Only one image per view can be uploaded at a time.", "DUPLICATE_EXAM_VIEW");
 		if ((await db.select({ id: activityReferenceImage.id }).from(activityReferenceImage).where(and(eq(activityReferenceImage.activityId, record.id), inArray(activityReferenceImage.id, referenceIds)))).length !== referenceIds.length) throw new ApiError(400, "One or more selected views do not belong to this exam.", "INVALID_REFERENCE_IMAGE");
-		const studentUserId = numericId(currentUser.id, "userId");
-		return db.transaction(async (tx) => {
-			await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${`exam-submission:${record.id}:${studentUserId}`}, 0))`);
-			await tx.insert(examSubmission).values({
-				activityId: record.id,
-				studentUserId
-			}).onConflictDoNothing();
-			const [submission] = await tx.select().from(examSubmission).where(and(eq(examSubmission.activityId, record.id), eq(examSubmission.studentUserId, studentUserId))).limit(1);
-			const now = /* @__PURE__ */ new Date();
-			for (const file of prepared) {
-				const [last] = await tx.select({ revision: max(examSubmissionFile.revision) }).from(examSubmissionFile).where(and(eq(examSubmissionFile.submissionId, submission.id), eq(examSubmissionFile.referenceImageId, file.referenceImageId)));
-				await tx.update(examSubmissionFile).set({
-					isCurrent: false,
-					replacedAt: now
-				}).where(and(eq(examSubmissionFile.submissionId, submission.id), eq(examSubmissionFile.referenceImageId, file.referenceImageId), eq(examSubmissionFile.isCurrent, true)));
-				await tx.insert(examSubmissionFile).values({
-					...file,
-					submissionId: submission.id,
-					revision: Number(last?.revision ?? 0) + 1
+		const prepared = [];
+		try {
+			for (const file of validated) {
+				const storageKey = await localStorageService.save({
+					base64: file.base64,
+					mimeType: file.mimeType,
+					category: "exam-submissions"
+				});
+				prepared.push({
+					referenceImageId: file.referenceImageId,
+					originalFilename: file.originalFilename,
+					mimeType: file.mimeType,
+					storageKey
 				});
 			}
-			await tx.update(examSubmission).set({ updatedAt: now }).where(eq(examSubmission.id, submission.id));
-			return {
-				id: submission.id,
-				uploaded: prepared.length
-			};
-		});
+		} catch (error) {
+			await Promise.allSettled(prepared.map((file) => localStorageService.remove(file.storageKey)));
+			throw error;
+		}
+		const studentUserId = numericId(currentUser.id, "userId");
+		try {
+			return await db.transaction(async (tx) => {
+				await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${`exam-submission:${record.id}:${studentUserId}`}, 0))`);
+				await tx.insert(examSubmission).values({
+					activityId: record.id,
+					studentUserId
+				}).onConflictDoNothing();
+				const [submission] = await tx.select().from(examSubmission).where(and(eq(examSubmission.activityId, record.id), eq(examSubmission.studentUserId, studentUserId))).limit(1);
+				const now = /* @__PURE__ */ new Date();
+				for (const file of prepared) {
+					const [last] = await tx.select({ revision: max(examSubmissionFile.revision) }).from(examSubmissionFile).where(and(eq(examSubmissionFile.submissionId, submission.id), eq(examSubmissionFile.referenceImageId, file.referenceImageId)));
+					await tx.update(examSubmissionFile).set({
+						isCurrent: false,
+						replacedAt: now
+					}).where(and(eq(examSubmissionFile.submissionId, submission.id), eq(examSubmissionFile.referenceImageId, file.referenceImageId), eq(examSubmissionFile.isCurrent, true)));
+					await tx.insert(examSubmissionFile).values({
+						...file,
+						submissionId: submission.id,
+						revision: Number(last?.revision ?? 0) + 1
+					});
+				}
+				await tx.update(examSubmission).set({ updatedAt: now }).where(eq(examSubmission.id, submission.id));
+				return {
+					id: submission.id,
+					uploaded: prepared.length
+				};
+			});
+		} catch (error) {
+			await Promise.allSettled(prepared.map((file) => localStorageService.remove(file.storageKey)));
+			throw error;
+		}
 	},
 	async removeFile(fileId, currentUser) {
 		requireUser(currentUser);
@@ -167,5 +191,4 @@ var examSubmissionService = {
 		return { id };
 	}
 };
-//#endregion
 export { examSubmissionService as t };

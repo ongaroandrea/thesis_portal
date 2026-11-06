@@ -1,11 +1,11 @@
 import { A as escape_html, O as attr, g as unsubscribe_stores, m as store_get, s as head } from "../../../../chunks/server.js";
-import { t as $format } from "../../../../chunks/runtime.js";
-import { h as Col, m as Container, n as Row, s as Label, v as CardBody, y as Card } from "../../../../chunks/dist.js";
-import { t as ParticlesAuth } from "../../../../chunks/ParticlesAuth.js";
-import "../../../../chunks/navigation.js";
-import "../../../../chunks/auth-client.js";
+import { _ as Card, g as CardBody, m as Col, n as Row, p as Container, s as Label } from "../../../../chunks/dist.js";
 import { t as Link } from "../../../../chunks/svelte-link.js";
-//#region src/routes/(public)/login/+page.svelte
+import { t as ParticlesAuth } from "../../../../chunks/ParticlesAuth.js";
+import "../../../../chunks/auth-client.js";
+import "../../../../chunks/navigation.js";
+import { t as $format } from "../../../../chunks/runtime.js";
+// src/routes/(public)/login/+page.svelte
 function _page($$renderer, $$props) {
 	$$renderer.component(($$renderer) => {
 		var $$store_subs;
@@ -49,7 +49,7 @@ function _page($$renderer, $$props) {
 												CardBody($$renderer, {
 													class: "p-4",
 													children: ($$renderer) => {
-														$$renderer.push(`<div class="text-center mt-2"><h5 class="text-primary">${escape_html(store_get($$store_subs ??= {}, "$_", $format)("auth.welcome"))}</h5> <p class="text-muted">${escape_html(store_get($$store_subs ??= {}, "$_", $format)("auth.subtitle"))}</p></div> <div class="p-2 mt-4">`);
+														$$renderer.push(`<div class="text-center mt-2"><h1 class="h4 text-primary">${escape_html(store_get($$store_subs ??= {}, "$_", $format)("auth.welcome"))}</h1> <p class="text-muted">${escape_html(store_get($$store_subs ??= {}, "$_", $format)("auth.subtitle"))}</p></div> <div class="p-2 mt-4">`);
 														$$renderer.push("<!--[-1-->");
 														$$renderer.push(`<!--]--> <form class="form"><div class="mb-3">`);
 														Label($$renderer, {
@@ -60,7 +60,7 @@ function _page($$renderer, $$props) {
 															},
 															$$slots: { default: true }
 														});
-														$$renderer.push(`<!----> <input type="email" class="form-control" id="email"${attr("placeholder", store_get($$store_subs ??= {}, "$_", $format)("auth.emailPlaceholder"))}${attr("value", email)}/></div> <div class="mb-3"><div class="float-end">`);
+														$$renderer.push(`<!----> <input type="email" class="form-control" id="email" name="email" autocomplete="email" required=""${attr("placeholder", store_get($$store_subs ??= {}, "$_", $format)("auth.emailPlaceholder"))}${attr("value", email)}/></div> <div class="mb-3"><div class="float-end">`);
 														Link($$renderer, {
 															href: "/password-dimenticata",
 															class: "text-muted",
@@ -79,7 +79,7 @@ function _page($$renderer, $$props) {
 															$$slots: { default: true }
 														});
 														$$renderer.push(`<!----> <div class="position-relative auth-pass-inputgroup mb-3">`);
-														$$renderer.push(`<!--[-1--><input type="password" class="form-control pe-5"${attr("placeholder", store_get($$store_subs ??= {}, "$_", $format)("auth.passwordPlaceholder"))} id="password-input"${attr("value", password)}/>`);
+														$$renderer.push(`<!--[-1--><input type="password" class="form-control pe-5"${attr("placeholder", store_get($$store_subs ??= {}, "$_", $format)("auth.passwordPlaceholder"))} id="password-input" name="password" autocomplete="current-password" required=""${attr("value", password)}/>`);
 														$$renderer.push(`<!--]--> <button class="btn btn-link position-absolute end-0 top-0 text-decoration-none text-muted" type="button" id="password-addon"${attr("aria-label", store_get($$store_subs ??= {}, "$_", $format)("auth.showPassword"))}><i class="ri-eye-fill align-middle"></i></button></div></div> <div class="form-check"><input class="form-check-input" type="checkbox" value="" id="auth-remember-check"/> `);
 														Label($$renderer, {
 															class: "form-check-label",
@@ -113,5 +113,4 @@ function _page($$renderer, $$props) {
 		if ($$store_subs) unsubscribe_stores($$store_subs);
 	});
 }
-//#endregion
 export { _page as default };

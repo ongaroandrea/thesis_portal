@@ -1,8 +1,9 @@
-import { a as numericId, l as requireUser, n as readJson, r as ApiError, t as apiResponse, u as requiredText } from "../../../../../chunks/handler.js";
-import { c as courseInvitation, h as user, l as courseMember, s as courseImport, t as db } from "../../../../../chunks/db.js";
+import { n as readJson, t as apiResponse } from "../../../../../chunks/handler.js";
+import { b as user, d as courseMember, l as courseImport, t as db, u as courseInvitation } from "../../../../../chunks/db.js";
+import { c as requiredText, r as numericId, s as requireUser, t as ApiError } from "../../../../../chunks/api.service.js";
 import { t as courseService } from "../../../../../chunks/course.service.js";
 import { and, eq, sql } from "drizzle-orm";
-//#region src/lib/server/services/course-import.service.js
+// src/lib/server/services/course-import.service.js
 var POLITO_EMAIL = /^[^@\s]+@(?:[a-z0-9-]+\.)*polito\.it$/i;
 function normalizeEmails(emails) {
 	if (!Array.isArray(emails) || emails.length === 0) throw new ApiError(400, "emails must be a non-empty array.", "VALIDATION_ERROR");
@@ -14,7 +15,7 @@ function normalizeEmails(emails) {
 }
 var courseImportService = { async importMembers(input, currentUser) {
 	requireUser(currentUser);
-	if (!["professor", "developer"].includes(currentUser.role)) throw new ApiError(403, "Only a professor or developer can import course members.", "COURSE_IMPORT_DENIED");
+	if (!["professor", "admin"].includes(currentUser.role)) throw new ApiError(403, "Only a professor or admin can import course members.", "COURSE_IMPORT_DENIED");
 	const courseId = numericId(input.courseId, "courseId");
 	await courseService.requireCourseManager(courseId, currentUser);
 	const rows = normalizeEmails(input.emails);
@@ -85,11 +86,9 @@ var courseImportService = { async importMembers(input, currentUser) {
 		return completed;
 	});
 } };
-//#endregion
-//#region src/routes/api/corsi/import/+server.js
+// src/routes/api/corsi/import/+server.js
 var POST = ({ request, locals }) => apiResponse(async () => {
 	const input = await readJson(request);
 	return courseImportService.importMembers(input, locals.user);
 }, 201);
-//#endregion
 export { POST };

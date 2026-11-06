@@ -1,16 +1,10 @@
 import { t as getBaseURL } from "./url.js";
 import { isSafeUrlScheme } from "@better-auth/core/utils/url";
 import { STORE_UNMOUNT_DELAY, atom, onMount, onSet } from "nanostores";
-import { defu } from "defu";
+import { defu as defu$1 } from "defu";
 import { createFetch } from "@better-fetch/fetch";
 import { capitalizeFirstLetter, toKebabCase } from "@better-auth/core/utils/string";
-//#region node_modules/better-auth/dist/client/parser.mjs
-var PROTO_POLLUTION_PATTERNS = {
-	proto: /"(?:_|\\u0{2}5[Ff]){2}(?:p|\\u0{2}70)(?:r|\\u0{2}72)(?:o|\\u0{2}6[Ff])(?:t|\\u0{2}74)(?:o|\\u0{2}6[Ff])(?:_|\\u0{2}5[Ff]){2}"\s*:/,
-	constructor: /"(?:c|\\u0063)(?:o|\\u006[Ff])(?:n|\\u006[Ee])(?:s|\\u0073)(?:t|\\u0074)(?:r|\\u0072)(?:u|\\u0075)(?:c|\\u0063)(?:t|\\u0074)(?:o|\\u006[Ff])(?:r|\\u0072)"\s*:/,
-	protoShort: /"__proto__"\s*:/,
-	constructorShort: /"constructor"\s*:/
-};
+// node_modules/better-auth/dist/client/parser.mjs
 var JSON_SIGNATURE = /^\s*["[{]|^\s*-?\d{1,16}(\.\d{1,17})?([Ee][+-]?\d+)?\s*$/;
 var SPECIAL_VALUES = {
 	true: true,
@@ -46,14 +40,10 @@ function betterJSONParse(value, options = {}) {
 		if (strict) throw new SyntaxError("[better-json] Invalid JSON");
 		return value;
 	}
-	if (Object.entries(PROTO_POLLUTION_PATTERNS).some(([key, pattern]) => {
-		const matches = pattern.test(trimmed);
-		if (matches && warnings) console.warn(`[better-json] Detected potential prototype pollution attempt using ${key} pattern`);
-		return matches;
-	}) && strict) throw new Error("[better-json] Potential prototype pollution attempt detected");
 	try {
 		const secureReviver = (key, value) => {
 			if (key === "__proto__" || key === "constructor" && value && typeof value === "object" && "prototype" in value) {
+				if (strict) throw new Error("[better-json] Potential prototype pollution attempt detected");
 				if (warnings) console.warn(`[better-json] Dropping "${key}" key to prevent prototype pollution`);
 				return;
 			}
@@ -72,8 +62,7 @@ function betterJSONParse(value, options = {}) {
 function parseJSON(value, options = { strict: true }) {
 	return betterJSONParse(value, options);
 }
-//#endregion
-//#region node_modules/better-auth/dist/client/fetch-plugins.mjs
+// node_modules/better-auth/dist/client/fetch-plugins.mjs
 var redirectPlugin = {
 	id: "redirect",
 	name: "Redirect",
@@ -87,8 +76,7 @@ var redirectPlugin = {
 		}
 	} }
 };
-//#endregion
-//#region node_modules/better-auth/dist/client/equality.mjs
+// node_modules/better-auth/dist/client/equality.mjs
 function isPlainObject(value) {
 	if (typeof value !== "object" || value === null) return false;
 	const prototype = Object.getPrototypeOf(value);
@@ -127,8 +115,14 @@ function withEquality(store, isEqual) {
 		if (isEqual(store.value, newValue)) abort();
 	});
 }
-//#endregion
-//#region node_modules/better-auth/dist/client/broadcast-channel.mjs
+// node_modules/better-auth/dist/client/query-atom.mjs
+var kAuthQuery = Symbol.for("better-auth:auth-query");
+function createAuthQueryAtom(initialValue) {
+	const queryAtom = atom(initialValue);
+	Object.defineProperty(queryAtom, kAuthQuery, { value: true });
+	return queryAtom;
+}
+// node_modules/better-auth/dist/client/broadcast-channel.mjs
 var kBroadcastChannel = Symbol.for("better-auth:broadcast-channel");
 var now$1 = () => Math.floor(Date.now() / 1e3);
 var WindowBroadcastChannel = class {
@@ -170,8 +164,7 @@ function getGlobalBroadcastChannel(name = "better-auth.message") {
 	if (!globalThis[kBroadcastChannel]) globalThis[kBroadcastChannel] = new WindowBroadcastChannel(name);
 	return globalThis[kBroadcastChannel];
 }
-//#endregion
-//#region node_modules/better-auth/dist/client/focus-manager.mjs
+// node_modules/better-auth/dist/client/focus-manager.mjs
 var kFocusManager = Symbol.for("better-auth:focus-manager");
 var WindowFocusManager = class {
 	listeners = /* @__PURE__ */ new Set();
@@ -199,8 +192,7 @@ function getGlobalFocusManager() {
 	if (!globalThis[kFocusManager]) globalThis[kFocusManager] = new WindowFocusManager();
 	return globalThis[kFocusManager];
 }
-//#endregion
-//#region node_modules/better-auth/dist/client/online-manager.mjs
+// node_modules/better-auth/dist/client/online-manager.mjs
 var kOnlineManager = Symbol.for("better-auth:online-manager");
 var WindowOnlineManager = class {
 	listeners = /* @__PURE__ */ new Set();
@@ -231,8 +223,7 @@ function getGlobalOnlineManager() {
 	if (!globalThis[kOnlineManager]) globalThis[kOnlineManager] = new WindowOnlineManager();
 	return globalThis[kOnlineManager];
 }
-//#endregion
-//#region node_modules/better-auth/dist/client/session-refresh.mjs
+// node_modules/better-auth/dist/client/session-refresh.mjs
 var now = () => Math.floor(Date.now() / 1e3);
 /**
 * Rate limit: don't refetch on focus if a session request was made within this many seconds
@@ -358,8 +349,7 @@ function createSessionRefreshManager(opts) {
 		broadcastSessionUpdate
 	};
 }
-//#endregion
-//#region node_modules/better-auth/dist/client/session-atom.mjs
+// node_modules/better-auth/dist/client/session-atom.mjs
 var isServer = () => typeof window === "undefined";
 var SESSION_MOUNT_DEDUPE_INTERVAL = STORE_UNMOUNT_DELAY;
 function hydrateSessionAtom(sessionAtom, session) {
@@ -402,7 +392,7 @@ function getSessionAtom($fetch, options) {
 		freshUntil = 0;
 	});
 	const refetch = (queryParams) => fetchSession(queryParams);
-	const session = atom({
+	const session = createAuthQueryAtom({
 		data: null,
 		error: null,
 		isPending: true,
@@ -532,8 +522,7 @@ function getSessionAtom($fetch, options) {
 		broadcastSessionUpdate: (trigger) => broadcastSessionUpdate(trigger)
 	};
 }
-//#endregion
-//#region node_modules/better-auth/dist/client/config.mjs
+// node_modules/better-auth/dist/client/config.mjs
 var resolvePublicAuthUrl = (basePath) => {
 	if (typeof process === "undefined") return void 0;
 	const path = basePath ?? "/api/auth";
@@ -548,6 +537,7 @@ var resolvePublicAuthUrl = (basePath) => {
 		} catch {}
 	}
 };
+var matchesSessionSignal = (path) => path === "/sign-out" || path === "/update-user" || path === "/update-session" || path === "/sign-up/email" || path === "/sign-in/email" || path === "/delete-user" || path === "/verify-email" || path === "/revoke-sessions" || path === "/revoke-session" || path === "/revoke-other-sessions" || path === "/change-email" || path === "/change-password";
 var getClientConfig = (options, loadEnv) => {
 	const isCredentialsSupported = "credentials" in Request.prototype;
 	const baseURL = getBaseURL(options?.baseURL, options?.basePath, void 0, loadEnv) ?? resolvePublicAuthUrl(options?.basePath) ?? "/api/auth";
@@ -601,9 +591,7 @@ var getClientConfig = (options, loadEnv) => {
 	};
 	const atomListeners = [{
 		signal: "$sessionSignal",
-		matcher(path) {
-			return path === "/sign-out" || path === "/update-user" || path === "/update-session" || path === "/sign-up/email" || path === "/sign-in/email" || path === "/delete-user" || path === "/verify-email" || path === "/revoke-sessions" || path === "/revoke-session" || path === "/revoke-other-sessions" || path === "/change-email" || path === "/change-password";
-		},
+		matcher: matchesSessionSignal,
 		callback(path) {
 			if (path === "/sign-out") broadcastSessionUpdate("signout");
 			else if (path === "/update-user" || path === "/update-session") broadcastSessionUpdate("updateUser");
@@ -623,7 +611,7 @@ var getClientConfig = (options, loadEnv) => {
 		},
 		atoms: pluginsAtoms
 	};
-	for (const plugin of plugins) if (plugin.getActions) pluginsActions = defu(plugin.getActions?.($fetch, $store, options) ?? {}, pluginsActions);
+	for (const plugin of plugins) if (plugin.getActions) pluginsActions = defu$1(plugin.getActions?.($fetch, $store, options) ?? {}, pluginsActions);
 	return {
 		get baseURL() {
 			return baseURL;
@@ -638,13 +626,11 @@ var getClientConfig = (options, loadEnv) => {
 		$store
 	};
 };
-//#endregion
-//#region node_modules/better-auth/dist/utils/is-atom.mjs
+// node_modules/better-auth/dist/utils/is-atom.mjs
 function isAtom(value) {
 	return typeof value === "object" && value !== null && "get" in value && typeof value.get === "function" && "lc" in value && typeof value.lc === "number";
 }
-//#endregion
-//#region node_modules/better-auth/dist/client/proxy.mjs
+// node_modules/better-auth/dist/client/proxy.mjs
 function getMethod(path, knownPathMethods, args) {
 	const method = knownPathMethods[path];
 	const { fetchOptions, query: _query, ...body } = args || {};
@@ -718,8 +704,7 @@ function createDynamicPathProxy(routes, client, knownPathMethods, atoms, atomLis
 	}
 	return createProxy();
 }
-//#endregion
-//#region node_modules/better-auth/dist/client/svelte/index.mjs
+// node_modules/better-auth/dist/client/svelte/index.mjs
 function createAuthClient(options) {
 	const { pluginPathMethods, pluginsActions, pluginsAtoms, hydrateSession, $fetch, atomListeners, $store } = getClientConfig(options);
 	const resolvedHooks = {};
@@ -732,8 +717,6 @@ function createAuthClient(options) {
 		$store
 	}, $fetch, pluginPathMethods, pluginsAtoms, atomListeners);
 }
-//#endregion
-//#region src/lib/client/auth/auth-client.js
+// src/lib/client/auth/auth-client.js
 var authClient = createAuthClient();
-//#endregion
 export { authClient as t };

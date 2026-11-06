@@ -1,4 +1,4 @@
-//#region src/lib/correction-focus.js
+// src/lib/correction-focus.js
 var CORRECTION_FOCUS_OPTIONS = Object.freeze([
 	{
 		id: "LIGHT",
@@ -23,7 +23,7 @@ var CORRECTION_FOCUS_OPTIONS = Object.freeze([
 	{
 		id: "GENERAL",
 		labelKey: "correction.generalQuality",
-		analysisType: "camera"
+		analysisType: "general"
 	}
 ]);
 var CORRECTION_FOCUS_IDS = new Set(CORRECTION_FOCUS_OPTIONS.map((option) => option.id));
@@ -36,5 +36,4 @@ function allowedCorrectionFocusIds(activity) {
 function correctionFocusOption(id) {
 	return CORRECTION_FOCUS_OPTIONS.find((option) => option.id === id) ?? null;
 }
-//#endregion
 export { correctionFocusOption as a, allowedCorrectionFocusIds as i, CORRECTION_FOCUS_OPTIONS as n, DEFAULT_CORRECTION_FOCUS_IDS as r, CORRECTION_FOCUS_IDS as t };

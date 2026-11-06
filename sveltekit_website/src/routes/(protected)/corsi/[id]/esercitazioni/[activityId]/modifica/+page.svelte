@@ -40,7 +40,7 @@
 	}
 </script>
 
-<svelte:head><title>{$_('activity.edit')}</title></svelte:head>
+<svelte:head><title>{$_('activity.edit')} | {$_('site.name')}</title></svelte:head>
 <div class="page-content"><div class="container-fluid py-4">
 	<PageHeader title={$_('activity.edit')} subtitle={$_('activity.editSubtitle')} parentHref={`/corsi/${courseId}/esercitazioni/${activityId}`} parentLabel={$_('activity.activity')} />
 	{#if errorMessage}<div class="alert alert-danger">{errorMessage}</div>{/if}

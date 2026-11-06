@@ -1,7 +1,7 @@
 import { A as escape_html, O as attr, Rt as fallback, g as unsubscribe_stores, i as bind_props, m as store_get } from "./server.js";
-import { t as $format } from "./runtime.js";
 import { a as toDateInput } from "./api.js";
-//#region src/lib/components/portal/CourseForm.svelte
+import { t as $format } from "./runtime.js";
+// src/lib/components/portal/CourseForm.svelte
 function CourseForm($$renderer, $$props) {
 	$$renderer.component(($$renderer) => {
 		var $$store_subs;
@@ -30,5 +30,4 @@ function CourseForm($$renderer, $$props) {
 		});
 	});
 }
-//#endregion
 export { CourseForm as t };
