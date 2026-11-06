@@ -1,0 +1,127 @@
+name: thesis-portal
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-thesis_portal}
+      POSTGRES_USER: ${POSTGRES_USER:-thesis_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in docker.env}
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./sveltekit_website/drizzle/0000_initial_schema.sql:/docker-entrypoint-initdb.d/0000_initial_schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+    networks:
+      - portal
+
+  image-api:
+    build:
+      context: ./python_server
+    restart: unless-stopped
+    init: true
+    environment:
+      HMAC_SECRET: ${PYTHON_SERVER_HMAC_SECRET:?Set PYTHON_SERVER_HMAC_SECRET in docker.env}
+      HMAC_MAX_AGE_SECONDS: ${HMAC_MAX_AGE_SECONDS:-300}
+      QUEUE_MAX_SIZE: ${QUEUE_MAX_SIZE:-100}
+      COMPLETED_JOB_LIMIT: ${COMPLETED_JOB_LIMIT:-500}
+      MAX_IMAGE_BYTES: ${MAX_IMAGE_BYTES:-12582912}
+      MAX_IMAGE_PIXELS: ${MAX_IMAGE_PIXELS:-40000000}
+      DEVELOPMENT_MODE: ${DEVELOPMENT_MODE:-false}
+      OLLAMA_CHAT_URL: ${OLLAMA_CHAT_URL:-http://host.docker.internal:11434/api/chat}
+      OLLAMA_ALLOWED_MODELS: ${OLLAMA_ALLOWED_MODELS:-qwen3.8:27b}
+      OLLAMA_TIMEOUT_SECONDS: ${OLLAMA_TIMEOUT_SECONDS:-900}
+      OLLAMA_NUM_CTX: ${OLLAMA_NUM_CTX:-}
+      OLLAMA_NUM_PREDICT: ${OLLAMA_NUM_PREDICT:-}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "127.0.0.1:${API_PORT:-8000}:8000"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/live')"
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    networks:
+      - portal
+
+  web:
+    build:
+      context: ./sveltekit_website
+      args:
+        PUBLIC_URL: ${PUBLIC_URL:-http://localhost:5173}
+    restart: unless-stopped
+    init: true
+    depends_on:
+      db:
+        condition: service_healthy
+      image-api:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-thesis_user}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-thesis_portal}
+      LOCAL_STORAGE_PATH: /app/storage
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?Set BETTER_AUTH_SECRET in docker.env}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:5173}
+      BETTER_AUTH_CLIENT_URL: ${BETTER_AUTH_CLIENT_URL:-http://localhost:5173}
+      PUBLIC_URL: ${PUBLIC_URL:-http://localhost:5173}
+      # adapter-node assumes https when ORIGIN is unset; Better Auth only serves
+      # /api/auth/* when the request origin matches BETTER_AUTH_URL.
+      ORIGIN: ${PUBLIC_URL:-http://localhost:5173}
+      PYTHON_SERVER_URL: ${PYTHON_SERVER_URL:-http://image-api:8000}
+      PYTHON_SERVER_HMAC_SECRET: ${PYTHON_SERVER_HMAC_SECRET}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      MAIL_FROM: ${MAIL_FROM:-}
+      INITIAL_USERS_PASSWORD: ${INITIAL_USERS_PASSWORD:-}
+      INITIAL_PROFESSOR_EMAIL: ${INITIAL_PROFESSOR_EMAIL:-}
+      INITIAL_PROFESSOR_NAME: ${INITIAL_PROFESSOR_NAME:-}
+      INITIAL_PROFESSOR_SURNAME: ${INITIAL_PROFESSOR_SURNAME:-}
+      INITIAL_ADMIN_EMAIL: ${INITIAL_ADMIN_EMAIL:-}
+      INITIAL_ADMIN_NAME: ${INITIAL_ADMIN_NAME:-}
+      INITIAL_ADMIN_SURNAME: ${INITIAL_ADMIN_SURNAME:-}
+      INITIAL_STUDENT_EMAIL: ${INITIAL_STUDENT_EMAIL:-}
+      INITIAL_STUDENT_NAME: ${INITIAL_STUDENT_NAME:-}
+      INITIAL_STUDENT_SURNAME: ${INITIAL_STUDENT_SURNAME:-}
+    ports:
+      - "127.0.0.1:${WEB_PORT:-5173}:3000"
+    volumes:
+      - local_storage:/app/storage
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/login').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks:
+      - portal
+
+volumes:
+  postgres_data:
+  local_storage:
+
+networks:
+  portal:
+    name: thesis-portal-network

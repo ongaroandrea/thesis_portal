@@ -1,0 +1,10 @@
+node_modules
+.svelte-kit
+build
+.env
+.env.*
+.git
+.gitignore
+npm-debug.log*
+tests
+docs
