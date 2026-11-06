@@ -1,6 +1,7 @@
 <script>
 	import { toDateInput } from '$lib/client/api.js';
 	import { _ } from 'svelte-i18n';
+	import InfoTip from '$lib/components/common/InfoTip.svelte';
 
 	export let initial = {};
 	export let submitLabel = '';
@@ -36,11 +37,17 @@
 	</div>
 	<div class="row g-3 mb-4">
 		<div class="col-md-6">
-			<label class="form-label fw-semibold" for="course-start">{$_('common.start')}</label>
+			<div class="d-flex align-items-center mb-2">
+				<label class="form-label fw-semibold mb-0" for="course-start">{$_('common.start')} <span class="optional-tag">({$_('common.optional')})</span></label>
+				<InfoTip text={$_('course.startInfo')} label={$_('course.startInfoLabel')} />
+			</div>
 			<input id="course-start" type="date" class="form-control" bind:value={startsAt} />
 		</div>
 		<div class="col-md-6">
-			<label class="form-label fw-semibold" for="course-end">{$_('common.end')}</label>
+			<div class="d-flex align-items-center mb-2">
+				<label class="form-label fw-semibold mb-0" for="course-end">{$_('common.end')} <span class="optional-tag">({$_('common.optional')})</span></label>
+				<InfoTip text={$_('course.endInfo')} label={$_('course.endInfoLabel')} />
+			</div>
 			<input id="course-end" type="date" class="form-control" bind:value={endsAt} />
 		</div>
 	</div>

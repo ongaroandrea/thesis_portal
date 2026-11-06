@@ -655,9 +655,14 @@ There is no object storage and no bind mount for images.
 
 | Data | On disk | In PostgreSQL |
 | --- | --- | --- |
-| Activity reference images (max 350 KB each, up to 6 per activity) | `reference-images/YYYY/MM/<uuid>.<ext>` | `activity_reference_image`: `storage_key`, original filename, MIME type, view type, label, alt text, order |
-| Exam submission images (max 4 MB each, up to 12 per upload) | `exam-submissions/YYYY/MM/<uuid>.<ext>` | `exam_submission_file`: `storage_key`, revision, original filename, MIME type, current/replaced/removed flags |
-| Images sent for a lesson correction (max 12 MB) | Not stored | `correction_attempt` keeps only the original file name; the analysis result and prompt snapshot go to `correction_attempt` and `analysis_job` |
+| Activity reference images (max 350 KB each when compressed, otherwise `MAX_IMAGE_MB`; up to 6 per activity) | `reference-images/YYYY/MM/<uuid>.<ext>` | `activity_reference_image`: `storage_key`, original filename, MIME type, view type, label, alt text, order |
+| Exam submission images (max `MAX_IMAGE_MB` each, default 5 MB; one per reference view) | `exam-submissions/YYYY/MM/<uuid>.<ext>` | `exam_submission_file`: `storage_key`, revision, original filename, MIME type, current/replaced/removed flags |
+| Images sent for a lesson correction (max `MAX_IMAGE_MB`, default 5 MB) | Not stored | `correction_attempt` keeps only the original file name; the analysis result and prompt snapshot go to `correction_attempt` and `analysis_job` |
+
+Reference images are still compressed to 350 KB before they're stored. That's
+a storage choice, separate from the upload limit. Set
+`COMPRESS_REFERENCE_IMAGES=false` in `docker.env` to store them as uploaded
+instead (up to `MAX_IMAGE_MB` each); existing images are not changed.
 
 The folder and month in the key come from the upload time in UTC, the file
 name is a random UUID, and the extension (`jpg`, `png`, `webp` or `avif`) comes

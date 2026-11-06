@@ -8,10 +8,10 @@ import { analysisJobService } from '$lib/server/services/analysis-job.service.js
 import { promptBuilderService } from '$lib/server/services/prompt-builder.service.js';
 import { localStorageService } from '$lib/server/services/local-storage.service.js';
 import { correctionFocusOption } from '$lib/correction-focus.js';
+import { maxImageBytes, maxImageMb } from '$lib/upload-limits.js';
 
 const TYPES = new Set(['camera', 'texture', 'light', 'material', 'general']);
 const IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
-const MAX_IMAGE_BYTES = 12 * 1024 * 1024;
 const DATA_URL_PATTERN = /^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/]+={0,2})$/;
 
 function analysisType(focus) {
@@ -25,7 +25,7 @@ function jobId(input) {
 /**
  * Start an analysis for a correction session (owner only).
  * Flow: check the session and correction limit, validate the uploaded image
- * (JPEG/PNG/WEBP, max 12 MB), build the prompt, load the locked reference
+ * (JPEG/PNG/WEBP, max MAX_IMAGE_MB), build the prompt, load the locked reference
  * image from local storage, send both images in one signed request to
  * Python, then record the attempt and the prompt snapshot. If recording
  * fails, the Python job is cancelled so no orphan job keeps running.
@@ -45,8 +45,8 @@ export const POST = ({ params, request, locals }) => apiResponse(async () => {
 	if (!IMAGE_TYPES.has(image.type)) {
 		throw new ApiError(400, 'Use a JPEG, PNG or WEBP image.', 'INVALID_IMAGE');
 	}
-	if (image.size > MAX_IMAGE_BYTES) {
-		throw new ApiError(413, 'The image cannot exceed 12 MB.', 'IMAGE_TOO_LARGE');
+	if (image.size > maxImageBytes()) {
+		throw new ApiError(413, `The image cannot exceed ${maxImageMb()} MB.`, 'IMAGE_TOO_LARGE');
 	}
 	if (!TYPES.has(type)) throw new ApiError(409, 'The correction session has an unsupported analysis type. Create a new conversation.', 'CONVERSATION_SETTINGS_LOCKED');
 	if (session.analysisFocus && focus !== session.analysisFocus) {

@@ -20,7 +20,8 @@ const publicActivitySelection = {
 	title: activity.title,
 	description: activity.description,
 	objective: activity.objective,
-	durationMinutes: activity.durationMinutes,
+	// Exams have no stored duration: it is derived from availableFrom/Until.
+	durationMinutes: activity.kind === 'EXAM' ? null : activity.durationMinutes,
 	maxCorrectionsPerStudent: activity.maxCorrectionsPerStudent,
 	allowedCorrectionFocuses: activity.allowedCorrectionFocuses,
 	availableFrom: activity.availableFrom,
@@ -77,6 +78,8 @@ function activityValues(input, partial = false) {
 		const value = optionalPositiveInteger(input[field], field);
 		if (value !== undefined) values[field] = value;
 	}
+	// An exam's duration is its opening-to-deadline window, never a separate value.
+	if (values.kind === 'EXAM') values.durationMinutes = null;
 	if (!partial || input.allowedCorrectionFocuses !== undefined) {
 		const focuses = input.allowedCorrectionFocuses ?? DEFAULT_CORRECTION_FOCUS_IDS;
 		if (!Array.isArray(focuses) || focuses.length === 0 || focuses.some((focus) => !CORRECTION_FOCUS_IDS.has(focus))) {

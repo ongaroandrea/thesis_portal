@@ -2,13 +2,14 @@
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
-	import { apiListRequest, apiRequest, formatDateTime } from '$lib/client/api.js';
+	import { apiListRequest, apiRequest, formatDateTime, formatWindowDuration } from '$lib/client/api.js';
 	import { modalDialog } from '$lib/client/modal-dialog.js';
 	import PageHeader from '$lib/components/portal/PageHeader.svelte';
 	import ActivityStatistics from '$lib/components/portal/ActivityStatistics.svelte';
 	import ExamActivityView from '$lib/components/portal/ExamActivityView.svelte';
 	import { correctionFocusOption } from '$lib/correction-focus.js';
 	import { _ } from 'svelte-i18n';
+	import { zoomable } from '$lib/client/lightbox.js';
 	import { tableScrollHint } from '$lib/client/table-scroll-hint.js';
 
 	let course; let activity; let referenceImages = []; let sessions = []; let loading = true; let errorMessage = '';
@@ -131,7 +132,7 @@
 						<div class="d-flex justify-content-between align-items-end gap-3 mb-3"><div><h2 class="h5 mb-1">{$_('activity.referenceImages')}</h2><p class="text-muted mb-0">{$_('activity.assignmentViews')}</p></div><span class="text-muted small">{$_('activity.imageCount', { values: { count: referenceImages.length } })}</span></div>
 						<div class="reference-gallery">
 							{#each referenceImages as image}
-								<figure><div><img src={image.storageKey} alt={image.altText || image.originalFilename} loading="lazy" decoding="async" /></div><figcaption><strong>{viewLabel(image)}</strong><small>{image.originalFilename}</small></figcaption></figure>
+								<figure><div><img src={image.storageKey} alt={image.altText || image.originalFilename} loading="lazy" decoding="async" use:zoomable={{ group: 'activity-references', caption: `${viewLabel(image)} · ${image.originalFilename}`, label: $_('lightbox.enlarge') }} /></div><figcaption><strong>{viewLabel(image)}</strong><small>{image.originalFilename}</small></figcaption></figure>
 							{/each}
 						</div>
 					{/if}
@@ -151,7 +152,7 @@
 						</div>
 					{/if}
 				</div></div>
-				<div class="card mb-4"><div class="card-body p-4"><h2 class="h5 mb-3">{$_('activity.availability')}</h2><div class="timeline-info"><div><span>{$_('common.from')}</span><strong>{formatDateTime(activity.availableFrom)}</strong></div><div><span>{$_('common.until')}</span><strong>{formatDateTime(activity.availableUntil)}</strong></div><div><span>{$_('common.duration')}</span><strong>{activity.durationMinutes ? $_('activity.minutes', { values: { count: activity.durationMinutes } }) : $_('activity.freeDuration')}</strong></div><div><span>{$_('activity.corrections')}</span><strong>{activity.maxCorrectionsPerStudent ?? $_('common.unlimited')}</strong></div></div></div></div>
+				<div class="card mb-4"><div class="card-body p-4"><h2 class="h5 mb-3">{$_('activity.availability')}</h2><div class="timeline-info"><div><span>{$_('common.from')}</span><strong>{formatDateTime(activity.availableFrom)}</strong></div><div><span>{$_('common.until')}</span><strong>{formatDateTime(activity.availableUntil)}</strong></div><div><span>{$_('common.duration')}</span><strong>{#if activity.kind === 'EXAM'}{formatWindowDuration(activity.availableFrom, activity.availableUntil) ?? $_('exam.untilDeadline')}{:else}{activity.durationMinutes ? $_('activity.minutes', { values: { count: activity.durationMinutes } }) : $_('activity.freeDuration')}{/if}</strong></div><div><span>{$_('activity.corrections')}</span><strong>{activity.maxCorrectionsPerStudent ?? $_('common.unlimited')}</strong></div></div></div></div>
 			</div>
 		</div>
 		<div class="card mt-4 correction-sessions">

@@ -1,7 +1,10 @@
 <script>
-	import { toDateTimeLocal } from '$lib/client/api.js';
+	import { toDateTimeLocal, formatDateTime, formatWindowDuration } from '$lib/client/api.js';
 	import { CORRECTION_FOCUS_OPTIONS, DEFAULT_CORRECTION_FOCUS_IDS } from '$lib/correction-focus.js';
-	import { _ } from 'svelte-i18n';
+	import { _, locale } from 'svelte-i18n';
+	import { zoomable } from '$lib/client/lightbox.js';
+	import InfoTip from '$lib/components/common/InfoTip.svelte';
+	import { COMPRESSED_REFERENCE_IMAGE_BYTES, compressReferenceImages, maxImageBytes, maxImageMb } from '$lib/upload-limits.js';
 
 	export let initial = {};
 	export let submitLabel = '';
@@ -23,7 +26,6 @@
 	let resultsReleasedAt = toDateTimeLocal(initial.resultsReleasedAt);
 	let durationMinutes = initial.durationMinutes ?? '';
 	let maxCorrectionsPerStudent = initial.maxCorrectionsPerStudent ?? '';
-	let displayOrder = initial.displayOrder ?? 0;
 	let allowedCorrectionFocuses = Array.isArray(initial.allowedCorrectionFocuses) && initial.allowedCorrectionFocuses.length
 		? [...initial.allowedCorrectionFocuses]
 		: [...DEFAULT_CORRECTION_FOCUS_IDS];
@@ -45,6 +47,13 @@
 		{ value: 'ANGLED', key: 'view.angled' },
 		{ value: 'OTHER', key: 'view.other' }
 	];
+	// Opening/deadline window. Exams have no duration field: it is derived
+	// from this window.
+	// `windowReversed` warns before the server would reject the save.
+	$: windowFrom = availableFrom ? new Date(availableFrom) : null;
+	$: windowUntil = availableUntil ? new Date(availableUntil) : null;
+	$: windowReversed = Boolean(windowFrom && windowUntil && windowUntil <= windowFrom);
+	$: examDuration = kind === 'EXAM' && $locale ? formatWindowDuration(windowFrom, windowUntil) : null;
 	$: allTopicsSelected = allowedCorrectionFocuses.length === CORRECTION_FOCUS_OPTIONS.length;
 
 	function toggleAllTopics() {
@@ -61,22 +70,33 @@
 		return Math.floor((dataUrl.split(',')[1]?.length ?? 0) * 3 / 4);
 	}
 
+	function readDataUrl(file) {
+		return new Promise((resolve, reject) => {
+			const reader = new FileReader();
+			reader.onload = () => resolve(reader.result);
+			reader.onerror = () => reject(new Error($_('exam.readError', { values: { name: file.name } })));
+			reader.readAsDataURL(file);
+		});
+	}
+
 	/**
-	 * Re-encode a reference image in the browser so it fits the server's
-	 * 350 KB limit for reference images.
-	 * Downscales to at most 1600 px on the long side, then tries up to five
+	 * Prepare a reference image for upload. With compression on (default),
+	 * re-encode it in the browser so it fits the server's 350 KB limit:
+	 * downscale to at most 1600 px on the long side, then try up to five
 	 * WEBP encodes, lowering quality (0.84 -> 0.5) and shrinking the size by
-	 * 22% after each attempt that is still too big.
-	 * @param {File} file - JPEG, PNG or WEBP, max 12 MB.
-	 * @returns {Promise<string>} A `data:image/webp;base64,...` URL.
+	 * 22% after each attempt that is still too big. With compression off
+	 * (COMPRESS_REFERENCE_IMAGES=false) the original file is sent as is.
+	 * @param {File} file - JPEG, PNG or WEBP, max MAX_IMAGE_MB.
+	 * @returns {Promise<{ dataUrl: string, mimeType: string }>}
 	 * @throws {Error} Localized message when the type, size or final result
 	 *   is not acceptable.
 	 */
-	async function optimizeImage(file) {
+	async function prepareImage(file) {
 		if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
 			throw new Error($_('activity.imageTypeError', { values: { name: file.name } }));
 		}
-		if (file.size > 12 * 1024 * 1024) throw new Error($_('activity.imageSizeError', { values: { name: file.name } }));
+		if (file.size > maxImageBytes()) throw new Error($_('activity.imageSizeError', { values: { name: file.name, max: maxImageMb() } }));
+		if (!compressReferenceImages()) return { dataUrl: await readDataUrl(file), mimeType: file.type };
 		const bitmap = await createImageBitmap(file);
 		let scale = Math.min(1, 1600 / Math.max(bitmap.width, bitmap.height));
 		let dataUrl = '';
@@ -86,16 +106,16 @@
 			canvas.height = Math.max(1, Math.round(bitmap.height * scale));
 			canvas.getContext('2d').drawImage(bitmap, 0, 0, canvas.width, canvas.height);
 			dataUrl = canvas.toDataURL('image/webp', Math.max(.5, .84 - attempt * .08));
-			if (dataUrlBytes(dataUrl) <= 350 * 1024) break;
+			if (dataUrlBytes(dataUrl) <= COMPRESSED_REFERENCE_IMAGE_BYTES) break;
 			scale *= .78;
 		}
 		bitmap.close();
-		if (dataUrlBytes(dataUrl) > 350 * 1024) throw new Error($_('activity.imageOptimizeError', { values: { name: file.name } }));
-		return dataUrl;
+		if (dataUrlBytes(dataUrl) > COMPRESSED_REFERENCE_IMAGE_BYTES) throw new Error($_('activity.imageOptimizeError', { values: { name: file.name } }));
+		return { dataUrl, mimeType: 'image/webp' };
 	}
 
 	// Add picked files to the reference set (max 6 in total). Files are only
-	// optimized here; they are uploaded with the form on submit. The first
+	// prepared here; they are uploaded with the form on submit. The first
 	// image defaults to the FRONT view, later ones to SIDE. The input is
 	// cleared so the same file can be picked again.
 	async function selectReferenceImages(event) {
@@ -109,11 +129,12 @@
 		try {
 			const prepared = [];
 			for (const [offset, file] of files.entries()) {
+				const { dataUrl, mimeType } = await prepareImage(file);
 				prepared.push({
 					key: `${Date.now()}-${offset}-${file.name}`,
-					dataUrl: await optimizeImage(file),
+					dataUrl,
 					originalFilename: file.name,
-					mimeType: 'image/webp',
+					mimeType,
 					viewType: referenceImages.length + offset === 0 ? 'FRONT' : 'SIDE',
 					customViewLabel: '',
 					altText: ''
@@ -148,9 +169,8 @@
 			availableFrom: availableFrom ? new Date(availableFrom).toISOString() : null,
 			availableUntil: availableUntil ? new Date(availableUntil).toISOString() : null,
 			resultsReleasedAt: kind === 'EXAM' && resultsReleasedAt ? new Date(resultsReleasedAt).toISOString() : null,
-			durationMinutes: durationMinutes === '' ? null : Number(durationMinutes),
+			durationMinutes: kind === 'EXAM' || durationMinutes === '' ? null : Number(durationMinutes),
 			maxCorrectionsPerStudent: kind === 'EXAM' || maxCorrectionsPerStudent === '' ? null : Number(maxCorrectionsPerStudent),
-			displayOrder: Number(displayOrder),
 			allowedCorrectionFocuses,
 			referenceImages: referenceImages.map((image, index) => ({
 				id: image.existingId,
@@ -187,46 +207,57 @@
 			<textarea id="activity-objective" class="form-control" rows="3" bind:value={objective} required placeholder={$_('activity.objectivePlaceholder')}></textarea>
 		</div>
 		<div class="col-12">
-			<label class="form-label fw-semibold" for="activity-description">{$_('activity.instructions')}</label>
+			<label class="form-label fw-semibold" for="activity-description">{$_('activity.instructionsLabel')} <span class="optional-tag">({$_('common.optional')})</span></label>
 			<textarea id="activity-description" class="form-control" rows="5" bind:value={description} placeholder={$_('activity.instructionsPlaceholder')}></textarea>
 		</div>
 		<div class="col-12">
-			<label class="form-label fw-semibold" for="activity-prompt-addendum">{$_('activity.promptAddendum')}</label>
+			<label class="form-label fw-semibold" for="activity-prompt-addendum">{$_('activity.promptAddendum')} <span class="optional-tag">({$_('common.optional')})</span></label>
 			<textarea id="activity-prompt-addendum" class="form-control" rows="5" maxlength="8000" bind:value={promptAddendum} disabled={Boolean(initial.promptFrozenAt)} placeholder={$_('activity.promptAddendumPlaceholder')}></textarea>
 			<div class="form-text">{$_(initial.promptFrozenAt ? 'activity.promptFrozenHelp' : 'activity.promptAddendumHelp')}</div>
 		</div>
 		<div class="col-md-6">
-			<label class="form-label fw-semibold" for="activity-from">{$_('activity.availableFrom')}</label>
+			<div class="d-flex align-items-center mb-2">
+				<label class="form-label fw-semibold mb-0" for="activity-from">{$_('activity.availableFrom')} <span class="optional-tag">({$_('common.optional')})</span></label>
+				<InfoTip text={$_(kind === 'EXAM' ? 'activity.availableFromInfoExam' : 'activity.availableFromInfo')} label={$_('activity.availableFromInfoLabel')} />
+			</div>
 			<input id="activity-from" type="datetime-local" class="form-control" bind:value={availableFrom} />
 		</div>
 		<div class="col-md-6">
-			<label class="form-label fw-semibold" for="activity-until">{$_('activity.availableUntil')}</label>
-			<input id="activity-until" type="datetime-local" class="form-control" bind:value={availableUntil} required={kind === 'EXAM'} />
+			<div class="d-flex align-items-center mb-2">
+				<label class="form-label fw-semibold mb-0" for="activity-until">{$_('activity.availableUntil')}{#if kind !== 'EXAM'} <span class="optional-tag">({$_('common.optional')})</span>{/if}</label>
+				<InfoTip text={$_(kind === 'EXAM' ? 'activity.availableUntilInfoExam' : 'activity.availableUntilInfo')} label={$_('activity.availableUntilInfoLabel')} />
+			</div>
+			<input id="activity-until" type="datetime-local" class="form-control" class:is-invalid={windowReversed} bind:value={availableUntil} required={kind === 'EXAM'} aria-describedby="activity-window" aria-invalid={windowReversed} />
+			<div id="activity-window" aria-live="polite">
+			{#if windowReversed}
+				<p class="window-summary is-error mb-0"><i class="ri-error-warning-line" aria-hidden="true"></i>{$_('exam.windowReversed')}</p>
+			{:else if kind === 'EXAM' && examDuration}
+				<p class="window-summary mb-0"><i class="ri-timer-line" aria-hidden="true"></i><span><strong>{$_('exam.windowDuration', { values: { duration: examDuration } })}</strong> <span class="text-muted">· {$_('exam.windowHelp')}</span></span></p>
+			{:else if kind === 'EXAM' && windowUntil && !windowFrom}
+				<p class="window-summary mb-0"><i class="ri-timer-line" aria-hidden="true"></i><span>{$_('exam.windowFromPublish', { values: { until: formatDateTime(windowUntil) } })}</span></p>
+			{/if}
+			</div>
 		</div>
 		{#if kind === 'EXAM'}
 			<div class="col-12">
-				<label class="form-label fw-semibold" for="activity-results-release">{$_('exam.resultsRelease')}</label>
+				<label class="form-label fw-semibold" for="activity-results-release">{$_('exam.resultsRelease')} <span class="optional-tag">({$_('common.optional')})</span></label>
 				<input id="activity-results-release" type="datetime-local" class="form-control" bind:value={resultsReleasedAt} />
 				<div class="form-text">{$_('exam.resultsReleaseHelp')}</div>
 			</div>
 		{/if}
-		<div class="col-md-3">
-			<label class="form-label fw-semibold" for="activity-duration">{$_('activity.durationMinutes')}</label>
-			<input id="activity-duration" type="number" min="1" class="form-control" bind:value={durationMinutes} />
-		</div>
 		{#if kind !== 'EXAM'}
-			<div class="col-md-3">
-				<label class="form-label fw-semibold" for="activity-limit">{$_('activity.maxCorrections')}</label>
-				<input id="activity-limit" type="number" min="1" class="form-control" bind:value={maxCorrectionsPerStudent} />
+			<div class="col-md-4 d-flex flex-column">
+				<label class="form-label fw-semibold" for="activity-duration">{$_('activity.durationMinutes')} <span class="optional-tag">({$_('common.optional')})</span></label>
+				<input id="activity-duration" type="number" min="1" class="form-control mt-auto" bind:value={durationMinutes} />
+			</div>
+			<div class="col-md-4 d-flex flex-column">
+				<label class="form-label fw-semibold" for="activity-limit">{$_('activity.maxCorrections')} <span class="optional-tag">({$_('common.optional')})</span></label>
+				<input id="activity-limit" type="number" min="1" class="form-control mt-auto" bind:value={maxCorrectionsPerStudent} />
 			</div>
 		{/if}
-		<div class="col-md-3">
-			<label class="form-label fw-semibold" for="activity-order">{$_('common.order')}</label>
-			<input id="activity-order" type="number" class="form-control" bind:value={displayOrder} />
-		</div>
-		<div class="col-md-3">
+		<div class={`${kind === 'EXAM' ? 'col-md-6' : 'col-md-4'} d-flex flex-column`}>
 			<label class="form-label fw-semibold" for="activity-status">{$_('common.status')}</label>
-			<select id="activity-status" class="form-select" bind:value={status}>
+			<select id="activity-status" class="form-select mt-auto" bind:value={status}>
 				<option value="DRAFT">{$_('status.draft')}</option>
 				<option value="PUBLISHED">{$_('status.published')}</option>
 				<option value="ARCHIVED">{$_('status.archived')}</option>
@@ -272,7 +303,7 @@
 				{#each referenceImages as image, index (image.key)}
 					<article class="reference-card">
 						<div class="reference-preview">
-							<img src={image.dataUrl} alt={image.altText || image.originalFilename} decoding="async" />
+							<img src={image.dataUrl} alt={image.altText || image.originalFilename} decoding="async" use:zoomable={{ group: 'form-references', caption: image.originalFilename, label: $_('lightbox.enlarge') }} />
 							<span>{index + 1}</span>
 							<button type="button" on:click={() => removeReferenceImage(image.key)} aria-label={$_('activity.removeImage', { values: { name: image.originalFilename } })}><i class="ri-close-line"></i></button>
 						</div>
@@ -286,7 +317,7 @@
 								<label class="form-label small fw-semibold mt-3" for={`image-custom-${image.key}`}>{$_('activity.viewName')}</label>
 								<input class="form-control" id={`image-custom-${image.key}`} maxlength="100" required bind:value={image.customViewLabel} placeholder={$_('activity.viewNamePlaceholder')} />
 							{/if}
-							<label class="form-label small fw-semibold mt-3" for={`image-alt-${image.key}`}>{$_('activity.altText')}</label>
+							<label class="form-label small fw-semibold mt-3" for={`image-alt-${image.key}`}>{$_('activity.altText')} <span class="optional-tag">({$_('common.optional')})</span></label>
 							<input class="form-control" id={`image-alt-${image.key}`} maxlength="500" bind:value={image.altText} placeholder={$_('activity.altTextPlaceholder')} />
 						</div>
 					</article>
@@ -307,6 +338,13 @@
 </form>
 
 <style>
+	/* Derived exam duration / window error under the deadline input. */
+	.window-summary { display: flex; align-items: flex-start; gap: .4rem; margin-top: .5rem; font-size: .875rem; line-height: 1.45; }
+	.window-summary i { flex-shrink: 0; margin-top: .1rem; color: var(--portal-polito-blue); }
+	.window-summary strong { font-weight: 600; }
+	.window-summary.is-error { color: var(--portal-danger-text); }
+	.window-summary.is-error i { color: inherit; }
+
 	.form-section-heading { display: flex; align-items: center; gap: .85rem; padding-bottom: 1rem; margin-bottom: 1.25rem; border-bottom: 1px solid var(--portal-border); }
 	.form-section-heading h2 { margin: 0 0 .15rem; }
 	.form-section-heading p { margin: 0; color: var(--portal-muted); }

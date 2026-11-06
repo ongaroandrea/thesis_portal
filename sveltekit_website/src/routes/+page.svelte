@@ -1,4 +1,5 @@
 <script>
+	import { maxImageMb } from '$lib/upload-limits.js';
 	import { _ } from 'svelte-i18n';
 	import LanguageSwitcher from '$lib/components/common/LanguageSwitcher.svelte';
 
@@ -41,7 +42,7 @@
 			<section aria-labelledby="home-steps-title">
 				<h2 id="home-steps-title">{$_('home.stepsTitle')}</h2>
 				<ol class="steps">
-					{#each steps as step}<li>{$_(step)}</li>{/each}
+					{#each steps as step}<li>{$_(step, { values: { max: maxImageMb() } })}</li>{/each}
 				</ol>
 				<p class="professor-note">{$_('home.professorNote')}</p>
 			</section>

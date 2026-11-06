@@ -5,10 +5,10 @@ import { ApiError, numericId, paginated, paginationParams, requiredText, require
 import { activityService } from './activity.service.js';
 import { courseService } from './course.service.js';
 import { localStorageService } from './local-storage.service.js';
+import { maxImageBytes, maxImageMb } from '$lib/upload-limits.js';
 
 const IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/avif']);
 const DATA_URL_PATTERN = /^data:(image\/(?:jpeg|png|webp|avif));base64,([A-Za-z0-9+/]+={0,2})$/;
-const MAX_FILE_BYTES = 4 * 1024 * 1024;
 const MAX_FILES_PER_REQUEST = 12;
 
 async function isCourseManager(courseId, currentUser) {
@@ -53,11 +53,12 @@ function fileValues(input) {
 	const originalFilename = requiredText(input.originalFilename, 'originalFilename', 255);
 	const mimeType = requiredText(input.mimeType, 'mimeType', 100);
 	if (!IMAGE_TYPES.has(mimeType)) throw new ApiError(400, 'Only JPG, PNG, WEBP and AVIF images are supported.', 'INVALID_EXAM_FILE');
-	const dataUrl = requiredText(input.dataUrl, 'dataUrl', 6_000_000);
+	// Base64 is 4/3 of the file size; the extra 100 chars cover the data: prefix.
+	const dataUrl = requiredText(input.dataUrl, 'dataUrl', Math.ceil(maxImageBytes() * 4 / 3) + 100);
 	const match = dataUrl.match(DATA_URL_PATTERN);
 	if (!match || match[1] !== mimeType) throw new ApiError(400, 'The uploaded image data is invalid.', 'INVALID_EXAM_FILE');
 	const bytes = Math.floor(match[2].length * 3 / 4);
-	if (bytes > MAX_FILE_BYTES) throw new ApiError(413, 'Each exam image must be 4 MB or smaller.', 'EXAM_FILE_TOO_LARGE');
+	if (bytes > maxImageBytes()) throw new ApiError(413, `Each exam image must be ${maxImageMb()} MB or smaller.`, 'EXAM_FILE_TOO_LARGE');
 	return { originalFilename, mimeType, base64: match[2] };
 }
 

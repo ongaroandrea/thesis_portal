@@ -14,17 +14,6 @@ function analysisType(value) {
 	return type;
 }
 
-function outputSchema(value) {
-	if (!value || typeof value !== 'object' || Array.isArray(value)) {
-		throw new ApiError(400, 'outputSchema must be a JSON object.', 'VALIDATION_ERROR');
-	}
-	const serialized = JSON.stringify(value);
-	if (serialized.length > 50_000) {
-		throw new ApiError(400, 'outputSchema cannot exceed 50,000 characters.', 'VALIDATION_ERROR');
-	}
-	return value;
-}
-
 /**
  * Decide which prompt scope a request targets and whether the user may use it.
  * No courseId means GLOBAL (admins only); a courseId means that course's
@@ -46,9 +35,10 @@ async function authorizeScope(courseId, currentUser) {
 /**
  * Load a template's revision: the active one, or, when `at` is given, the
  * newest revision created on or before that date (used to freeze exams).
+ * Pass `conn` to read inside a transaction.
  */
-async function activeRevisionFor(template, at = null) {
-	const [revision] = await db.select().from(promptTemplateRevision).where(and(
+async function activeRevisionFor(template, at = null, conn = db) {
+	const [revision] = await conn.select().from(promptTemplateRevision).where(and(
 		eq(promptTemplateRevision.templateId, template.id),
 		at ? lte(promptTemplateRevision.createdAt, at) : eq(promptTemplateRevision.version, template.activeRevision)
 	)).orderBy(desc(promptTemplateRevision.version)).limit(1);
@@ -131,15 +121,18 @@ export const promptTemplateService = {
 	 * Append a new immutable revision and make it active. Revisions are never
 	 * edited in place. An advisory lock per (scope, course, type) serializes
 	 * concurrent saves so version numbers stay unique.
+	 *
+	 * Only the system and user prompts are editable. The model and the output
+	 * schema are locked: any value sent by the client is ignored and both are
+	 * carried over from the revision currently in effect (the template's own
+	 * active revision, or the global one when a course override is created).
 	 */
 	async createRevision(input, currentUser) {
 		const scope = await authorizeScope(input.courseId, currentUser);
 		const type = analysisType(input.analysisType);
 		const values = {
-			model: requiredText(input.model, 'model', 200),
 			systemPrompt: requiredText(input.systemPrompt, 'systemPrompt', 50_000),
 			userPrompt: requiredText(input.userPrompt, 'userPrompt', 50_000),
-			outputSchema: outputSchema(input.outputSchema),
 			createdByUserId: numericId(currentUser.id, 'userId')
 		};
 
@@ -151,6 +144,22 @@ export const promptTemplateService = {
 				scope.courseId == null ? sql`${promptTemplate.courseId} is null` : eq(promptTemplate.courseId, scope.courseId),
 				eq(promptTemplate.analysisType, type)
 			)).limit(1);
+			// Source of the locked fields: this template's active revision, or
+			// for a brand-new course override, the global template's.
+			let source = template;
+			if (!source && scope.scope === 'COURSE') {
+				[source] = await tx.select().from(promptTemplate).where(and(
+					eq(promptTemplate.scope, 'GLOBAL'),
+					eq(promptTemplate.analysisType, type)
+				)).limit(1);
+			}
+			if (!source) {
+				throw new ApiError(503, `No ${type} prompt template is configured.`, 'PROMPT_TEMPLATE_MISSING');
+			}
+			const { revision: current } = await activeRevisionFor(source, null, tx);
+			values.model = current.model;
+			values.outputSchema = current.outputSchema;
+
 			if (!template) {
 				[template] = await tx.insert(promptTemplate).values({
 					analysisType: type,

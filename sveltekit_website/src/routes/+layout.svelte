@@ -12,6 +12,7 @@
 	import '$lib/i18n';
 	import { untrack } from 'svelte';
 	import { _, locale } from 'svelte-i18n';
+	import ImageLightbox from '$lib/components/common/ImageLightbox.svelte';
 
 	let { children, data } = $props();
 
@@ -25,3 +26,4 @@
 
 <a class="skip-link" href="#main-content">{$_('common.skipToContent')}</a>
 {@render children()}
+<ImageLightbox />

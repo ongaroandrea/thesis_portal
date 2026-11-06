@@ -221,7 +221,8 @@ still require valid signature headers.
 | `HMAC_MAX_AGE_SECONDS` | `300` | 10–3600 | Maximum accepted clock difference and nonce-retention window. |
 | `QUEUE_MAX_SIZE` | `100` | 1–10,000 | Maximum number of jobs waiting in the FIFO queue. |
 | `COMPLETED_JOB_LIMIT` | `500` | 1–100,000 | Maximum retained terminal jobs. |
-| `MAX_IMAGE_BYTES` | `12582912` | Positive integer | Maximum size of each image; default is 12 MiB. |
+| `MAX_IMAGE_MB` | `5` | Positive number | Maximum size of each image in MB. Docker Compose passes the same value to the web app. |
+| `MAX_IMAGE_BYTES` | unset | Positive integer | Optional exact byte limit; overrides `MAX_IMAGE_MB` when set. |
 | `MAX_IMAGE_PIXELS` | `40000000` | Positive integer | Maximum width multiplied by height for each image. |
 | `API_PORT` | `8000` | Valid host port | Host port used by Docker Compose. |
 | `DEVELOPMENT_MODE` | `false` | Boolean | Return an immediate mock result without contacting Ollama. |
@@ -369,7 +370,7 @@ only in the SvelteKit backend and this service.
 The submitted image and reference image are validated independently:
 
 - Empty files are rejected with `422`.
-- Files larger than `MAX_IMAGE_BYTES` are rejected with `413`.
+- Files larger than the image limit (`MAX_IMAGE_MB`) are rejected with `413`.
 - Pillow verifies the encoded image contents instead of trusting the filename.
 - Only JPEG, PNG, and WEBP are accepted.
 - The declared content type must match the detected format, unless it is

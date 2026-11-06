@@ -1,4 +1,5 @@
 <script>
+    import { maxImageBytes, maxImageMb } from '$lib/upload-limits.js';
     import { onMount, onDestroy } from "svelte";
     import { page } from "$app/stores";
 	import { goto } from "$app/navigation";
@@ -11,8 +12,21 @@
     import { CORRECTION_FOCUS_OPTIONS, allowedCorrectionFocusIds } from "$lib/correction-focus.js";
     import PageHeader from "$lib/components/portal/PageHeader.svelte";
     import { _ } from 'svelte-i18n';
+    import { openLightbox } from "$lib/client/lightbox.js";
 
     let focusOptions = [...CORRECTION_FOCUS_OPTIONS];
+
+    /**
+     * Open the student's image and the reference together in the viewer, so
+     * the two can be compared full screen (arrow keys switch between them).
+     * @param {0 | 1} start - 0 = student's image, 1 = reference.
+     */
+    function enlargeComparison(start) {
+        const items = [];
+        if (imageUrl) items.push({ src: imageUrl, alt: $_('correction.selectedImageAlt'), caption: imageName ? `${$_('correction.yourImage')} · ${imageName}` : $_('correction.yourImage') });
+        if (selectedReference?.storageKey) items.push({ src: selectedReference.storageKey, alt: selectedReference.altText || selectedReference.originalFilename || $_('correction.referenceImageAlt'), caption: `${$_('correction.reference')} · ${viewLabel(selectedReference)}` });
+        openLightbox(items, imageUrl ? start : 0);
+    }
     const correctionCategories = [
 		{ key: "camera", label: 'correction.camera', icon: "ri-camera-lens-line" },
 		{ key: "material", label: 'correction.material', icon: "ri-shapes-line" },
@@ -214,7 +228,7 @@
         );
     }
 
-    // File input handler. Mirrors the server limits (image, max 12 MB) to
+    // File input handler. Mirrors the server limits (image, max MAX_IMAGE_MB) to
     // fail fast, and swaps the preview object URL, revoking the old one.
     function selectImage(event) {
         const file = event.currentTarget.files?.[0];
@@ -223,8 +237,8 @@
 			errorMessage = $_('correction.invalidImage');
             return;
         }
-        if (file.size > 12 * 1024 * 1024) {
-			errorMessage = $_('correction.imageTooLarge');
+        if (file.size > maxImageBytes()) {
+			errorMessage = $_('correction.imageTooLarge', { values: { max: maxImageMb() } });
             return;
         }
         if (imageUrl) URL.revokeObjectURL(imageUrl);
@@ -834,6 +848,7 @@
                                             >{#if imageName}<small
                                                     >{imageName}</small
                                                 >{/if}
+                                            {#if imageUrl}<button type="button" class="enlarge-button" on:click={() => enlargeComparison(0)}><i class="ri-zoom-in-line" aria-hidden="true"></i>{$_('lightbox.enlarge')}</button>{/if}
                                         </div>
                                         <label
                                             class="image-stage"
@@ -848,7 +863,7 @@
                                                     <i class="ri-image-add-line upload-icon" aria-hidden="true"></i>
                                                     <strong
 												>{$_('correction.uploadView')}</strong
-											><span>{$_('correction.imageFormats')}</span
+											><span>{$_('correction.imageFormats', { values: { max: maxImageMb() } })}</span
                                                     ><span
                                                         class="btn btn-primary btn-sm mt-3"
 												>{$_('correction.chooseImage')}</span
@@ -870,8 +885,14 @@
                                                     selectedReference,
                                                 )}</span
                                             >
+                                            {#if selectedReference?.storageKey}<button type="button" class="enlarge-button" on:click={() => enlargeComparison(1)}><i class="ri-zoom-in-line" aria-hidden="true"></i>{$_('lightbox.enlarge')}</button>{/if}
                                         </div>
-                                        <div class="image-stage has-image">
+                                        <button
+                                            type="button"
+                                            class="image-stage has-image zoom-stage"
+                                            on:click={() => enlargeComparison(1)}
+                                            aria-label={`${$_('lightbox.enlarge')}: ${$_('correction.reference')} · ${viewLabel(selectedReference)}`}
+                                        >
                                             <img
                                                 src={selectedReference?.storageKey}
                                                 decoding="async"
@@ -879,7 +900,7 @@
                                                     selectedReference?.originalFilename ||
 													$_('correction.referenceImageAlt')}
                                             />
-                                        </div>
+                                        </button>
                                     </div>
                                 </div>{/if}
                         </div>
@@ -1261,6 +1282,28 @@
     .image-panel-title span {
         font-weight: 700;
     }
+    .image-panel-title small { margin-left: auto; }
+    .enlarge-button {
+        flex-shrink: 0;
+        min-height: 40px;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        padding: 0 0.7rem;
+        color: var(--portal-info-text);
+        border: 1px solid var(--portal-border);
+        border-radius: var(--portal-radius-sm);
+        background: var(--portal-surface);
+        font-size: 0.8rem;
+        font-weight: 600;
+        transition: border-color 160ms ease-out, background-color 160ms ease-out;
+    }
+    .enlarge-button:hover { border-color: var(--portal-polito-blue); background: var(--portal-surface-muted); }
+    .image-panel-title .enlarge-button i { margin: 0; color: inherit; }
+    @media (pointer: coarse) { .enlarge-button { min-height: 44px; } }
+    /* The reference stage is a button that opens the viewer. */
+    .zoom-stage { width: 100%; padding: 0; border: 0; cursor: zoom-in; }
+    .zoom-stage:focus-visible { outline: 2px solid var(--portal-polito-blue); outline-offset: -2px; }
     .image-panel-title i {
         color: var(--portal-brand-primary);
         margin-right: 0.25rem;

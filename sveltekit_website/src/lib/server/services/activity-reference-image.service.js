@@ -5,24 +5,26 @@ import { ApiError, numericId, optionalText, requiredText, requireUser } from './
 import { activityService } from './activity.service.js';
 import { courseService } from './course.service.js';
 import { localStorageService } from './local-storage.service.js';
+import { maxReferenceImageBytes } from '$lib/upload-limits.js';
 
 const VIEW_TYPES = ['FRONT', 'SIDE', 'TOP', 'ANGLED', 'OTHER'];
 const DATA_URL_PATTERN = /^data:(image\/(?:jpeg|png|webp|avif));base64,([A-Za-z0-9+/]+={0,2})$/;
-const MAX_IMAGE_BYTES = 350 * 1024;
 
 /**
- * Validate a reference image sent as a data: URL (max 350 KB, JPEG/PNG/WEBP/
- * AVIF), write it to local storage and return the DB column values.
+ * Validate a reference image sent as a data: URL (JPEG/PNG/WEBP/AVIF; max
+ * 350 KB when compression is on, otherwise MAX_IMAGE_MB), write it to local storage and return the DB column values.
  * The file is written before the DB insert, so callers must delete it if
  * the insert fails.
  */
 async function imageValues(input) {
-	const dataUrl = requiredText(input.dataUrl, 'dataUrl', 500000);
+	const maxBytes = maxReferenceImageBytes();
+	// Base64 is 4/3 of the file size; the extra 100 chars cover the data: prefix.
+	const dataUrl = requiredText(input.dataUrl, 'dataUrl', Math.ceil(maxBytes * 4 / 3) + 100);
 	const match = dataUrl.match(DATA_URL_PATTERN);
 	if (!match) throw new ApiError(400, 'Use a JPEG, PNG, WEBP or AVIF image.', 'INVALID_IMAGE');
 	const approximateBytes = Math.floor(match[2].length * 3 / 4);
-	if (approximateBytes > MAX_IMAGE_BYTES) {
-		throw new ApiError(400, 'Each reference image must be no larger than 350 KB.', 'IMAGE_TOO_LARGE');
+	if (approximateBytes > maxBytes) {
+		throw new ApiError(400, `Each reference image must be no larger than ${Math.round(maxBytes / 1024)} KB.`, 'IMAGE_TOO_LARGE');
 	}
 	const mimeType = match[1];
 	if (input.mimeType && input.mimeType !== mimeType) {

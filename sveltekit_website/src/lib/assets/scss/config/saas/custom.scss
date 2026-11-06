@@ -197,6 +197,11 @@ a {
 
 /* Controls */
 .btn {
+    /* Flex so the min-height below is shared above and below the label;
+       as Bootstrap's inline-block, the extra height all fell under the text. */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     min-height: 42px;
     border-radius: var(--portal-radius-sm);
     box-shadow: none;
@@ -206,6 +211,11 @@ a {
 
 .btn-sm { min-height: 34px; border-radius: var(--portal-radius-sm); }
 .btn-lg { min-height: 48px; }
+.btn.text-start { justify-content: flex-start; }
+
+/* Images that open the full-screen viewer (`use:zoomable`). */
+img.is-zoomable { cursor: zoom-in; }
+img.is-zoomable:focus-visible { outline: 2px solid var(--portal-polito-blue); outline-offset: -2px; }
 .btn:disabled, .btn.disabled { cursor: not-allowed; opacity: 0.58; box-shadow: none; }
 
 .form-label {
@@ -416,4 +426,12 @@ textarea.form-control { min-height: 112px; resize: vertical; }
     #back-to-top:hover { animation: none !important; }
 
     .modal.fade .modal-dialog { transform: none !important; }
+}
+
+// "(opzionale)" marker inside form labels: same line, lighter than the label.
+.optional-tag {
+    margin-left: .15rem;
+    color: var(--portal-muted);
+    font-size: .875em;
+    font-weight: 400;
 }

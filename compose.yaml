@@ -32,7 +32,7 @@ services:
       HMAC_MAX_AGE_SECONDS: ${HMAC_MAX_AGE_SECONDS:-300}
       QUEUE_MAX_SIZE: ${QUEUE_MAX_SIZE:-100}
       COMPLETED_JOB_LIMIT: ${COMPLETED_JOB_LIMIT:-500}
-      MAX_IMAGE_BYTES: ${MAX_IMAGE_BYTES:-12582912}
+      MAX_IMAGE_MB: ${MAX_IMAGE_MB:-5}
       MAX_IMAGE_PIXELS: ${MAX_IMAGE_PIXELS:-40000000}
       DEVELOPMENT_MODE: ${DEVELOPMENT_MODE:-false}
       OLLAMA_CHAT_URL: ${OLLAMA_CHAT_URL:-http://host.docker.internal:11434/api/chat}
@@ -82,6 +82,13 @@ services:
       # /api/auth/* when the request origin matches BETTER_AUTH_URL.
       ORIGIN: ${PUBLIC_URL:-http://localhost:5173}
       PYTHON_SERVER_URL: ${PYTHON_SERVER_URL:-http://image-api:8000}
+      # Same value as image-api's MAX_IMAGE_MB. PUBLIC_ makes it readable by
+      # both the browser checks and the server checks. The request-body limit
+      # (BODY_SIZE_LIMIT) is derived from it when the container starts.
+      PUBLIC_MAX_IMAGE_MB: ${MAX_IMAGE_MB:-5}
+      # true: reference images are re-encoded to WEBP under 350 KB before upload.
+      # false: they are stored as uploaded, up to MAX_IMAGE_MB.
+      PUBLIC_COMPRESS_REFERENCE_IMAGES: ${COMPRESS_REFERENCE_IMAGES:-true}
       PYTHON_SERVER_HMAC_SECRET: ${PYTHON_SERVER_HMAC_SECRET}
       SMTP_HOST: ${SMTP_HOST:-}
       SMTP_PORT: ${SMTP_PORT:-587}

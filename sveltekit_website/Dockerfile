@@ -32,4 +32,8 @@ RUN mkdir -p /app/storage && chown node:node /app/storage
 USER node
 EXPOSE 3000
 
-CMD ["node", "build"]
+# adapter-node rejects bodies over BODY_SIZE_LIMIT (default 512K) with 413.
+# An exam upload sends up to 6 photos (one per reference view) as base64
+# (4/3 of the size) in one request, so allow 9x the per-photo limit.
+# Set BODY_SIZE_LIMIT explicitly to override.
+CMD ["sh", "-c", "export BODY_SIZE_LIMIT=\"${BODY_SIZE_LIMIT:-$(( ${PUBLIC_MAX_IMAGE_MB:-5} * 9 ))M}\"; exec node build"]

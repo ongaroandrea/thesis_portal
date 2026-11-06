@@ -102,6 +102,28 @@ export function formatDate(value) {
 	}).format(new Date(value));
 }
 
+/**
+ * Length of the window between two dates, e.g. "2 h 30 min" or "3 g 4 h".
+ * Exams have no separate duration: it is always derived from their
+ * opening and deadline. Returns null when either date is missing or the
+ * window is empty or reversed.
+ */
+export function formatWindowDuration(from, until) {
+	if (!from || !until) return null;
+	const totalMinutes = Math.round((new Date(until) - new Date(from)) / 60000);
+	if (!Number.isFinite(totalMinutes) || totalMinutes <= 0) return null;
+	const t = get(_);
+	const days = Math.floor(totalMinutes / 1440);
+	const hours = Math.floor((totalMinutes % 1440) / 60);
+	const minutes = totalMinutes % 60;
+	const parts = [];
+	if (days) parts.push(t('duration.days', { values: { count: days } }));
+	if (hours) parts.push(t('duration.hours', { values: { count: hours } }));
+	// Minutes are noise once the window spans days.
+	if (minutes && !days) parts.push(t('duration.minutes', { values: { count: minutes } }));
+	return parts.join(' ');
+}
+
 export function toDateTimeLocal(value) {
 	if (!value) return '';
 	const date = new Date(value);

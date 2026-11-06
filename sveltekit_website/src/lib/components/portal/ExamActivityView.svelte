@@ -1,7 +1,9 @@
 <script>
+	import { maxImageBytes, maxImageMb } from '$lib/upload-limits.js';
 	import { onDestroy, onMount } from 'svelte';
 	import { apiListRequest, apiRequest, formatDateTime } from '$lib/client/api.js';
 	import { _ } from 'svelte-i18n';
+	import { openLightbox, zoomable } from '$lib/client/lightbox.js';
 	import { tableScrollHint } from '$lib/client/table-scroll-hint.js';
 	import { page } from '$app/stores';
 
@@ -62,7 +64,7 @@
 	}
 
 	// Queue picked files for upload, skipping (with an error) anything that is
-	// not JPEG/PNG/WEBP or is over the server's 4 MB limit. Each new file is
+	// not JPEG/PNG/WEBP or is over the shared MAX_IMAGE_MB limit. Each new file is
 	// pre-assigned to the next reference view in round-robin order; the
 	// student can change it before uploading.
 	function selectFiles(event) {
@@ -74,8 +76,8 @@
 				errorMessage = $_('exam.invalidFile', { values: { name: file.name } });
 				continue;
 			}
-			if (file.size > 4 * 1024 * 1024) {
-				errorMessage = $_('exam.fileTooLarge', { values: { name: file.name } });
+			if (file.size > maxImageBytes()) {
+				errorMessage = $_('exam.fileTooLarge', { values: { name: file.name, max: maxImageMb() } });
 				continue;
 			}
 			pendingFiles = [...pendingFiles, {
@@ -147,6 +149,22 @@
 		}
 	}
 
+	/**
+	 * Show one student's current exam files in the image viewer, starting
+	 * from the view that was clicked; the arrows step through their other views.
+	 */
+	function viewSubmission(submission, startIndex) {
+		const student = `${submission.studentName} ${submission.studentSurname}`;
+		openLightbox(
+			submission.files.filter((file) => file.isCurrent).map((file) => ({
+				src: file.storageKey,
+				alt: file.originalFilename,
+				caption: `${student} · ${viewLabel(file)} · ${file.originalFilename}`
+			})),
+			startIndex
+		);
+	}
+
 	async function removeCurrentFile(file) {
 		if (!confirm($_('exam.confirmRemove', { values: { name: file.originalFilename } }))) return;
 		errorMessage = '';
@@ -183,7 +201,7 @@
 			<section class="exam-card">
 				<div class="exam-card-heading"><div><h3 class="h4">{$_('exam.submissions')}</h3><p>{$_('exam.submissionsHelp')}</p></div><b>{submissions.length}</b></div>
 				{#if submissions.length === 0}<div class="exam-empty"><p>{$_('exam.noSubmissions')}</p></div>{:else}
-					<div class="table-responsive" use:tableScrollHint={$_('common.scrollTable')}><table class="table align-middle mb-0"><thead><tr><th>{$_('correction.student')}</th><th>{$_('exam.currentFiles')}</th><th>{$_('exam.revisions')}</th><th>{$_('exam.lastChange')}</th></tr></thead><tbody>{#each submissions as submission}<tr><td><strong>{submission.studentName} {submission.studentSurname}</strong><small>{submission.studentEmail}</small></td><td><div class="manager-files">{#each submission.files.filter((file) => file.isCurrent) as file}<a href={file.storageKey} download={file.originalFilename} title={file.originalFilename}><i class="ri-download-2-line"></i>{viewLabel(file)}</a>{/each}</div></td><td>{submission.files.length}</td><td>{formatDateTime(submission.updatedAt)}</td></tr>{/each}</tbody></table></div>
+					<div class="table-responsive" use:tableScrollHint={$_('common.scrollTable')}><table class="table align-middle mb-0"><thead><tr><th>{$_('correction.student')}</th><th>{$_('exam.currentFiles')}</th><th>{$_('exam.revisions')}</th><th>{$_('exam.lastChange')}</th></tr></thead><tbody>{#each submissions as submission}<tr><td><strong>{submission.studentName} {submission.studentSurname}</strong><small>{submission.studentEmail}</small></td><td><div class="manager-files">{#each submission.files.filter((file) => file.isCurrent) as file, fileIndex}<span class="manager-file"><button type="button" onclick={() => viewSubmission(submission, fileIndex)} title={file.originalFilename}><i class="ri-zoom-in-line" aria-hidden="true"></i>{viewLabel(file)}</button><a href={file.storageKey} download={file.originalFilename} aria-label={$_('exam.downloadFile', { values: { name: file.originalFilename } })} title={$_('exam.downloadFile', { values: { name: file.originalFilename } })}><i class="ri-download-2-line" aria-hidden="true"></i></a></span>{/each}</div></td><td>{submission.files.length}</td><td>{formatDateTime(submission.updatedAt)}</td></tr>{/each}</tbody></table></div>
 				{/if}
 			</section>
 			<section class="exam-card">
@@ -195,7 +213,7 @@
 				<div class="exam-card-heading"><div><h3 class="h4">{examState === 'OPEN' ? $_('exam.yourSubmission') : $_('exam.submissionLocked')}</h3><p>{$_(`exam.uploadHelp.${examState.toLowerCase()}`)}</p></div></div>
 				{#if examState === 'OPEN'}
 					<input bind:this={fileInput} class="visually-hidden" type="file" accept="image/jpeg,image/png,image/webp" multiple onchange={selectFiles} />
-					<button class="exam-dropzone" type="button" onclick={() => fileInput?.click()} disabled={referenceImages.length === 0}><i class="ri-image-add-line" aria-hidden="true"></i><strong>{$_('exam.chooseFiles')}</strong><small>{$_('exam.fileFormats')}</small></button>
+					<button class="exam-dropzone" type="button" onclick={() => fileInput?.click()} disabled={referenceImages.length === 0}><i class="ri-image-add-line" aria-hidden="true"></i><strong>{$_('exam.chooseFiles')}</strong><small>{$_('exam.fileFormats', { values: { max: maxImageMb() } })}</small></button>
 					{#if referenceImages.length === 0}<div class="alert alert-warning mt-3 mb-0">{$_('exam.noViews')}</div>{/if}
 					{#if pendingFiles.length > 0}<div class="pending-files">{#each pendingFiles as item (item.key)}<article><img src={item.preview} alt={item.file.name} decoding="async" /><div><strong>{item.file.name}</strong><small>{Math.ceil(item.file.size / 1024)} KB</small><label for={`exam-view-${item.key}`}>{$_('exam.selectView')}</label><select id={`exam-view-${item.key}`} class="form-select" bind:value={item.referenceImageId}>{#each referenceImages as image}<option value={String(image.id)}>{viewLabel(image)}</option>{/each}</select></div><button type="button" onclick={() => removePending(item.key)} aria-label={$_('activity.removeImage', { values: { name: item.file.name } })}><i class="ri-close-line"></i></button></article>{/each}</div><div class="upload-actions"><button class="btn btn-success" type="button" onclick={uploadFiles} disabled={uploading}>{#if uploading}<span class="spinner-border spinner-border-sm me-2"></span>{/if}{$_('exam.saveFiles')}</button></div>{/if}
 				{/if}
@@ -203,7 +221,7 @@
 
 			<section class="exam-card">
 				<div class="exam-card-heading"><div><h3 class="h4">{$_('exam.submittedFiles')}</h3><p>{$_('exam.submittedFilesHelp')}</p></div><b>{currentFiles.length}</b></div>
-				{#if currentFiles.length === 0}<div class="exam-empty"><p>{$_('exam.noFiles')}</p></div>{:else}<div class="submitted-grid">{#each currentFiles as file}<article><div class="submitted-preview"><img src={file.storageKey} alt={file.originalFilename} loading="lazy" decoding="async" /><span>{viewLabel(file)}</span></div><div class="submitted-copy"><strong>{file.originalFilename}</strong><small>{$_('exam.revisionNumber', { values: { revision: file.revision } })} · {formatDateTime(file.uploadedAt)}</small></div>{#if examState === 'OPEN'}<button type="button" onclick={() => removeCurrentFile(file)} aria-label={$_('activity.removeImage', { values: { name: file.originalFilename } })}><i class="ri-delete-bin-line"></i></button>{/if}</article>{/each}</div>{/if}
+				{#if currentFiles.length === 0}<div class="exam-empty"><p>{$_('exam.noFiles')}</p></div>{:else}<div class="submitted-grid">{#each currentFiles as file}<article><div class="submitted-preview"><img src={file.storageKey} alt={file.originalFilename} loading="lazy" decoding="async" use:zoomable={{ group: 'exam-files', caption: `${viewLabel(file)} · ${file.originalFilename}`, label: $_('lightbox.enlarge') }} /><span>{viewLabel(file)}</span></div><div class="submitted-copy"><strong>{file.originalFilename}</strong><small>{$_('exam.revisionNumber', { values: { revision: file.revision } })} · {formatDateTime(file.uploadedAt)}</small></div>{#if examState === 'OPEN'}<button type="button" onclick={() => removeCurrentFile(file)} aria-label={$_('activity.removeImage', { values: { name: file.originalFilename } })}><i class="ri-delete-bin-line"></i></button>{/if}</article>{/each}</div>{/if}
 				{#if historicalFiles.length > 0}<details class="revision-history"><summary>{$_('exam.showHistory', { values: { count: historicalFiles.length } })}</summary><div>{#each historicalFiles as file}<p><span>{viewLabel(file)} · {file.originalFilename}</span><small>{$_('exam.revisionNumber', { values: { revision: file.revision } })} · {formatDateTime(file.uploadedAt)}</small></p>{/each}</div></details>{/if}
 			</section>
 		{/if}
@@ -280,7 +298,13 @@
 	.result-status { padding: .2rem .45rem; border-radius: var(--portal-radius-sm); background: var(--portal-surface-muted); font-size: .75rem; font-weight: 600; }
 	.result-status.status-published { color: var(--portal-positive-text); background: rgba(var(--portal-positive-rgb),.12); }
 	.manager-files { display: flex; flex-wrap: wrap; gap: .35rem; }
-	.manager-files a { display: inline-flex; align-items: center; gap: .25rem; padding: .25rem .45rem; color: var(--portal-info-text); border: 1px solid var(--portal-border); border-radius: var(--portal-radius-sm); font-size: .78rem; font-weight: 600; }
+	/* One chip per view: the label opens the viewer, the icon downloads the file. */
+	.manager-file { display: inline-flex; overflow: hidden; border: 1px solid var(--portal-border); border-radius: var(--portal-radius-sm); }
+	.manager-file button, .manager-file a { min-height: 36px; display: inline-flex; align-items: center; gap: .25rem; padding: 0 .55rem; color: var(--portal-info-text); border: 0; background: var(--portal-surface); font-size: .78rem; font-weight: 600; white-space: nowrap; }
+	.manager-file a { border-left: 1px solid var(--portal-border); }
+	.manager-file button:hover, .manager-file a:hover { background: var(--portal-surface-muted); }
+	.manager-file button { cursor: zoom-in; }
+	@media (pointer: coarse) { .manager-file button, .manager-file a { min-height: 44px; } }
 	@media (max-width: 1399.98px) { .exam-layout { grid-template-columns: 1fr; } .exam-layout aside { grid-template-columns: repeat(2,minmax(0,1fr)); grid-row: 1; } }
 	@media (max-width: 767.98px) { .exam-layout aside { grid-template-columns: 1fr; } .pending-files article { grid-template-columns: 70px minmax(0,1fr) auto; } .pending-files img { width: 70px; height: 70px; } }
 	@media (pointer: coarse) { .pending-files article > button, .submitted-grid article > button { width: 44px; height: 44px; } }
